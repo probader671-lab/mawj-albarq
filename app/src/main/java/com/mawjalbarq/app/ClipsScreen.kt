@@ -90,6 +90,8 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
     var commentsFor by remember { mutableStateOf<Video?>(null) }
     var reportFor by remember { mutableStateOf<Video?>(null) }
     var creatorId by remember { mutableStateOf<String?>(null) }
+    val barShown = Ui.barVisible && !Ui.deep
+    val bpad by androidx.compose.animation.core.animateDpAsState(if (barShown) 120.dp else 44.dp, label = "bpad")
     VerticalPager(pager, Modifier.fillMaxSize()) { page ->
         val v = videos[page]
         val liked = Feed.liked[v.id] == true
@@ -108,7 +110,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                 AndroidView({ c -> PlayerView(c).apply { useController = false; resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; this.player = player } },
                     Modifier.fillMaxSize(), update = { it.player = player })
             }
-            Column(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 120.dp, end = 90.dp)) {
+            Column(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = bpad, end = 90.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.clickable { creatorId = v.userId }) { Avatar(null, v.author, 40) }
                     Spacer(Modifier.width(8.dp))
@@ -132,7 +134,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                     Box(Modifier.fillMaxWidth(prog).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
                 }
             }
-            if (!cinema) Column(Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 130.dp), verticalArrangement = Arrangement.spacedBy(14.dp),
+            if (!cinema) Column(Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = bpad + 10.dp), verticalArrangement = Arrangement.spacedBy(14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {
                 Action(Icons.Filled.Favorite, v.likes.toString(), if (liked) MaterialTheme.colorScheme.primary else Color.White) {
                     if (!App.loggedIn) onNeedLogin() else scope.launch { Feed.toggleLike(v.id) }
@@ -167,7 +169,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                 var left by remember { mutableStateOf("") }
                 LaunchedEffect(curId) { while (true) { kotlinx.coroutines.delay(500); playing = player.isPlaying; val d = player.duration
                     left = if (d > 0) { val r = ((d - player.currentPosition) / 1000).coerceAtLeast(0); "%d:%02d".format(r / 60, r % 60) } else "" } }
-                Column(Modifier.align(Alignment.BottomCenter).padding(start = 12.dp, end = 12.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.align(Alignment.BottomCenter).padding(start = 12.dp, end = 12.dp, bottom = bpad - 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                         CapBtn(Icons.Filled.Favorite, v.likes.toString(), if (liked) MaterialTheme.colorScheme.primary else Color.White) { if (!App.loggedIn) onNeedLogin() else scope.launch { Feed.toggleLike(v.id) } }
                         CapBtn(Icons.Filled.Comment, v.comments.toString(), Color.White) { commentsFor = v }
