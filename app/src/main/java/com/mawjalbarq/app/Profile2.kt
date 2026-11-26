@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.StayCurrentLandscape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,14 +30,17 @@ import org.json.JSONObject
 data class ProfileData(val id: String, val name: String, val bio: String, val avatar: String?, val videos: List<Video>, val followers: Int = 0, val following: Int = 0)
 
 suspend fun loadProfile(id: String): ProfileData? {
-    val (c, t) = api("GET", "/rest/v1/profiles?id=eq.$id&select=id,full_name,bio,avatar_url")
+    val (c, t) = api("GET", "/rest/v1/profiles?id=eq.$id&select=id,full_name,bio,avatar_url,verified,followers_count")
     if (c != 200) return null
     val o = try { JSONArray(t).optJSONObject(0) } catch (e: Exception) { null } ?: return null
-    val (c2, t2) = api("GET", "/rest/v1/videos?user_id=eq.$id&status=eq.ready&deleted=eq.false&select=id,title,description,video_url,thumbnail_url,likes,comments_count&order=created_at.desc")
+    val (c2, t2) = api("GET", "/rest/v1/videos?user_id=eq.$id&status=eq.ready&deleted=eq.false&select=id,width,height,duration,views,created_at,title,description,video_url,thumbnail_url,likes,comments_count&order=created_at.desc")
     val vids = ArrayList<Video>()
     if (c2 == 200) try { val a = JSONArray(t2); for (i in 0 until a.length()) { val v = a.getJSONObject(i)
         vids.add(Video(v.getString("id"), v.optString("title"), if (v.isNull("description")) "" else v.optString("description"), v.getString("video_url"),
-            if (v.isNull("thumbnail_url")) null else v.optString("thumbnail_url"), o.optString("full_name"), v.optInt("likes"), v.optInt("comments_count"), id)) } } catch (_: Exception) {}
+            if (v.isNull("thumbnail_url")) null else v.optString("thumbnail_url"), o.optString("full_name"), v.optInt("likes"), v.optInt("comments_count"), id,
+            v.optInt("width"), v.optInt("height"), if (o.isNull("avatar_url")) null else o.optString("avatar_url"),
+            v.optDouble("duration", 0.0).toInt().coerceAtLeast(0), v.optLong("views", 0L).coerceAtLeast(0L),
+            v.optString("created_at"), o.optBoolean("verified", false), o.optLong("followers_count", 0L).coerceAtLeast(0L))) } } catch (_: Exception) {}
     suspend fun cnt(q: String): Int { return try { val (c3, t3) = api("GET", "/rest/v1/follows?$q"); if (c3 == 200) JSONArray(t3).length() else 0 } catch (_: Exception) { 0 } }
     return ProfileData(id, o.optString("full_name").ifBlank { "مستخدم" }, if (o.isNull("bio")) "" else o.optString("bio"),
         if (o.isNull("avatar_url")) null else o.optString("avatar_url"), vids, cnt("following_id=eq.$id&select=follower_id"), cnt("follower_id=eq.$id&select=following_id"))
@@ -88,7 +93,19 @@ fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = fals
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     row.forEach { v ->
                         Box(Modifier.weight(1f).aspectRatio(9f / 15f).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable { onPlay(v.id) }) {
-                            if (v.thumb != null) AsyncImage(v.thumb, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            if (v.thumb != null) AsyncImage(v.thumb, v.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(56.dp)
+                                .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000)))))
+                            if (!v.portrait) {
+                                Box(Modifier.align(Alignment.TopEnd).padding(6.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xB3000000)).padding(horizontal = 5.dp, vertical = 3.dp)) {
+                                    Icon(Icons.Filled.StayCurrentLandscape, "فيديو عريض", tint = Color.White, modifier = Modifier.size(13.dp))
+                                }
+                            }
+                            if (v.duration > 0) {
+                                Text(formatDuration(v.duration), color = Color.White, fontSize = 10.sp,
+                                    modifier = Modifier.align(Alignment.TopStart).padding(6.dp).clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xB3000000)).padding(horizontal = 5.dp, vertical = 2.dp))
+                            }
                             Text(v.title, color = Color.White, fontSize = 11.sp, maxLines = 1, modifier = Modifier.align(Alignment.BottomStart).padding(6.dp))
                         }
                     }
@@ -143,7 +160,7 @@ fun EditProfileSheet(cur: ProfileData, onDone: (Boolean) -> Unit) {
                     val b = JSONObject().put("full_name", name.trim()).put("bio", bio.trim())
                     if (avatar != null) b.put("avatar_url", avatar)
                     val (c, _) = api("PATCH", "/rest/v1/profiles?id=eq.${App.userId}", b.toString())
-                    if (c in 200..299) { App.name = name.trim(); App.save() }
+                    if (c in 200..299) { App.name = name.trim(); if (avatar != null) App.avatar = avatar; App.save() }
                     busy = false; onDone(c in 200..299)
                 }
             }) { Text(if (busy) "..." else "حفظ التعديلات") }

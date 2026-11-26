@@ -3,7 +3,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.toArgb
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
@@ -31,14 +33,15 @@ object App {
     var userId by mutableStateOf<String?>(null)
     var email by mutableStateOf("")
     var name by mutableStateOf("")
+    var avatar by mutableStateOf<String?>(null)
     val loggedIn get() = token != null && userId != null
     fun init(ctx: Context) {
         sp = ctx.getSharedPreferences("session", Context.MODE_PRIVATE)
         token = sp.getString("t", null); refresh = sp.getString("r", null); userId = sp.getString("u", null)
-        email = sp.getString("e", "") ?: ""; name = sp.getString("n", "") ?: ""
+        email = sp.getString("e", "") ?: ""; name = sp.getString("n", "") ?: ""; avatar = sp.getString("av", null)
     }
-    fun save() { sp.edit().putString("t", token).putString("r", refresh).putString("u", userId).putString("e", email).putString("n", name).apply() }
-    fun logout() { token = null; refresh = null; userId = null; email = ""; name = ""; save(); Feed.liked.clear(); Feed.saved.clear() }
+    fun save() { sp.edit().putString("t", token).putString("r", refresh).putString("u", userId).putString("e", email).putString("n", name).putString("av", avatar).apply() }
+    fun logout() { token = null; refresh = null; userId = null; email = ""; name = ""; avatar = null; save(); Feed.liked.clear(); Feed.saved.clear() }
     fun fromAuth(j: JSONObject) {
         token = j.optString("access_token"); refresh = j.optString("refresh_token")
         val u = j.optJSONObject("user")
@@ -108,10 +111,12 @@ suspend fun signUp(name: String, email: String, pass: String): String? {
 
 suspend fun afterLogin() {
     Feed.loadUserState()
-    val (c, t) = api("GET", "/rest/v1/profiles?id=eq.${App.userId}&select=full_name,theme_accent_argb")
+    val (c, t) = api("GET", "/rest/v1/profiles?id=eq.${App.userId}&select=full_name,avatar_url,theme_accent_argb")
     if (c == 200) try {
         val o = JSONArray(t).optJSONObject(0) ?: return
-        if (!o.isNull("full_name")) { App.name = o.getString("full_name"); App.save() }
+        if (!o.isNull("full_name")) { App.name = o.getString("full_name") }
+        if (!o.isNull("avatar_url")) { App.avatar = o.getString("avatar_url") }
+        App.save()
         if (!o.isNull("theme_accent_argb")) {
             val v = o.getLong("theme_accent_argb")
             val i = Accents.indexOfFirst { (it.main.toArgb().toLong() and 0xFFFFFFFFL) == v }
@@ -133,48 +138,262 @@ suspend fun uploadImageToCloud(ctx: Context, uri: android.net.Uri): String? = wi
 
 object Theme { var prefs: ThemePrefs? = null }
 
-data class Video(val id: String, val title: String, val desc: String, val url: String, val thumb: String?,
-                 val author: String, val likes: Int, val comments: Int, val userId: String = "", val w: Int = 0, val h: Int = 0, val avatar: String? = null) {
+data class Video(
+    val id: String,
+    val title: String,
+    val desc: String,
+    val url: String,
+    val thumb: String?,
+    val author: String,
+    val likes: Int,
+    val comments: Int,
+    val userId: String = "",
+    val w: Int = 0,
+    val h: Int = 0,
+    val avatar: String? = null,
+    val duration: Int = 0,
+    val views: Long = 0L,
+    val createdAt: String = "",
+    val verified: Boolean = false,
+    val followers: Long = 0L
+) {
     val portrait get() = h == 0 || h >= w
 }
-data class Comment(val id: String, val text: String, val author: String)
+data class Comment(
+    val id: String,
+    val text: String,
+    val author: String,
+    val avatar: String? = null,
+    val at: String = "",
+    val likes: Int = 0,
+    val verified: Boolean = false,
+    val userId: String = ""
+)
+
+fun formatDuration(seconds: Int): String {
+    if (seconds <= 0) return ""
+    val h = seconds / 3600
+    val m = (seconds % 3600) / 60
+    val s = seconds % 60
+    return if (h > 0) "%d:%02d:%02d".format(java.util.Locale.US, h, m, s)
+    else "%02d:%02d".format(java.util.Locale.US, m, s)
+}
+
+fun formatDurationMs(ms: Long): String {
+    val totalSec = (ms.coerceAtLeast(0L) / 1000L).toInt()
+    val h = totalSec / 3600
+    val m = (totalSec % 3600) / 60
+    val s = totalSec % 60
+    return if (h > 0) "%d:%02d:%02d".format(java.util.Locale.US, h, m, s)
+    else "%02d:%02d".format(java.util.Locale.US, m, s)
+}
+
+fun formatCount(n: Long): String = when {
+    n >= 1_000_000L -> String.format(java.util.Locale.US, "%.1fM", n / 1_000_000.0)
+    n >= 1_000L -> String.format(java.util.Locale.US, "%.1fK", n / 1_000.0)
+    else -> n.toString()
+}
+
+fun formatVideoDate(iso: String): String {
+    if (iso.isBlank()) return ""
+    return try {
+        val diff = java.time.Duration.between(java.time.Instant.parse(iso), java.time.Instant.now())
+        val mins = diff.toMinutes().coerceAtLeast(0)
+        val hours = diff.toHours()
+        val days = diff.toDays()
+        when {
+            mins < 1 -> "الآن"
+            mins < 60 -> "منذ $mins د"
+            hours < 24 -> "منذ $hours س"
+            days < 7 -> "منذ $days ي"
+            else -> iso.take(10)
+        }
+    } catch (_: Throwable) {
+        iso.take(10)
+    }
+}
 
 object Feed {
     val videos = mutableStateListOf<Video>()
     val clips: List<Video> get() = videos.filter { it.portrait }
+    val wideVideos: List<Video> get() = videos.filter { !it.portrait }
     var loading by mutableStateOf(false)
+    var loadingMore by mutableStateOf(false)
+    var hasMore by mutableStateOf(true)
     var error by mutableStateOf(false)
+    var isOffline by mutableStateOf(false)
+    var cacheUpdatedAt by mutableStateOf(0L)
     val liked = mutableStateMapOf<String, Boolean>()
     val saved = mutableStateMapOf<String, Boolean>()
     var jumpTo by mutableStateOf<Int?>(null)
+    var activeVideo by mutableStateOf<Video?>(null)
+    private const val PAGE_SIZE = 30
+    private var nextOffset = 0
 
-    private fun parse(t: String): List<Video> {
+    fun open(v: Video, onGoClips: () -> Unit) {
+        if (!v.portrait) {
+            activeVideo = v
+        } else {
+            val idx = videos.indexOfFirst { it.id == v.id }
+            if (idx >= 0) {
+                jumpTo = idx
+                onGoClips()
+            } else {
+                activeVideo = v
+            }
+        }
+    }
+
+    private fun parse(t: String): Pair<Int, List<Video>> {
         val a = JSONArray(t); val list = ArrayList<Video>()
         for (i in 0 until a.length()) {
             val o = a.getJSONObject(i)
-            list.add(Video(o.getString("id"), o.optString("title"), if (o.isNull("description")) "" else o.optString("description"),
-                o.getString("video_url"), if (o.isNull("thumbnail_url")) null else o.optString("thumbnail_url"),
-                o.optJSONObject("profiles")?.optString("full_name").orEmpty().ifBlank { "موج البرق" },
-                o.optInt("likes"), o.optInt("comments_count"), o.optString("user_id"), o.optInt("width"), o.optInt("height"), o.optJSONObject("profiles")?.let { pr -> if (pr.isNull("avatar_url")) null else pr.optString("avatar_url") }))
+            val pr = o.optJSONObject("profiles")
+            list.add(
+                Video(
+                    id = o.getString("id"),
+                    title = o.optString("title"),
+                    desc = if (o.isNull("description")) "" else o.optString("description"),
+                    url = o.getString("video_url"),
+                    thumb = if (o.isNull("thumbnail_url")) null else o.optString("thumbnail_url"),
+                    author = pr?.optString("full_name").orEmpty().ifBlank { "موج البرق" },
+                    likes = o.optInt("likes"),
+                    comments = o.optInt("comments_count"),
+                    userId = o.optString("user_id"),
+                    w = o.optInt("width"),
+                    h = o.optInt("height"),
+                    avatar = pr?.let { p -> if (p.isNull("avatar_url")) null else p.optString("avatar_url") },
+                    duration = o.optDouble("duration", 0.0).toInt().coerceAtLeast(0),
+                    views = o.optLong("views", 0L).coerceAtLeast(0L),
+                    createdAt = o.optString("created_at"),
+                    verified = pr?.optBoolean("verified", false) == true,
+                    followers = pr?.optLong("followers_count", 0L)?.coerceAtLeast(0L) ?: 0L
+                )
+            )
         }
-        return list.distinctBy { it.id }.distinctBy { it.url }
+        return a.length() to list.distinctBy { it.id }.distinctBy { it.url }
     }
 
-    private var feedPrefs: android.content.SharedPreferences? = null
-    fun loadCached() {
-        try { feedPrefs?.getString("feed", null)?.let { if (videos.isEmpty()) videos.addAll(parse(it)) } } catch (_: Exception) {}
+    private var appCtx: Context? = null
+
+    suspend fun restoreFromCache() {
+        val ctx = appCtx ?: return
+        val cached = VideoMetadataCache.load(ctx) ?: return
+        withContext(Dispatchers.Main) {
+            if (videos.isEmpty()) {
+                videos.addAll(cached.videos)
+            }
+            cacheUpdatedAt = cached.updatedAtMs
+        }
+        val urls = cached.videos.filter { it.portrait }.ifEmpty { cached.videos }.take(2).map { it.url }
+        MediaCache.prefetch(ctx, urls)
     }
+
+    private fun persistCacheAsync() {
+        val ctx = appCtx ?: return
+        val snapshot = videos.toList()
+        if (snapshot.isEmpty()) return
+        CoroutineScope(Dispatchers.IO).launch {
+            VideoMetadataCache.save(ctx, snapshot)
+        }
+    }
+
+    private fun videosQuery(limit: Int, offset: Int): String =
+        "/rest/v1/videos?select=id,user_id,width,height,duration,views,created_at,title,description,video_url,thumbnail_url,likes,comments_count,profiles!videos_user_id_fkey(full_name,avatar_url,verified,followers_count)&status=eq.ready&deleted=eq.false&order=created_at.desc&limit=$limit&offset=$offset"
 
     suspend fun load() {
-        loading = videos.isEmpty(); error = false
-        val (c, t) = api("GET", "/rest/v1/videos?select=id,user_id,width,height,title,description,video_url,thumbnail_url,likes,comments_count,profiles!videos_user_id_fkey(full_name,avatar_url)&status=eq.ready&deleted=eq.false&order=created_at.desc&limit=40")
-        if (c == 200) try {
-            val list = parse(t)
-            videos.clear(); videos.addAll(list)
-            feedPrefs?.edit()?.putString("feed", t)?.apply()
-        } catch (e: Exception) { if (videos.isEmpty()) error = true } else if (videos.isEmpty()) error = true
+        if (loading) return
+        loading = true; error = false
+        if (videos.isEmpty()) {
+            restoreFromCache()
+        }
+        val (c, t) = api("GET", videosQuery(PAGE_SIZE, 0))
+        if (c == 200) {
+            try {
+                val (raw0, parsed0) = parse(t)
+                val merged = ArrayList<Video>(parsed0)
+                var offset = raw0
+                var moreAvailable = raw0 >= PAGE_SIZE
+                var extraPages = 0
+                // Ensure at least 10 horizontal videos are ready in Home right after initial load with minimal extra requests
+                while (moreAvailable && merged.count { !it.portrait } < 10 && extraPages < 3) {
+                    val (cExtra, tExtra) = api("GET", videosQuery(PAGE_SIZE, offset))
+                    if (cExtra != 200) break
+                    val (rawExtra, parsedExtra) = parse(tExtra)
+                    if (rawExtra == 0) {
+                        moreAvailable = false
+                        break
+                    }
+                    offset += rawExtra
+                    moreAvailable = rawExtra >= PAGE_SIZE
+                    extraPages++
+                    val seenIds = merged.mapTo(HashSet()) { it.id }
+                    val seenUrls = merged.mapTo(HashSet()) { it.url }
+                    parsedExtra.forEach { v ->
+                        if (seenIds.add(v.id) && seenUrls.add(v.url)) merged.add(v)
+                    }
+                }
+                withContext(Dispatchers.Main) {
+                    videos.clear()
+                    videos.addAll(merged)
+                    nextOffset = offset
+                    hasMore = moreAvailable
+                    isOffline = false
+                    error = false
+                    cacheUpdatedAt = System.currentTimeMillis()
+                }
+                appCtx?.let { ctx ->
+                    VideoMetadataCache.save(ctx, merged)
+                    val urls = merged.filter { it.portrait }.ifEmpty { merged }.take(3).map { it.url }
+                    CoroutineScope(Dispatchers.IO).launch { MediaCache.prefetch(ctx, urls) }
+                }
+            } catch (_: Exception) {
+                if (videos.isEmpty()) error = true else isOffline = true
+            }
+        } else {
+            if (videos.isEmpty()) error = true else isOffline = true
+        }
         loading = false
-        loadUserState(); loadFollows(); Notifs.refreshCount()
+        if (!isOffline) {
+            loadUserState(); loadFollows(); Notifs.refreshCount()
+        }
+    }
+
+    suspend fun loadMore(ensureWide: Boolean = false) {
+        if (loading || loadingMore || !hasMore || isOffline) return
+        loadingMore = true
+        try {
+            var pages = 0
+            val maxPages = if (ensureWide) 2 else 1
+            while (hasMore && pages < maxPages) {
+                val (c, t) = api("GET", videosQuery(PAGE_SIZE, nextOffset))
+                if (c != 200) break
+                val (raw, parsed) = parse(t)
+                if (raw == 0) {
+                    hasMore = false
+                    break
+                }
+                nextOffset += raw
+                hasMore = raw >= PAGE_SIZE
+                pages++
+                var addedWide = 0
+                withContext(Dispatchers.Main) {
+                    val seenIds = videos.mapTo(HashSet()) { it.id }
+                    val seenUrls = videos.mapTo(HashSet()) { it.url }
+                    parsed.forEach { v ->
+                        if (seenIds.add(v.id) && seenUrls.add(v.url)) {
+                            videos.add(v)
+                            if (!v.portrait) addedWide++
+                        }
+                    }
+                }
+                if (ensureWide && addedWide >= 5) break
+            }
+            persistCacheAsync()
+        } catch (_: Exception) {
+        } finally {
+            loadingMore = false
+        }
     }
 
     suspend fun loadUserState() {
@@ -189,7 +408,10 @@ object Feed {
 
     private fun bump(id: String, d: Int) {
         val i = videos.indexOfFirst { it.id == id }
-        if (i >= 0) videos[i] = videos[i].copy(likes = maxOf(0, videos[i].likes + d))
+        if (i >= 0) {
+            videos[i] = videos[i].copy(likes = maxOf(0, videos[i].likes + d))
+            persistCacheAsync()
+        }
     }
 
     suspend fun toggleLike(id: String) {
@@ -212,16 +434,29 @@ object Feed {
     suspend fun toggleFollow(id: String) {
         val u = App.userId ?: return
         if (id.isBlank() || id == u) return
-        if (following[id] == true) { following.remove(id); api("DELETE", "/rest/v1/follows?follower_id=eq.$u&following_id=eq.$id") }
-        else { following[id] = true; api("POST", "/rest/v1/follows", JSONObject().put("follower_id", u).put("following_id", id).toString()) }
+        val wasFollowing = following[id] == true
+        val delta = if (wasFollowing) -1L else 1L
+        for (i in videos.indices) {
+            if (videos[i].userId == id) {
+                videos[i] = videos[i].copy(followers = maxOf(0L, videos[i].followers + delta))
+            }
+        }
+        persistCacheAsync()
+        if (wasFollowing) {
+            following.remove(id)
+            api("DELETE", "/rest/v1/follows?follower_id=eq.$u&following_id=eq.$id")
+        } else {
+            following[id] = true
+            api("POST", "/rest/v1/follows", JSONObject().put("follower_id", u).put("following_id", id).toString())
+        }
     }
 
     private var gp: android.content.SharedPreferences? = null
     fun init(ctx: Context) {
         if (gp != null) return
-        gp = ctx.applicationContext.getSharedPreferences("guest_saved", Context.MODE_PRIVATE)
-        feedPrefs = ctx.applicationContext.getSharedPreferences("feed_cache", Context.MODE_PRIVATE)
-        loadCached()
+        appCtx = ctx.applicationContext
+        gp = appCtx!!.getSharedPreferences("guest_saved", Context.MODE_PRIVATE)
+        CoroutineScope(Dispatchers.IO).launch { restoreFromCache() }
         if (App.userId == null) gp!!.getStringSet("ids", emptySet())!!.forEach { saved[it] = true }
     }
 
@@ -241,12 +476,24 @@ object Feed {
     }
 
     suspend fun comments(id: String): List<Comment>? {
-        val (c, t) = api("GET", "/rest/v1/comments?video_id=eq.$id&is_deleted=eq.false&select=id,content,profiles!comments_user_id_fkey(full_name)&order=created_at.desc&limit=100")
+        val (c, t) = api("GET", "/rest/v1/comments?video_id=eq.$id&is_deleted=eq.false&select=id,user_id,content,created_at,likes,profiles!comments_user_id_fkey(full_name,avatar_url,verified)&order=created_at.desc&limit=100")
         if (c != 200) return null
         return try {
             val a = JSONArray(t)
-            (0 until a.length()).map { val o = a.getJSONObject(it)
-                Comment(o.getString("id"), o.optString("content"), o.optJSONObject("profiles")?.optString("full_name").orEmpty().ifBlank { "مستخدم" }) }
+            (0 until a.length()).map {
+                val o = a.getJSONObject(it)
+                val pr = o.optJSONObject("profiles")
+                Comment(
+                    id = o.getString("id"),
+                    text = o.optString("content"),
+                    author = pr?.optString("full_name").orEmpty().ifBlank { "مستخدم" },
+                    avatar = if (pr == null || pr.isNull("avatar_url")) null else pr.optString("avatar_url"),
+                    at = o.optString("created_at").take(10),
+                    likes = o.optInt("likes", 0),
+                    verified = pr?.optBoolean("verified", false) == true,
+                    userId = o.optString("user_id")
+                )
+            }
         } catch (e: Exception) { null }
     }
 
@@ -255,7 +502,10 @@ object Feed {
         val (c, _) = api("POST", "/rest/v1/comments", JSONObject().put("user_id", u).put("video_id", id).put("content", text).toString())
         if (c in 200..299) {
             val i = videos.indexOfFirst { it.id == id }
-            if (i >= 0) videos[i] = videos[i].copy(comments = videos[i].comments + 1)
+            if (i >= 0) {
+                videos[i] = videos[i].copy(comments = videos[i].comments + 1)
+                persistCacheAsync()
+            }
             return true
         }
         return false

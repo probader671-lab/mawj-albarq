@@ -12,10 +12,20 @@ android {
         versionCode = System.getenv("BUILD_VERSION_CODE")?.toIntOrNull() ?: 1
         versionName = "1.0." + (System.getenv("BUILD_VERSION_CODE") ?: "0")
     }
-    signingConfigs { create("fixed") {
-        storeFile = rootProject.file("release.keystore"); storePassword = "mawjalbarq2026"
-        keyAlias = "mawj"; keyPassword = "mawjalbarq2026" } }
-    buildTypes { debug { isMinifyEnabled = false; signingConfig = signingConfigs.getByName("fixed") } }
+    signingConfigs {
+        create("debugConfig") {
+            storeFile = file("${rootDir}/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+    buildTypes {
+        debug {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debugConfig")
+        }
+    }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true; buildConfig = true }
@@ -37,4 +47,5 @@ dependencies {
     implementation("androidx.media3:media3-common:1.3.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 }

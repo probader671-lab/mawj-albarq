@@ -10,10 +10,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         App.init(applicationContext)
+        Feed.init(applicationContext)
         val prefs = ThemePrefs(applicationContext)
         Theme.prefs = prefs
         setContent {
             MawjTheme(Accents[prefs.index]) {
+                LaunchedEffect(Unit) { Feed.load() }
                 var splash by remember { mutableStateOf(true) }
                 if (splash) SplashScreen { splash = false } else AppRoot(prefs)
             }

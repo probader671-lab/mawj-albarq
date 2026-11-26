@@ -5,21 +5,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
@@ -27,28 +24,48 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
+    if (!App.loggedIn) {
+        AuthPortalScreen(prefs = prefs, onSuggestions = onSuggestions)
+        return
+    }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp).padding(bottom = 100.dp)) {
         Text("حسابي", color = Color.White, fontSize = 24.sp, fontFamily = Cairo)
         Spacer(Modifier.height(16.dp))
-        if (App.loggedIn) {
-            var me by remember { mutableStateOf<ProfileData?>(null) }
-            var edit by remember { mutableStateOf(false) }
-            LaunchedEffect(App.userId) { me = App.userId?.let { loadProfile(it) } }
-            me?.let { d ->
-                ProfileHeader(d, isMe = true, onPlay = { vid -> Feed.videos.indexOfFirst { it.id == vid }.let { if (it >= 0) { Feed.jumpTo = it; onOpenFeed() } } }) {
-                    Text(App.email, color = Color(0xFF8A8F9C), fontSize = 12.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { edit = true }) { Text("تعديل الملف") }
-                        OutlinedButton(onClick = { App.logout() }) { Text("تسجيل الخروج") }
+        var me by remember { mutableStateOf<ProfileData?>(null) }
+        var edit by remember { mutableStateOf(false) }
+        LaunchedEffect(App.userId) { me = App.userId?.let { loadProfile(it) } }
+        me?.let { d ->
+            ProfileHeader(d, isMe = true, onPlay = { vid ->
+                val target = d.videos.firstOrNull { it.id == vid } ?: Feed.videos.firstOrNull { it.id == vid }
+                if (target != null) Feed.open(target, onOpenFeed)
+            }) {
+                Text(App.email, color = Color(0xFF8A8F9C), fontSize = 12.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { edit = true }) {
+                        Icon(Icons.Filled.Edit, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("تعديل الملف")
+                    }
+                    OutlinedButton(onClick = { App.logout() }) {
+                        Icon(Icons.AutoMirrored.Filled.Logout, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("تسجيل الخروج")
                     }
                 }
-                if (edit) EditProfileSheet(d) { ok -> edit = false; if (ok) scope.launch { me = App.userId?.let { loadProfile(it) } } }
-            } ?: Text(App.name, color = MaterialTheme.colorScheme.primary, fontSize = 20.sp, fontFamily = Cairo)
-        } else AuthForm()
+            }
+            if (edit) EditProfileSheet(d) { ok -> edit = false; if (ok) scope.launch { me = App.userId?.let { loadProfile(it) } } }
+        } ?: Text(App.name, color = MaterialTheme.colorScheme.primary, fontSize = 20.sp, fontFamily = Cairo)
         Spacer(Modifier.height(16.dp))
-        OutlinedButton(onClick = onSuggestions) { Text("لوحة الاقتراحات") }
-        Spacer(Modifier.height(28.dp))
-        Text("لون التطبيق", color = Color.White, fontSize = 16.sp, fontFamily = Cairo)
+        OutlinedButton(onClick = onSuggestions) {
+            Icon(Icons.Filled.Lightbulb, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("لوحة الاقتراحات")
+        }
+        Spacer(Modifier.height(24.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Filled.Palette, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Text("لون التطبيق", color = Color.White, fontSize = 16.sp, fontFamily = Cairo)
+        }
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Accents.forEachIndexed { i, a ->
@@ -58,53 +75,6 @@ fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions:
         }
         Spacer(Modifier.height(8.dp))
         Text(Accents[prefs.index].name, color = Color(0xFF8A8F9C), fontSize = 13.sp)
-    }
-}
-
-
-@Composable
-fun AuthForm() {
-    val scope = rememberCoroutineScope()
-    var signup by remember { mutableStateOf(false) }
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var pass by remember { mutableStateOf("") }
-    var busy by remember { mutableStateOf(false) }
-    var err by remember { mutableStateOf<String?>(null) }
-    val tr = androidx.compose.animation.core.rememberInfiniteTransition(label = "glow")
-    val ang by tr.animateFloat(0f, 360f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(4000, easing = androidx.compose.animation.core.LinearEasing)), label = "a")
-    val c1 = MaterialTheme.colorScheme.primary; val c2 = MaterialTheme.colorScheme.secondary
-    Box(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(26.dp))
-        .drawBehind {
-            rotate(ang) { drawRect(Brush.sweepGradient(listOf(c1, c2, Color.Transparent, c1)), topLeft = Offset(-size.width, -size.width), size = androidx.compose.ui.geometry.Size(size.width * 3, size.width * 3)) }
-        }.padding(2.dp)) {
-    Column(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surface).padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(if (signup) "إنشاء حساب" else "تسجيل الدخول", color = Color.White, fontSize = 18.sp, fontFamily = Cairo)
-        if (signup) OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("الاسم") }, singleLine = true)
-        OutlinedTextField(email, { email = it.trim() }, Modifier.fillMaxWidth(), label = { Text("البريد الإلكتروني") }, singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
-        OutlinedTextField(pass, { pass = it }, Modifier.fillMaxWidth(), label = { Text("كلمة المرور") }, singleLine = true,
-            visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
-        err?.let { Text(it, color = Color(0xFFFF6B6B), fontSize = 13.sp) }
-        Button(enabled = !busy && email.isNotBlank() && pass.length >= 8, modifier = Modifier.fillMaxWidth(), onClick = {
-            busy = true; err = null
-            scope.launch {
-                err = if (signup) signUp(name.trim(), email, pass) else signIn(email, pass)
-                busy = false
-            }
-        }) { Text(if (busy) "..." else if (signup) "إنشاء الحساب" else "دخول") }
-        TextButton(onClick = { signup = !signup; err = null }) {
-            Text(if (signup) "لديك حساب؟ سجّل الدخول" else "ليس لديك حساب؟ أنشئ حساباً")
-        }
-        GoogleButton()
-    }
-    }
-}
-
-@Composable
-fun GoogleButton() {
-    OutlinedButton(onClick = { GoogleAuth.start?.invoke() }, modifier = Modifier.fillMaxWidth(), enabled = GoogleAuth.enabled) {
-        Text(if (GoogleAuth.enabled) "المتابعة باستخدام Google" else "Google (قريباً)")
     }
 }
 

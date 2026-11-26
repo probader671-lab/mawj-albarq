@@ -1,0 +1,4897 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Open Graph / WhatsApp Preview Tags -->
+    <meta property="og:title" content="Pagebook - مشاهدة الفيديو">
+    <meta property="og:description" content="شاهد أفضل الفيديوهات على منصة Pagebook. تجربة مشاهدة ممتعة وآمنة.">
+    <meta property="og:image" content="https://raw.githubusercontent.com/your-repo/pagebook/main/pagebook.jpg"> <!-- Placeholder for branding -->
+    <meta property="og:url" content="">
+    <meta property="og:type" content="video.other">
+    <meta property="og:site_name" content="Pagebook">
+    
+    <title>Pagebook - مشاهدة الفيديو</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap">
+    <script src="security-core.js"></script> <!-- Fort Knox Security & Professional UI -->
+    <style>
+        :root {
+            --primary: #ff6600;
+            --primary-dark: #cc5200;
+            /* مظهر ليلي مريح للعين: خلفية دافئة-باردة قاتمة وليست سوداء مطلقة */
+            --dark: #0b1720; /* نغمة داكنة مائلة للأزرق لتهدئة العين */
+            --dark-light: rgba(12, 18, 24, 0.62); /* لأسطح البطاقة شبة شفافة لتقليل التباين */
+            --light: #ffffff;
+            --text-main: #e6eef8; /* لون نص ناعم للقراءة مريحة */
+            --text-sec: #aeb6bd; /* لون ثانوي أقل سطوعًا */
+            --border-color: rgba(255, 255, 255, 0.04); /* حدود خفيفة لتمييز البطاقات */
+            --shadow: 0 8px 30px rgba(0, 0, 0, 0.35); /* ظل أخف وأوسع */
+            --card-bg: rgba(255,255,255,0.02);
+        }
+
+        .verified-badge {
+            color: #1da1f2;
+            margin-right: 5px;
+            font-size: 0.9em;
+            vertical-align: middle;
+            display: inline-block;
+        }
+
+        /* Light Mode Variables */
+        body.light-mode {
+            --dark: #f5f5f5;
+            --dark-light: #ffffff;
+            --light: #333333;
+            --text-main: #333333;
+            --text-sec: #666;
+            --border-color: rgba(0, 0, 0, 0.1);
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            --primary: #ff6600;
+            --primary-dark: #cc5200;
+        }
+
+        /* Sky Mode Variables - REAL SKY WITH CLOUDS */
+        body.sky-mode {
+            --dark: linear-gradient(180deg, #4da6ff 0%, #b3e0ff 100%);
+            --dark-light: rgba(255, 255, 255, 0.9);
+            --light: #333333;
+            --text-main: #2c3e50;
+            --text-sec: #5d6d7e;
+            --border-color: rgba(0, 0, 0, 0.08);
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --primary: #ff6600;
+            --primary-dark: #cc5200;
+
+            /* تصحيحات خاصة بوضع السحاب: الخلفية (السحب) تبقى وراء العناصر، والعناصر ذات خلفيات معتمة ومقروءة */
+            --card-bg: rgba(255,255,255,0.95); /* بطاقات بيضاء خفيفة */
+            --navbar-bg: rgba(255,255,255,0.92);
+            --navbar-text: #12313b;
+            --modal-bg: rgba(255,255,255,0.96);
+        }
+
+        /* Cloud Animation Elements - REAL SKY WITH MANY CLEAR CLOUDS */
+        .clouds-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1; /* keep behind main UI */
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            overflow: hidden;
+        }
+
+        body.sky-mode .clouds-container {
+            opacity: 1;
+        }
+
+        /* Realistic Cloud Shapes - Fixed Distribution (sky look) */
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 100px;
+            filter: blur(8px);
+            opacity: 0.95;
+            animation: floatCloud linear infinite;
+            box-shadow: 0 5px 25px rgba(255, 255, 255, 0.5);
+            pointer-events: none;
+        }
+
+        .cloud::before,
+        .cloud::after {
+            content: '';
+            position: absolute;
+            background: inherit;
+            border-radius: 50%;
+        }
+
+        .cloud::before {
+            width: 50%;
+            height: 80%;
+            top: -40%;
+            left: 15%;
+        }
+
+        .cloud::after {
+            width: 40%;
+            height: 60%;
+            top: -30%;
+            right: 15%;
+        }
+
+        /* Cloud positions - focus on top and bottom regions only */
+        .c1 {
+            width: 150px;
+            height: 50px;
+            top: 6%;
+            left: -200px;
+            animation-duration: 25s;
+        }
+
+        .c2 {
+            width: 220px;
+            height: 70px;
+            top: 12%;
+            left: -300px;
+            animation-duration: 35s;
+            animation-delay: 5s;
+        }
+
+        .c3 {
+            width: 120px;
+            height: 40px;
+            top: 3%;
+            left: -150px;
+            animation-duration: 20s;
+            animation-delay: 2s;
+        }
+
+        .c4 {
+            width: 280px;
+            height: 90px;
+            top: 8%;
+            left: -400px;
+            animation-duration: 45s;
+            animation-delay: 8s;
+        }
+
+        .c5 {
+            width: 180px;
+            height: 60px;
+            top: 15%;
+            left: -250px;
+            animation-duration: 30s;
+            animation-delay: 4s;
+        }
+
+        .c6 {
+            width: 200px;
+            height: 65px;
+            bottom: 5%;
+            left: -200px;
+            animation-duration: 28s;
+        }
+
+        .c7 {
+            width: 140px;
+            height: 45px;
+            bottom: 12%;
+            left: -300px;
+            animation-duration: 38s;
+            animation-delay: 3s;
+        }
+
+        .c8 {
+            width: 250px;
+            height: 80px;
+            bottom: 3%;
+            left: -150px;
+            animation-duration: 42s;
+            animation-delay: 7s;
+        }
+
+        .c9 {
+            width: 160px;
+            height: 55px;
+            bottom: 15%;
+            left: -400px;
+            animation-duration: 33s;
+            animation-delay: 1s;
+        }
+
+        .c10 {
+            width: 190px;
+            height: 60px;
+            bottom: 8%;
+            left: -250px;
+            animation-duration: 31s;
+            animation-delay: 6s;
+        }
+
+        @keyframes floatCloud {
+            0% {
+                transform: translateX(0) translateY(0);
+                opacity: 0.8;
+            }
+
+            25% {
+                transform: translateX(25vw) translateY(-8px);
+                opacity: 0.9;
+            }
+
+            50% {
+                transform: translateX(50vw) translateY(4px);
+                opacity: 0.8;
+            }
+
+            75% {
+                transform: translateX(75vw) translateY(-6px);
+                opacity: 0.7;
+            }
+
+            100% {
+                transform: translateX(110vw) translateY(0);
+                opacity: 0.8;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--dark);
+            color: var(--text-main);
+            transition: all 0.3s ease;
+            min-height: 100vh;
+            overflow-x: hidden;
+            user-select: none;
+            /* منع تحديد النصوص */
+            -webkit-user-select: none;
+            caret-color: transparent;
+            /* إخفاء مؤشر الكتابة العشوائي */
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Navigation */
+        .navbar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            left: 0;
+            background: rgba(12,18,24,0.64);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+            z-index: 1000;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            transition: all 0.28s ease;
+            border-bottom: 1px solid rgba(255,255,255,0.02);
+        }
+
+        /* Sky mode navbar override - make it light and readable above the clouds */
+        body.sky-mode .navbar {
+            background: var(--navbar-bg);
+            color: var(--navbar-text);
+            border-bottom-color: rgba(0,0,0,0.05);
+        }
+
+        body.sky-mode .logo-section,
+        body.sky-mode .nav-container,
+        body.sky-mode .user-actions {
+            color: var(--navbar-text);
+        }
+
+        /* Light mode navbar override - make it bright, clear and comfortable */
+        body.light-mode .navbar {
+            background: #ffffff; /* clear white bar */
+            color: #16222a; /* dark teal-ish for less harsh black */
+            border-bottom: 1px solid rgba(22,34,42,0.06);
+            box-shadow: 0 6px 18px rgba(22,34,42,0.04);
+            backdrop-filter: none;
+        }
+
+        body.light-mode .logo-section,
+        body.light-mode .nav-container,
+        body.light-mode .user-actions {
+            color: #16222a;
+        }
+
+        /* Ensure controls (search, menu, theme) are readable in light mode */
+        body.light-mode .search-input {
+            background: #f0f0f0;
+            color: #16222a;
+            border: 1px solid #ddd;
+        }
+
+        body.sky-mode .search-input {
+            color: var(--navbar-text);
+            background: rgba(255, 255, 255, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        body.light-mode .menu-toggle,
+        body.light-mode .control-btn,
+        body.light-mode .theme-toggle-wrapper {
+            color: #16222a;
+            border-color: rgba(22,34,42,0.06);
+        }
+
+        .nav-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .right-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: var(--text-main);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-main);
+            cursor: pointer;
+            position: relative;
+            z-index: 10002;
+            pointer-events: auto;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pagebook {
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .tagline {
+            font-size: 11px;
+            color: var(--text-sec);
+            margin-top: 2px;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle-wrapper {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            background: var(--dark-light);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle-wrapper:hover {
+            transform: scale(1.05);
+            border-color: var(--primary);
+        }
+
+        .theme-icon-slider {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .theme-icon {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .theme-icon i {
+            font-size: 22px;
+            transition: all 0.3s ease;
+        }
+
+        .fa-moon {
+            color: #f1c40f;
+        }
+
+        .fa-sun {
+            color: #ff9800;
+        }
+
+        .fa-cloud-sun {
+            color: #2196f3;
+        }
+
+        .search-section {
+            flex: 1;
+            max-width: 600px;
+            margin: 0 30px;
+        }
+
+        .search-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 50px 12px 20px;
+            background: rgba(125, 125, 125, 0.1);
+            border: 1px solid var(--border-color);
+            border-radius: 30px;
+            color: var(--text-main);
+            font-size: 14px;
+            font-family: 'Cairo', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(125, 125, 125, 0.2);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-sec);
+        }
+
+        .search-btn {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-main);
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .user-actions img {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary);
+        }
+
+        /* Watch Page */
+        .watch-container {
+            max-width: 1400px;
+            margin: 80px auto 40px;
+            padding: 0 20px;
+        }
+
+        .watch-layout {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+        }
+
+        @media (max-width: 1200px) {
+            .watch-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        /* ضع الشريط الجانبي (الاقتراحات) على اليسار كما هو مطلوب */
+        .suggestions-sidebar { grid-column: 2; }
+        .video-section { grid-column: 1; }
+
+        /* Video Player Section */
+        .video-section {
+            background: var(--card-bg);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 28px rgba(0,0,0,0.32);
+            border: 1px solid var(--border-color);
+            transition: all 0.28s ease;
+        }
+
+        .video-player-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+            overflow: hidden;
+        }
+
+        .video-player {
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            display: block;
+        }
+
+        /* Professional Custom Video Controls - Refined */
+        .video-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.5) 50%, transparent 100%);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 10;
+        }
+
+        .video-player-wrapper:hover .video-controls,
+        .video-player-wrapper.user-active .video-controls {
+            opacity: 1;
+        }
+
+        .video-controls.hide-controls {
+            opacity: 0 !important;
+            cursor: none;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+            transition: height 0.2s;
+        }
+
+        .progress-container:hover {
+            height: 6px;
+        }
+
+        .progress-buffer {
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.7);
+            /* Even more visible */
+            width: 0%;
+            border-radius: 2px;
+            z-index: 1;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+            /* Stronger glow */
+        }
+
+        .progress-bar-filled {
+            height: 100%;
+            background: #ff6600;
+            width: 0%;
+            border-radius: 2px;
+            position: absolute;
+            right: 0;
+            /* Anchor to right for RTL */
+            top: 0;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .progress-thumb {
+            position: absolute;
+            left: -8px;
+            /* Correct leading edge for RTL */
+            top: 50%;
+            transform: translateY(-50%);
+            /* Visible by default but small */
+            width: 16px;
+            height: 16px;
+            background: #4CAF50;
+            border-radius: 50%;
+            border: 2px solid white;
+            transition: all 0.2s;
+            z-index: 5;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        .progress-container:hover .progress-thumb {
+            transform: translateY(-50%) scale(1.4);
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.8);
+        }
+
+        .controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+            height: 30px;
+        }
+
+        .controls-left,
+        .controls-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .control-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover {
+            color: #ff6600;
+            transform: scale(1.1);
+        }
+
+        .time-text {
+            font-size: 12px;
+            font-weight: 500;
+            font-family: 'Cairo', sans-serif;
+            letter-spacing: 0.5px;
+        }
+
+        /* Video Info Section */
+        .video-info-section {
+            padding: 25px;
+        }
+
+        .video-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .video-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .video-stats {
+            color: var(--text-sec);
+            font-size: 14px;
+        }
+
+        .video-actions {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: rgba(125, 125, 125, 0.1);
+            border: 1px solid var(--border-color);
+            border-radius: 25px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+            border: none;
+            font-family: 'Cairo', sans-serif;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-btn:hover {
+            background: rgba(125, 125, 125, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .action-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        /* Download Button - now green */
+        .download-btn {
+            background: linear-gradient(45deg, #4CAF50, #2e7d32);
+            color: white;
+            border: none;
+            transition: all 0.22s ease;
+        }
+
+        .download-btn:hover {
+            background: linear-gradient(45deg, #2e7d32, #1b5e20);
+            box-shadow: 0 6px 18px rgba(46,125,50,0.18);
+            transform: translateY(-2px);
+        }
+
+        .download-btn.downloading {
+            background: linear-gradient(45deg, #43a047, #2e7d32);
+        }
+
+        .progress-bar-bg {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            width: 0%;
+            background: rgba(255, 255, 255, 0.8);
+            transition: width 0.1s linear;
+        }
+
+        .action-btn i {
+            font-size: 18px;
+        }
+
+        /* Page Section */
+        .page-section {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 0;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 25px;
+        }
+
+        .page-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .page-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary);
+        }
+
+        .page-details h3 {
+            color: var(--text-main);
+            font-size: 16px;
+            margin-bottom: 4px;
+            cursor: pointer;
+        }
+
+        .page-details h3:hover {
+            color: var(--primary);
+        }
+
+        .page-followers {
+            color: var(--text-sec);
+            font-size: 13px;
+        }
+
+        .follow-btn {
+            padding: 10px 24px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            font-family: 'Cairo', sans-serif;
+            position: relative;
+            overflow: hidden; /* hide seams when morphing */
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+
+        .follow-btn .follow-inner {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Improved progress bar that sits inside the button and won't leave a line when button transforms */
+        .follow-btn .follow-progress {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            height: 4px;
+            width: 100%;
+            background: linear-gradient(90deg, rgba(255,230,120,0.98), rgba(255,196,0,0.98));
+            transform-origin: left center;
+            transform: scaleX(0);
+            transition: transform 0.45s cubic-bezier(.2,.9,.2,1);
+            border-bottom-left-radius: 25px;
+            border-bottom-right-radius: 25px;
+            box-shadow: inset 0 -1px rgba(0,0,0,0.06);
+        }
+
+        .follow-btn.morphing {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        }
+
+        /* visually-disable pulse and balloons (user preference) */
+        .follow-btn.pulse::after { display: none !important; }
+
+        @keyframes pulseGlow {
+            0% { opacity: 0; transform: scale(0.96); }
+            50% { opacity: 1; transform: scale(1.04); }
+            100% { opacity: 0; transform: scale(1.08); }
+        }
+
+        /* active icon style */
+        .follow-btn.active .follow-icon i {
+            color: #111;
+            transform: scale(1.02);
+        }
+
+        /* disable balloon visuals */
+        .balloon-screen, .balloon-wrap, .button-balloon { display: none !important; }
+
+        /* keep balloon keyframes defined but not used */
+        @keyframes balloonFloat {
+            0% { transform: translateY(0) translateX(0) rotate(0deg) scale(0.98); opacity: 1; }
+            80% { opacity: 0.9; }
+            100% { transform: translateY(-220px) translateX(40px) rotate(16deg) scale(1.06); opacity: 0.02; }
+        }
+
+        .button-balloon .balloon-string {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: -14px;
+            width: 2px;
+            height: 12px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.02));
+            border-radius: 2px;
+        }
+
+        @keyframes balloonFloat {
+            0% { transform: translateY(0) translateX(0) rotate(0deg) scale(0.98); opacity: 1; }
+            80% { opacity: 0.9; }
+            100% { transform: translateY(-180px) translateX(22px) rotate(12deg) scale(1.04); opacity: 0.02; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .follow-btn .follow-progress { transition: none !important; }
+            .join-bubble { animation: none !important; }
+            .welcome-banner { transition: none !important; }
+            .button-balloon { animation: none !important; }
+        }
+
+        .follow-btn .follow-text {
+            display: inline-block;
+            min-width: 44px;
+            text-align: center;
+        }
+
+        .follow-btn:disabled { opacity: 0.9; cursor: default; }
+
+        .follow-btn:focus-visible {
+            outline: 3px solid rgba(255,196,0,0.18);
+            outline-offset: 4px;
+            border-radius: 26px;
+        }
+
+        /* welcome banner */
+        .welcome-banner {
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-10px) scale(0.98);
+            background: rgba(20, 20, 20, 0.9);
+            color: #fff;
+            padding: 12px 18px;
+            border-radius: 10px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+            font-weight: 700;
+            z-index: 7000;
+            opacity: 0;
+            transition: all 0.36s cubic-bezier(.2,.9,.2,1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .welcome-banner.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0) scale(1);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .follow-btn .follow-progress { transition: none !important; }
+            .join-bubble { animation: none !important; }
+            .welcome-banner { transition: none !important; }
+        }
+
+        /* Description Section */
+        .description-section {
+            padding: 20px;
+            background: rgba(125, 125, 125, 0.05);
+            border-radius: 15px;
+            margin-bottom: 25px;
+        }
+
+        .description-text {
+            color: var(--text-main);
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        /* Comments Section */
+        .comments-section {
+            margin-top: 30px;
+        }
+
+        .comments-header {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 20px;
+        }
+
+        .comment-input-area {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .comment-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .comment-input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .comment-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(125, 125, 125, 0.1);
+            border: 1px solid var(--border-color);
+            border-radius: 25px;
+            color: var(--text-main);
+            font-size: 14px;
+            transition: all 0.3s ease;
+            font-family: 'Cairo', sans-serif;
+            border: none;
+        }
+
+        .comment-input:focus {
+            outline: none;
+            background: rgba(125, 125, 125, 0.15);
+            border-color: var(--primary);
+        }
+
+        .comment-submit {
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        .comment-submit:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Comments List */
+        .comments-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .comment {
+            display: flex;
+            gap: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .comment-content {
+            flex: 1;
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 14px;
+        }
+
+        .comment-time {
+            color: var(--text-sec);
+            font-size: 12px;
+        }
+
+        .comment-text {
+            color: var(--text-main);
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        /* Sidebar - Same styling as main page */
+        .sidebar {
+            position: fixed;
+            top: 60px;
+            right: 0;
+            bottom: 0;
+            width: 240px;
+            background-color: var(--dark-light);
+            padding: 12px 0;
+            transform: translateX(0);
+            transition: transform 0.3s ease;
+            z-index: 99;
+            overflow-y: auto;
+            border-left: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(100%);
+        }
+
+        .sidebar-icon {
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            color: var(--light);
+            text-decoration: none;
+            font-size: 14px;
+            transition: 0.3s;
+        }
+
+        .sidebar-icon:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .sidebar-icon i {
+            margin-left: 15px;
+            width: 24px;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .sidebar-icon.active {
+            background-color: rgba(255,255,255,0.05);
+            color: var(--primary);
+            border-right: 3px solid var(--primary);
+        }
+
+        /* Light mode sidebar */
+        body.light-mode .sidebar {
+            background-color: #ffffff;
+            border-left-color: rgba(0,0,0,0.1);
+            color: #333;
+        }
+
+        body.light-mode .sidebar-icon {
+            color: #555;
+        }
+
+        body.light-mode .sidebar-icon:hover,
+        body.light-mode .sidebar-icon.active {
+            background-color: #f0f0f0;
+            color: var(--primary);
+        }
+
+        /* Sky mode sidebar */
+        body.sky-mode .sidebar {
+            background-color: var(--navbar-bg);
+            border-left-color: rgba(0,0,0,0.05);
+            color: var(--navbar-text);
+        }
+
+        body.sky-mode .sidebar-icon {
+            color: var(--navbar-text);
+        }
+
+        body.sky-mode .sidebar-icon:hover,
+        body.sky-mode .sidebar-icon.active {
+            background-color: rgba(22,34,42,0.06);
+            color: var(--primary);
+        }
+
+        /* Sidebar Suggestions */
+        .suggestions-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            /* Increased gap */
+        }
+
+        .suggestion-card {
+            display: flex;
+            gap: 12px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.28s ease;
+            padding: 12px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.28);
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+            /* Added spacing between cards */
+        }
+
+        .suggestion-card:hover {
+            background: rgba(125, 125, 125, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .suggestion-thumbnail {
+            width: 168px;
+            height: 94px;
+            border-radius: 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+            position: relative;
+            background: rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .suggestion-thumbnail i {
+            font-size: 32px;
+            color: var(--text-sec);
+        }
+
+        .suggestion-duration {
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .suggestion-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-width: 0;
+        }
+
+        .suggestion-title {
+            color: var(--text-main);
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.3;
+            margin-bottom: 6px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .suggestion-page {
+            color: var(--text-sec);
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .suggestion-meta {
+            color: var(--text-sec);
+            font-size: 11px;
+        }
+
+        /* Horizontal Suggestions Rail */
+        .suggestions-rail-container {
+            margin-top: 30px;
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .rail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .rail-title {
+            color: var(--text-main);
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .rail-scroll-wrapper {
+            display: flex;
+            overflow-x: auto;
+            gap: 15px;
+            padding-bottom: 10px;
+        }
+
+        .rail-scroll-wrapper::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .rail-scroll-wrapper::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 3px;
+        }
+
+        .rail-video-card {
+            flex: 0 0 220px;
+            background: var(--dark-light);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .rail-video-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .rail-thumbnail {
+            width: 100%;
+            height: 124px;
+            background: rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .rail-thumbnail i {
+            font-size: 48px;
+            color: var(--text-sec);
+        }
+
+        .rail-info {
+            padding: 12px;
+        }
+
+        .rail-video-title {
+            color: var(--text-main);
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.3;
+        }
+
+        /* Animation Overlay - IMPROVED */
+        .animation-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        /* PROFESSIONAL HEART ANIMATION - MEDIUM WITH EXPANDING LINES */
+        .heart-animation {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .heart-main {
+            font-size: 150px;
+            /* Medium heart */
+            color: #ff3366;
+            filter: drop-shadow(0 0 20px rgba(255, 51, 102, 0.6));
+            animation: heartPopup 5s ease forwards;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Expanding rotating circles - ENLARGED */
+        .rotating-circle {
+            position: absolute;
+            width: 350px;
+            /* Enlarged from 220px */
+            height: 350px;
+            border: 6px solid transparent;
+            border-radius: 50%;
+            z-index: 3;
+            opacity: 0;
+            animation: circleRotate 2.5s ease-out infinite;
+        }
+
+        .circle-orange {
+            border-top-color: #ff6600;
+            border-right-color: #ff6600;
+            box-shadow: 0 0 20px #ff6600;
+            animation-delay: 0s;
+        }
+
+        .circle-green {
+            border-bottom-color: #4CAF50;
+            border-left-color: #4CAF50;
+            box-shadow: 0 0 20px #4CAF50;
+            animation-delay: 1.2s;
+        }
+
+        @keyframes circleRotate {
+            0% {
+                transform: rotate(0deg) scale(0.8);
+                opacity: 0;
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            80% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: rotate(360deg) scale(1.4);
+                opacity: 0;
+            }
+        }
+
+        @keyframes seekFade {
+            0% {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0;
+            }
+
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        @keyframes heartPopup {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+
+            10% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+
+            15% {
+                transform: scale(1);
+            }
+
+            20% {
+                transform: scale(1.1);
+            }
+
+            25% {
+                transform: scale(1);
+            }
+
+            90% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 0;
+            }
+        }
+
+        /* PROFESSIONAL SAVE ANIMATION - LIQUID FLOW */
+        .save-animation {
+            text-align: center;
+        }
+
+        .save-icon-wrapper {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            margin: 0 auto;
+        }
+
+        .save-outline {
+            position: absolute;
+            font-size: 130px;
+            color: #f1c40f;
+            top: 15px;
+            left: 15px;
+            z-index: 3; /* above liquid */
+        }
+
+        .save-fill {
+            position: absolute;
+            font-size: 130px;
+            color: #f1c40f;
+            top: 15px;
+            left: 15px;
+            opacity: 0;
+            z-index: 6; /* always above liquid and drops */
+            transition: opacity 0.3s ease;
+        }
+
+        .liquid-container {
+            position: absolute;
+            width: 95px;
+            /* Matches the bookmark body width */
+            height: 130px;
+            overflow: hidden;
+            top: 15px;
+            left: 18px; /* moved slightly left to align under the bookmark */
+            /* Center aligned with fa-bookmark */
+            z-index: 1;
+            /* Precise Bookmark shape: Top rect + bottom V-cut */
+            clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 50% 80%, 0% 100%);
+        }
+
+        .liquid-fill {
+            position: absolute;
+            z-index: 1; /* ensure under the icon */
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            overflow: hidden; /* enforce clipping for waves */
+            background: linear-gradient(to top, #f39c12, #f1c40f);
+            transition: height 4s cubic-bezier(0.1, 0, 0.2, 1);
+        }
+
+        /* Wave elements inside the liquid for fluid motion */
+        .wave {
+            position: absolute;
+            bottom: 0;
+            left: -50%;
+            width: 200%;
+            height: 30%;
+            background: rgba(255,255,255,0.12);
+            border-radius: 50%;
+            transform-origin: center bottom;
+            opacity: 0.9;
+            mix-blend-mode: screen;
+            pointer-events: none;
+            animation: waveShift 3.6s ease-in-out infinite;
+        }
+
+        .wave.wave-2 { opacity: 0.6; height: 20%; animation-duration: 4.6s; }
+        .wave.wave-3 { opacity: 0.5; height: 24%; animation-duration: 2.8s; }
+
+        @keyframes waveShift {
+            0% { transform: translateX(-10%) translateY(0) scaleX(1); }
+            50% { transform: translateX(10%) translateY(-6%) scaleX(1.05); }
+            100% { transform: translateX(-10%) translateY(0) scaleX(1); }
+        }
+
+        .liquid-drops {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .liquid-fill::after {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -50%;
+            width: 200%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.45);
+            border-radius: 45%;
+            animation: liquidWave 2s infinite linear;
+            mix-blend-mode: screen;
+        }
+
+        @keyframes liquidWave {
+            0% {
+                transform: translateX(0) rotate(0deg);
+            }
+
+            100% {
+                transform: translateX(-25%) rotate(360deg);
+            }
+        }
+
+        .drop {
+            position: absolute;
+            background: rgba(241,196,15,0.98);
+            border-radius: 50%;
+            width: 6px;
+            height: 6px;
+            will-change: transform, opacity;
+            transform: translateX(var(--tx,0)) translateY(0) rotate(var(--rot,0deg));
+            opacity: 0;
+        }
+
+        @keyframes dropFall {
+            0% {
+                transform: translateX(var(--tx,0)) translateY(-12%) rotate(var(--rot,0deg));
+                opacity: 0;
+            }
+
+            15% {
+                opacity: 1;
+            }
+
+            65% {
+                transform: translateX(calc(var(--tx,0) * 0.6)) translateY(70%) rotate(calc(var(--rot,0deg) * 0.6));
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateX(calc(var(--tx,0) * 0.4)) translateY(120%) rotate(calc(var(--rot,0deg) * 0.4));
+                opacity: 0;
+            }
+        }
+
+        @keyframes dropRise {
+            0% {
+                transform: translateY(120%);
+                opacity: 0;
+            }
+
+            30% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(-10%);
+                opacity: 0;
+            }
+        }
+
+        /* FLOATING REACTION ICONS */
+        .floating-reaction {
+            position: fixed;
+            bottom: -50px;
+            font-size: 35px;
+            pointer-events: none;
+            z-index: 9999;
+            animation: floatUpAnimation 4s ease-out forwards;
+        }
+
+        @keyframes floatUpAnimation {
+            0% {
+                transform: translateY(0);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(-110vh);
+                opacity: 0;
+            }
+        }
+
+        /* DOWNLOAD MODAL */
+        .download-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+        }
+
+        .download-modal-content {
+            background: rgba(0,0,0,0.72);
+            padding: 28px 28px;
+            border-radius: 14px;
+            text-align: center;
+            max-width: 420px;
+            width: 92%;
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .download-modal-icon {
+            font-size: 80px;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .download-modal-title {
+            color: var(--text-main);
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .download-modal-text {
+            color: var(--text-sec);
+            margin-bottom: 30px;
+        }
+
+        .download-modal-close {
+            padding: 12px 30px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .download-modal-close:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        /* Comment Submission Modal - Improved */
+        .comment-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3500;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+        }
+
+        .comment-modal-content {
+            width: 92%;
+            max-width: 780px;
+            /* شبه شفاف مع حواف شفافة */
+            background: rgba(255,255,255,0.02);
+            border: 1px solid transparent;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+            position: relative;
+            padding: 0;
+            transform: translateY(20px) scale(0.98);
+            opacity: 0;
+            animation: modalIn 0.36s cubic-bezier(.2,.9,.2,1) forwards;
+        }
+
+        /* In sky-mode make modal content solid/light so clouds stay behind it */
+        body.sky-mode .comment-modal {
+            background: rgba(255,255,255,0.06); /* افتح الخلفية قليلاً لتحسس السماء */
+        }
+
+        body.sky-mode .comment-modal-content {
+            background: var(--modal-bg);
+            border: 1px solid rgba(0,0,0,0.06);
+            color: var(--text-main);
+        }
+
+        @keyframes modalIn {
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        .comment-modal iframe {
+            width: 100%;
+            height: 420px;
+            border: 0;
+            display: block;
+            background: #000;
+        }
+
+        .progress-wrap {
+            height: 6px;
+            background: rgba(255,255,255,0.06);
+            width: 100%;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+            transition: width 0.1s linear;
+        }
+
+        .modal-close-btn {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(0,0,0,0.25);
+            color: var(--text-main);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .success-box {
+            display: none;
+            padding: 36px 24px;
+            text-align: center;
+            color: var(--text-main);
+            /* شبه شفاف مع حد شفاف خفيف */
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.03);
+            position: relative;
+            border-radius: 8px;
+        }
+
+        .success-icon {
+            font-size: 72px;
+            color: var(--primary);
+            transform: scale(0);
+            animation: successPop 0.6s 0.05s forwards;
+            filter: drop-shadow(0 6px 20px rgba(255,102,0,0.22));
+        }
+
+        .success-text {
+            margin-top: 12px;
+            font-size: 20px;
+            font-weight: 800;
+            opacity: 0;
+            animation: textFadeIn 0.5s 0.15s forwards;
+        }
+
+        .confetti-container {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .confetti {
+            position: absolute;
+            top: -10vh;
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            opacity: 0.95;
+            animation: confettiFall 3.3s cubic-bezier(.2,.7,.2,1) forwards;
+        }
+
+        @keyframes confettiFall {
+            0% { transform: translateY(-10vh) rotate(0); opacity: 1; }
+            100% { transform: translateY(110vh) rotate(540deg); opacity: 1; }
+        }
+
+        @keyframes successPop {
+            0% { transform: scale(0); opacity: 0; }
+            60% { transform: scale(1.15); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes textFadeIn { to { opacity: 1; } }
+
+        /* Side toast notifications for download */
+        .toast-container {
+            position: fixed;
+            right: 20px;
+            top: 100px; /* appear near top-right as a subtle notification */
+            z-index: 6000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: flex-end;
+            pointer-events: none;
+        }
+
+        .toast {
+            pointer-events: auto;
+            background: rgba(30,30,30,0.94);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 10px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+            display: inline-flex;
+            gap: 10px;
+            align-items: center;
+            font-weight: 600;
+            transform: translateX(12px);
+            opacity: 0;
+            animation: toastIn 0.26s forwards;
+        }
+
+        @keyframes toastIn {
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes toastOut {
+            to { transform: translateX(12px); opacity: 0; }
+        }
+
+        /* COMMENT REACTION ICONS */
+        .comment-reaction-icons {
+            position: fixed;
+            bottom: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 1001;
+            transition: bottom 0.5s ease;
+        }
+
+        .comment-reaction-icons.show {
+            bottom: 50px;
+        }
+
+        .reaction-icon {
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            animation: floatUp 0.5s ease forwards;
+        }
+
+        .reaction-icon:hover {
+            transform: scale(1.2);
+        }
+
+        .reaction-icon:nth-child(1) {
+            animation-delay: 0.1s;
+            color: #ff3366;
+        }
+
+        .reaction-icon:nth-child(2) {
+            animation-delay: 0.2s;
+            color: #ff6600;
+        }
+
+        .reaction-icon:nth-child(3) {
+            animation-delay: 0.3s;
+            color: #ff0000;
+        }
+
+        @keyframes floatUp {
+            0% {
+                transform: translateY(100px) scale(0.5);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .video-meta {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .video-actions {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .page-section {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .follow-btn {
+                width: 100%;
+            }
+
+            .nav-container {
+                padding: 0 10px;
+            }
+
+            .search-section {
+                display: none;
+            }
+
+            .watch-container {
+                margin-top: 70px;
+            }
+
+            .heart-main {
+                font-size: 150px;
+            }
+
+            .heart-animation {
+                width: 150px;
+                height: 150px;
+            }
+        }
+        /* Error Animation Overlay */
+        #errorAnimationOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            display: none;
+        }
+        .error-icon-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 71, 87, 0.2);
+            border: 2px solid #ff4757;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            animation: pulse-red 1.5s infinite;
+        }
+        .error-icon {
+            font-size: 40px;
+            color: #ff4757;
+        }
+        .error-text {
+            color: #ff4757;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(255, 71, 87, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Clouds for Sky Mode - REAL SKY WITH MANY CLOUDS -->
+    <div class="clouds-container">
+        <div class="cloud c1"></div>
+        <div class="cloud c2"></div>
+        <div class="cloud c3"></div>
+        <div class="cloud c4"></div>
+        <div class="cloud c5"></div>
+        <div class="cloud c6"></div>
+        <div class="cloud c7"></div>
+        <div class="cloud c8"></div>
+        <div class="cloud c9"></div>
+        <div class="cloud c10"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <div class="right-section">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <a href="index.html" class="logo-section" title="العودة للصفحة الرئيسية" onclick="window.location.href='index.html'; return false;">
+                    <img src="pagebook.jpg" class="logo-icon" style="background: none; object-fit: cover;">
+                    <div class="logo-text">
+                        <div class="pagebook">Pagebook</div>
+                        <div class="tagline">افضل منصة فديو</div>
+                    </div>
+                </a>
+
+                <!-- Theme Toggle with 3 States -->
+                <div class="theme-toggle-wrapper" id="themeToggle" title="تغيير الثيم (ليلي / نهاري / سحاب)">
+                    <div class="theme-icon-slider" id="iconSlider">
+                        <div class="theme-icon"><i class="fas fa-moon"></i></div>
+                        <div class="theme-icon"><i class="fas fa-sun"></i></div>
+                        <div class="theme-icon"><i class="fas fa-cloud-sun"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="search-section">
+                <div class="search-container">
+                    <input type="text" class="search-input" placeholder="ابحث عن فيديوهات...">
+                    <button class="search-btn">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="header-login-section">
+                <a href="login.html" class="header-login-btn" id="headerLoginBtn" style="background: linear-gradient(135deg, #ff6600, #cc5200); color: white; padding: 8px 16px; border-radius: 20px; text-decoration: none; font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(255,102,0,0.3);">
+                    <i class="fas fa-user"></i>
+                    دخول
+                </a>
+                <!-- User Avatar (shown when logged in) -->
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80"
+                    alt="المستخدم" class="user-avatar" id="userAvatar" style="display: none; width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); cursor: pointer; margin-left: 10px;">
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <main class="watch-container">
+            <div class="watch-layout">
+                <!-- Main Video Section -->
+                <div class="video-section">
+                    <div class="video-player-container">
+                        <div class="video-player-wrapper" id="videoWrapper">
+                            <video class="video-player" id="mainVideo" preload="auto">
+                                <source src="" type="video/mp4">
+                                متصفحك لا يدعم تشغيل الفيديو.
+                            </video>
+
+                            <!-- Custom Video Controls -->
+                            <div class="video-controls" id="videoControls">
+                                <div class="progress-container" id="progressContainer">
+                                    <div class="progress-buffer" id="progressBuffer"></div>
+                                    <div class="progress-bar-filled" id="progressBarFilled">
+                                        <div class="progress-thumb"></div>
+                                    </div>
+                                </div>
+                                <div class="controls-row">
+                                    <div class="controls-left">
+                                        <button class="control-btn" id="playPauseControl">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        <span class="time-text" id="timeDisplay">0:00 / 0:00</span>
+                                    </div>
+                                    <div class="controls-right">
+                                        <button class="control-btn" id="muteControl">
+                                            <i class="fas fa-volume-up"></i>
+                                        </button>
+                                        <button class="control-btn" id="fullscreenControl">
+                                            <i class="fas fa-expand"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="video-info-section">
+                            <h1 class="video-title" id="videoTitle">&nbsp;</h1>
+
+                            <div class="video-meta">
+                                <div class="video-stats" id="videoMeta">... مشاهدة • ...</div>
+                                <div class="video-actions">
+                                    <button class="action-btn" id="likeBtn">
+                                        <i class="far fa-heart"></i>
+                                        <span id="likeCount">0</span>
+                                    </button>
+                                    <button class="action-btn" id="saveBtn">
+                                        <i class="far fa-bookmark"></i>
+                                        <span>حفظ</span>
+                                    </button>
+
+                                    <!-- زر التحميل -->
+                                    <button class="action-btn download-btn" id="downloadBtn">
+                                        <div class="progress-bar-bg" id="downloadProgress"></div>
+                                        <i class="fas fa-download" id="downloadIcon"></i>
+                                        <span id="downloadText">تحميل</span>
+                                    </button>
+                                    
+                                    <!-- زر المشاركة -->
+                                    <button class="action-btn" id="shareBtn">
+                                        <i class="fas fa-share-alt"></i>
+                                        <span>مشاركة</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Page Section -->
+                            <div class="page-section">
+                                <div class="page-info">
+                                    <img src=""
+                                        alt="الصفحة" class="page-avatar" id="pageAvatar">
+                                    <div class="page-details">
+                                        <h3 id="pageName">&nbsp;</h3>
+                                        <div class="page-followers" id="followerCount"></div>
+                                    </div>
+                                </div>
+                                <button class="follow-btn" id="followBtn" aria-pressed="false">
+                                    <span class="follow-inner">
+                                        <span class="follow-icon"><i class="fas fa-user-plus"></i></span>
+                                        <span class="follow-text">إنضمام</span>
+                                    </span>
+                                    <span class="follow-progress" aria-hidden="true"></span>
+                                </button>
+                            </div>
+
+                            <div class="description-section">
+                                <div class="description-text" id="videoDescription">...</div>
+                            </div>
+
+                            <div class="comments-section">
+                                <h3 class="comments-header">التعليقات <span id="commentsCount">(0)</span></h3>
+                                <div class="comment-input-area">
+                                    <div class="comment-avatar">
+                                        <img src="" id="currentUserCommentAvatar" style="width:100%; height:100%; border-radius:50%; object-fit:cover; display:none;">
+                                        <span id="currentUserCommentPlaceholder" style="display:block;">U</span>
+                                    </div>
+                                    <div class="comment-input-wrapper">
+                                        <input type="text" class="comment-input" id="commentInput" name="cmt_no_suggest" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                                            placeholder="أضف تعليقاً...">
+                                        <button class="comment-submit" id="submitCommentBtn">إرسال</button>
+                                    </div>
+                                    <div id="commentLimitInfo" style="font-size: 11px; margin-top: 4px; padding-right: 10px; color: var(--text-sec); display:none;">
+                                        متبقي لك <span id="remainingCommentsCount" style="font-weight:bold; color:var(--primary);">5</span> تعليقات لهذا الفيديو
+                                    </div>
+                                </div>
+                                <div class="comments-list" id="commentsList">
+                                    <!-- Comments will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Horizontal Suggestions Rail -->
+                        <div class="suggestions-rail-container">
+                            <div class="rail-header">
+                                <h3 class="rail-title">فيديوهات قد تعجبك</h3>
+                            </div>
+                            <div class="rail-scroll-wrapper" id="suggestionsRail">
+                                <!-- Items will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- close video-section -->
+                <!-- Suggestions Sidebar -->
+                <aside class="suggestions-sidebar">
+                    <div id="suggestionsList">
+                        <!-- Suggestions will be loaded here -->
+                    </div>
+                </aside>
+            </div> <!-- close watch-layout -->
+        </main>
+    </div>
+
+    <!-- Sidebar - Same as main page -->
+    <aside class="sidebar collapsed" id="sidebar">
+        <a href="index.html" class="sidebar-icon">
+            <i class="fas fa-home"></i>
+            <span>الصفحة الرئيسية</span>
+        </a>
+        <a href="saved_videos.html" class="sidebar-icon">
+            <i class="fas fa-bookmark"></i>
+            <span>الفيديوهات المحفوظة</span>
+        </a>
+        <a href="upload.html" class="sidebar-icon">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <span>الرفع</span>
+        </a>
+        <a href="posts.html" class="sidebar-icon">
+            <i class="fas fa-newspaper"></i>
+            <span>المنشورات</span>
+        </a>
+        <a href="settings.html" class="sidebar-icon" id="sidebar-profile-link">
+            <i class="fas fa-user"></i>
+            <span id="sidebar-profile-text">الحساب الشخصي</span>
+        </a>
+    </aside>
+
+    <!-- Animation Overlays -->
+    <div class="animation-overlay" id="limitExceededOverlay" style="display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); z-index: 10000;">
+        <div style="background: var(--card-bg); padding: 30px; border-radius: 20px; text-align: center; border: 1px solid var(--border-color); max-width: 400px; width: 90%;">
+            <div style="font-size: 50px; margin-bottom: 20px; color: #ff3366;">⚠️</div>
+            <h3 style="color: var(--text-main); margin-bottom: 15px;">عفواً، لقد تجاوزت الحد المسموح</h3>
+            <p style="color: var(--text-sec); margin-bottom: 25px; line-height: 1.6;">
+                لا يمكنك إرسال أكثر من 5 تعليقات على نفس الفيديو. يرجى تجربة التعليق على فيديو آخر.
+            </p>
+            <button onclick="document.getElementById('limitExceededOverlay').style.display='none'" class="action-btn active" style="margin: 0 auto;">
+                حسناً، فهمت
+            </button>
+        </div>
+    </div>
+
+    <div id="likeAnimationOverlay" class="animation-overlay">
+        <div class="heart-animation">
+            <div class="rotating-circle circle-orange"></div>
+            <div class="rotating-circle circle-green"></div>
+            <div class="heart-main">
+                <i class="fas fa-heart"></i>
+            </div>
+        </div>
+    </div>
+
+    <div id="saveAnimationOverlay" class="animation-overlay">
+        <div class="save-animation">
+            <div class="save-icon-wrapper">
+                <i class="far fa-bookmark save-outline"></i>
+                <div class="liquid-container">
+                    <div class="liquid-fill" id="liquidFill">
+                        <div class="liquid-drops" id="liquidDrops"></div>
+                    </div>
+                </div>
+                <i class="fas fa-bookmark save-fill" id="saveFill"></i>
+            </div>
+            <div class="save-text" style="color: #f1c40f; font-size: 24px; font-weight: bold; margin-top: 20px;">تم
+                الحفظ</div>
+        </div>
+    </div>
+
+    <!-- Error Animation Overlay -->
+    <div id="errorAnimationOverlay" class="animation-overlay" style="display: none;">
+        <div class="error-content" style="text-align: center;">
+            <div class="error-icon-circle">
+                <i class="fas fa-times error-icon"></i>
+            </div>
+            <div class="error-text">فشل إضافة التعليق</div>
+        </div>
+    </div>
+
+    <!-- Welcome banner (for join animation) -->
+    <div id="welcomeBanner" class="welcome-banner" role="status" aria-live="polite">
+        <i class="fas fa-hand-peace" style="color:#ffd76b;font-size:20px;"></i>
+        <div id="welcomeText">مرحباً بك!</div>
+    </div>
+
+    <!-- Download Modal -->
+    <div id="downloadModal" class="download-modal">
+        <div class="download-modal-content">
+            <div class="download-modal-icon">
+                <i class="fas fa-cloud-download-alt"></i>
+            </div>
+            <h2 class="download-modal-title">تم التحميل</h2>
+            <p class="download-modal-text">سوف تتوفر ميزة التحميل قريباً بشكل جميل</p>
+            <button class="download-modal-close" id="closeDownloadModal">حسناً</button>
+        </div>
+    </div>
+
+    <!-- Side download notification container (toast) -->
+    <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Comment Submission Modal -->
+    <div id="commentModal" class="comment-modal" aria-hidden="true" role="dialog" aria-label="نافذة إرسال تعليق">
+        <div class="comment-modal-content">
+            <button class="modal-close-btn" id="closeCommentModal" title="إغلاق">&times;</button>
+            <iframe id="commentIframe" src="" frameborder="0" title="car content"></iframe>
+            <div id="commentSuccess" class="success-box" role="status" aria-live="polite">
+                <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="success-text">تم إرسال التعليق</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comment Reaction Icons -->
+    <div class="comment-reaction-icons" id="commentReactions">
+        <div class="reaction-icon" data-reaction="like">
+            <i class="far fa-heart"></i>
+        </div>
+        <div class="reaction-icon" data-reaction="love">
+            <i class="fas fa-heart"></i>
+        </div>
+        <div class="reaction-icon" data-reaction="fire">
+            <i class="fas fa-fire"></i>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="utils-secure.js"></script>
+    <script src="config-secure.js"></script>
+    <script src="auth-manager.js"></script>
+    <script src="profile-guard.js"></script>
+    <script src="profile-viewer.js"></script>
+    <script>
+        // Global variables available
+        // window.ProfileViewer is available
+        
+        // checkProfileGuard auto-runs if included
+        
+        let supabaseClient;
+        let config;
+        let currentUser = null;
+        const ADMIN_EMAIL = 'probader671@gmail.com';
+        let adminLogoutTimer = null;
+        let networkChecked = false;
+
+        const PLACEHOLDER_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMjAiIGhlaWdodD0iMTgwIiB2aWV3Qm94PSIwIDAgMzIwIDE4MCI+PHJlY3Qgd2lkdGg9IjMyMCIgaGVpZ2h0PSIxODAiIGZpbGw9IiMxYTFhMWEiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzU1NSIgZm9udC1mYW1pbHk9ImFyaWFsIiBmb250LXNpemU9IjIwIj5QYWdlYm9vazwvdGV4dD48L3N2Zz4=';
+
+        function startAdminAutoLogout() {
+            if (!supabaseClient) return;
+            if (adminLogoutTimer) clearTimeout(adminLogoutTimer);
+            adminLogoutTimer = setTimeout(async () => {
+                try {
+                    await supabaseClient.auth.signOut();
+                    alert('تم تسجيل خروج الأدمن تلقائياً لأسباب أمنية');
+                    window.location.href = 'login.html';
+                } catch (e) {
+                    console.warn('Auto logout failed:', e);
+                }
+            }, 60 * 60 * 1000);
+        }
+        function fingerprint() {
+            const d = navigator.userAgent + '|' + navigator.language + '|' + navigator.platform + '|' + (screen.width + 'x' + screen.height);
+            let h = 0;
+            for (let i = 0; i < d.length; i++) h = ((h << 5) - h) + d.charCodeAt(i), h |= 0;
+            return String(h);
+        }
+        async function checkNetworkBan() {
+            if (!supabaseClient || networkChecked) return;
+            networkChecked = true;
+            try {
+                const fp = fingerprint();
+                const { data } = await supabaseClient
+                    .from('banned_networks')
+                    .select('id')
+                    .eq('fingerprint', fp)
+                    .limit(1);
+                if (data && data.length > 0) {
+                    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0b0b0b;color:#fff;font-family:sans-serif;"><div style="text-align:center;"><h2>تم حظر هذه الشبكة</h2><p>لا يمكنك الوصول إلى الموقع من هذه الشبكة.</p></div></div>';
+                }
+            } catch (e) {
+                console.warn('Network ban check failed:', e);
+            }
+        }
+
+        // Initialize Auth Manager
+        window.addEventListener('DOMContentLoaded', async () => {
+            config = window.getSecureConfig();
+            try {
+                await window.authManager.init();
+                supabaseClient = window.authManager.supabase;
+                window.supabaseClient = supabaseClient;
+                await checkNetworkBan();
+
+                // Get current user
+                currentUser = await window.authManager.getCurrentUser();
+                if (currentUser?.email === ADMIN_EMAIL) startAdminAutoLogout();
+                updateUIForUser(currentUser);
+
+                // Load Data
+                await loadVideoDetails();
+            } catch (error) {
+                console.error("Init error:", error);
+            }
+        });
+
+        // --- Firebase & Auth Logic (Legacy Support) ---
+        // Define UI update function globally
+        async function updateUIForUser(user) {
+            currentUser = user;
+            const headerLoginBtn = document.getElementById('headerLoginBtn');
+            const userAvatar = document.getElementById('userAvatar');
+            const commentAvatar = document.getElementById('currentUserCommentAvatar');
+            const commentPlaceholder = document.getElementById('currentUserCommentPlaceholder');
+            
+            if (user) {
+                if(headerLoginBtn) headerLoginBtn.style.display = 'none';
+                
+                // 1. Try metadata
+                let avatarUrl = user.user_metadata?.avatar_url;
+
+                // 2. If not found, try profiles table
+                if (!avatarUrl && supabaseClient) {
+                    try {
+                        const { data: profile } = await supabaseClient
+                            .from('profiles')
+                            .select('avatar_url')
+                            .eq('id', user.id)
+                            .single();
+                        if (profile) avatarUrl = profile.avatar_url;
+                    } catch (e) {
+                        console.warn('Error fetching profile avatar:', e);
+                    }
+                }
+                
+                // Resolve Relative URLs
+                if (avatarUrl && !avatarUrl.startsWith('http') && !avatarUrl.startsWith('data:')) {
+                    try {
+                        const config = window.getSecureConfig();
+                        avatarUrl = `${config.url}/storage/v1/object/public/avatars/${avatarUrl}`;
+                    } catch(e) { console.error("Config Error:", e); }
+                }
+
+                let displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+                const finalAvatar = (avatarUrl && avatarUrl.trim() !== '') ? avatarUrl : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}`;
+
+                if(userAvatar) {
+                    userAvatar.style.display = 'block';
+                    userAvatar.src = finalAvatar;
+                    userAvatar.onerror = function() { 
+                        this.onerror = null; 
+                        this.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}`; 
+                    };
+                }
+
+                if(commentAvatar && commentPlaceholder) {
+                    commentAvatar.src = finalAvatar;
+                    commentAvatar.style.display = 'block';
+                    commentAvatar.onerror = function() { 
+                        this.onerror = null; 
+                        this.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}`; 
+                    };
+                    commentPlaceholder.style.display = 'none';
+                }
+
+                // Update Sidebar Text
+                const sidebarProfileText = document.getElementById('sidebar-profile-text');
+                if (sidebarProfileText) {
+                    let name = user.user_metadata?.full_name || user.user_metadata?.name;
+                    if (!name && user.email) name = user.email.split('@')[0];
+                    sidebarProfileText.textContent = 'صفحة ' + (name || 'المستخدم');
+                }
+
+            } else {
+                if(headerLoginBtn) headerLoginBtn.style.display = 'flex';
+                if(userAvatar) userAvatar.style.display = 'none';
+                if(commentAvatar && commentPlaceholder) {
+                    commentAvatar.style.display = 'none';
+                    commentPlaceholder.style.display = 'block';
+                }
+            }
+        }
+
+        // Removed dead code: createLoginDropdown
+
+        // --- Auth Logic (LocalStorage Sync with System.html) ---
+        function checkAuthStatus() {
+            const isLoggedIn = SafeStorage.getItem('isLoggedIn') === 'true';
+            const localName = SafeStorage.getItem('userName');
+            const localAvatar = SafeStorage.getItem('userAvatar');
+            const localEmail = SafeStorage.getItem('userEmail'); // Try to get real email if stored
+
+            if (isLoggedIn && localName) {
+                const user = {
+                    displayName: localName,
+                    photoURL: localAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(localName)}`,
+                    email: localEmail || '' // Don't use fake email
+                };
+                updateUIForUser(user);
+            } else {
+                updateUIForUser(null);
+            }
+        }
+        
+        // Run immediately
+        checkAuthStatus();
+
+        // Real Data State
+        const appState = {
+            currentVideo: null,
+            isFollowing: false,
+            isLiked: false,
+            isSaved: false,
+            likesCount: 0,
+            comments: [],
+            themeState: SafeStorage.getItem('themeIndex') ? parseInt(SafeStorage.getItem('themeIndex')) : 0
+        };
+
+        // Initialize UI components that don't depend on data
+        document.addEventListener('DOMContentLoaded', function () {
+            setupEventListeners();
+            initCustomVideo(); 
+            updateTheme();
+        });
+
+        async function loadVideoDetails() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let videoId = urlParams.get('v');
+            let isSecureLink = false;
+
+            if (videoId) {
+                try {
+                    // Decode secure parameter
+                    videoId = atob(videoId);
+                    isSecureLink = true;
+                } catch (e) {
+                    console.error("Failed to decode video ID", e);
+                    videoId = null;
+                }
+            } else {
+                // Fallback to old 'id' parameter
+                videoId = urlParams.get('id');
+            }
+
+            // Ensure Auth is ready before loading
+            if (!currentUser) {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session) {
+                    currentUser = session.user;
+                    isLoggedIn = true;
+                }
+            }
+
+            // Check Admin Status if logged in
+            if (currentUser) {
+                 try {
+                     const { data: profile } = await supabaseClient
+                        .from('profiles')
+                        .select('is_admin')
+                        .eq('id', currentUser.id)
+                        .maybeSingle();
+                    
+                    if (profile && profile.is_admin) {
+                        currentUser.is_admin = true;
+                    }
+                 } catch (e) { console.error("Admin check failed", e); }
+            }
+
+            if (!videoId) {
+                // If no ID, maybe load the latest video or show empty state?
+                // For now, let's try to load the latest video if no ID is provided
+                loadLatestVideo();
+                return;
+            }
+
+            try {
+                // 1. Fetch Video Data (Optimized: JOIN with Profile)
+                // Using explicit relationship alias to avoid ambiguity
+                const { data: video, error } = await supabaseClient
+                    .from('videos')
+                    .select('*, profiles(*)')
+                    .eq('id', videoId)
+                    .single();
+
+                if (error || !video) {
+                    console.error("Video not found:", error);
+                    document.querySelector('.video-section').innerHTML = `
+                        <div style="text-align: center; padding: 50px;">
+                            <h2>عذراً، الفيديو غير موجود</h2>
+                            <a href="index.html" class="action-btn" style="display:inline-block; margin-top:20px;">العودة للرئيسية</a>
+                        </div>
+                    `;
+                    loadSuggestions(); // Load suggestions anyway
+                    return;
+                }
+
+                console.log("Fetched Video Data:", video);
+
+                // Profile is now joined
+                let profile = video.profiles;
+                if (Array.isArray(profile)) profile = profile[0];
+
+                // Fallback: If profile missing or empty (failed join), fetch it separately
+                // We check for id or full_name to ensure we have a valid profile
+                if ((!profile || !profile.full_name) && video.user_id) {
+                    try {
+                        console.log("Fetching profile fallback for user:", video.user_id);
+                        const { data: p } = await supabaseClient
+                            .from('profiles')
+                            .select('*')
+                            .eq('id', video.user_id)
+                            .maybeSingle();
+                        if (p) profile = p;
+                    } catch (e) {
+                        console.error("Profile fallback fetch error:", e);
+                    }
+                }
+
+                profile = profile || {};
+
+                appState.currentVideo = { ...video, profile };
+                appState.likesCount = video.likes || 0;
+                
+                // 2. Update UI
+                updateVideoUI(video, profile);
+
+                // 3. Load Suggestions (excluding current video)
+                loadSuggestions(video.id);
+
+                // 4. Load Comments
+                loadComments();
+                updateCommentLimitUI();
+
+                // 5. Increment Views (Real Counter)
+                supabaseClient.rpc('increment_views', { video_id_param: video.id });
+
+                // 6. Check Like Status (Real Likes)
+                if (currentUser) {
+                    // Check Like
+                    const { data: likeData } = await supabaseClient
+                        .from('likes')
+                        .select('user_id')
+                        .eq('video_id', video.id)
+                        .eq('user_id', currentUser.id)
+                        .maybeSingle();
+                    
+                    if (likeData) {
+                        appState.isLiked = true;
+                        const likeBtn = document.getElementById('likeBtn');
+                        if (likeBtn) {
+                            likeBtn.classList.add('active');
+                            likeBtn.innerHTML = '<i class="fas fa-heart"></i><span id="likeCount">' + appState.likesCount.toLocaleString() + '</span>';
+                        }
+                    }
+
+                    // Check Saved
+                    const { data: savedData } = await supabaseClient
+                        .from('saved_videos')
+                        .select('user_id')
+                        .eq('video_id', video.id)
+                        .eq('user_id', currentUser.id)
+                        .maybeSingle();
+                    
+                    if (savedData) {
+                        appState.isSaved = true;
+                        const saveBtn = document.getElementById('saveBtn');
+                        if (saveBtn) {
+                            saveBtn.classList.add('active');
+                            saveBtn.innerHTML = '<i class="fas fa-bookmark"></i><span>محفوظ</span>';
+                        }
+                    }
+
+                    // Check Subscription (Follow)
+                    if (video.user_id && video.user_id !== currentUser.id) {
+                        const { data: subData } = await supabaseClient
+                            .from('subscriptions')
+                            .select('id')
+                            .eq('channel_owner_id', video.user_id)
+                            .eq('subscriber_id', currentUser.id)
+                            .maybeSingle();
+                        
+                        if (subData) {
+                            appState.isFollowing = true;
+                            const followBtn = document.getElementById('followBtn');
+                            if (followBtn) {
+                                followBtn.classList.add('active');
+                                followBtn.innerHTML = '<span class="follow-text">تم الإنضمام</span><span class="follow-icon"><i class="fas fa-check"></i></span>';
+                            }
+                        }
+                    }
+                }
+
+            } catch (err) {
+                console.error("Error loading video details:", err);
+            }
+        }
+
+        async function loadLatestVideo() {
+            const { data: videos } = await supabaseClient
+                .from('videos')
+                .select('id')
+                .order('created_at', { ascending: false })
+                .limit(1);
+            
+            if (videos && videos.length > 0) {
+                // Redirect to the latest video
+                window.location.search = `?id=${videos[0].id}`;
+            } else {
+                 // Absolutely no videos in DB
+                 document.querySelector('.video-section').innerHTML = `
+                    <div style="text-align: center; padding: 60px 20px; color: var(--text-sec);">
+                        <div style="font-size: 60px; margin-bottom: 20px; opacity: 0.5;">📹</div>
+                        <h3 style="font-size: 24px; margin-bottom: 10px; color: var(--text-main);">لا يوجد فديوهات الحين</h3>
+                        <p style="font-size: 16px; margin-bottom: 30px;">كن اول من يصنع فديو</p>
+                        <a href="upload.html" style="
+                            display: inline-block;
+                            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+                            color: white;
+                            padding: 12px 30px;
+                            border-radius: 30px;
+                            text-decoration: none;
+                            font-weight: 600;
+                        ">
+                            <i class="fas fa-cloud-upload-alt" style="margin-left: 8px;"></i> رفع فيديو
+                        </a>
+                    </div>
+                `;
+                // Also empty suggestions
+                loadSuggestions(null);
+            }
+        }
+
+        function formatNumber(num) {
+            if (!num) return '0';
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + ' مليون';
+            }
+            if (num >= 1000) {
+                return (num / 1000).toFixed(1) + ' ألف';
+            }
+            return num.toLocaleString();
+        }
+
+        function updateVideoUI(video, profile) {
+            // Title & Meta (Ensure this runs even if banned)
+            const titleEl = document.getElementById('videoTitle');
+            if (titleEl && video.title) titleEl.textContent = video.title;
+            
+            const metaEl = document.getElementById('videoMeta');
+            if (metaEl) metaEl.textContent = `${(video.views || 0).toLocaleString()} مشاهدة • ${new Date(video.created_at).toLocaleDateString('ar-EG')}`;
+            
+            const descEl = document.getElementById('videoDescription');
+            if (descEl) descEl.innerText = video.description || 'لا يوجد وصف';
+            
+            // Like Count (Initial Render)
+            const likesCount = video.likes || 0;
+            const likeCountEl = document.getElementById('likeCount');
+            if (likeCountEl) likeCountEl.textContent = likesCount.toLocaleString();
+
+            // Check Video Status
+            if (video.status === 'processing') {
+                // Allow owner to view even if processing (since local files are instant)
+                const isOwner = currentUser && video.user_id === currentUser.id;
+                
+                if (!isOwner) {
+                    document.querySelector('.video-player-wrapper').innerHTML = `
+                        <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#000; color:white; text-align:center;">
+                            <i class="fas fa-cog fa-spin" style="font-size:50px; margin-bottom:20px; color:var(--primary);"></i>
+                            <h3>الفيديو قيد المعالجة</h3>
+                            <p style="opacity:0.7;">يرجى الانتظار قليلاً، سيتم تشغيل الفيديو تلقائياً عند الانتهاء.</p>
+                            <button onclick="location.reload()" class="action-btn" style="margin-top:20px;">تحديث الصفحة</button>
+                        </div>
+                    `;
+                    return;
+                } else {
+                    // It's the owner, let them view it and maybe auto-fix the status
+                    showToast("أنت تشاهد الفيديو بينما هو قيد المعالجة للجمهور", "info");
+                    
+                    // Auto-fix status to 'ready' if it works
+                    if (video.id) {
+                         supabaseClient.from('videos').update({ status: 'ready' }).eq('id', video.id).then(({ error }) => {
+                             if (!error) console.log("Auto-fixed video status to ready");
+                         });
+                    }
+                }
+            }
+
+            if (video.status === 'failed') {
+                document.querySelector('.video-player-wrapper').innerHTML = `
+                    <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#000; color:white; text-align:center;">
+                        <i class="fas fa-exclamation-triangle" style="font-size:50px; margin-bottom:20px; color:#ff3366;"></i>
+                        <h3>فشل معالجة الفيديو</h3>
+                        <p style="opacity:0.7;">حدث خطأ أثناء معالجة هذا الفيديو. يرجى من الناشر إعادة رفعه.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Moderation: تحذير/حظر/حذف
+            const wrapper = document.querySelector('.video-player-wrapper');
+            const now = new Date();
+            if (video.deleted || video.ban_status === 'deleted') {
+                if (wrapper) {
+                    wrapper.innerHTML = `
+                        <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#1a1a1a; color:white; text-align:center;">
+                            <div style="background:#b30000; color:#fff; padding:14px 20px; border-radius:30px; box-shadow:0 10px 30px rgba(179,0,0,0.5); margin-bottom:16px;">
+                                تم حظر هذا الفيديو لأنه ينتهك سياسات المنصة
+                            </div>
+                            <p style="opacity:0.85;">${video.ban_reason ? ('السبب: ' + video.ban_reason) : ''}</p>
+                        </div>
+                    `;
+                }
+                // Allow falling through to show title/comments
+                // return;
+            }
+            if (video.ban_status === 'permanent') {
+                if (wrapper) {
+                    wrapper.innerHTML = `
+                        <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#1a1a1a; color:white; text-align:center;">
+                            <div style="background:#b30000; color:#fff; padding:14px 20px; border-radius:30px; box-shadow:0 10px 30px rgba(179,0,0,0.5); margin-bottom:16px;">
+                                تم حظر هذا الفيديو بسبب: ${video.ban_reason || 'تم الحظر'}
+                            </div>
+                        </div>
+                    `;
+                }
+                // Allow falling through to show title/comments
+                // return;
+            }
+            if (video.ban_status === 'temporary' && video.temp_ban_until) {
+                const until = new Date(video.temp_ban_until);
+                if (until > now) {
+                    const ms = until - now;
+                    if (wrapper) {
+                        wrapper.innerHTML = `
+                            <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#0b0b0b; color:white; text-align:center;">
+                                <div style="background:linear-gradient(135deg, #e67e22, #d35400); color:#fff; padding:15px 30px; border-radius:12px; box-shadow:0 10px 25px rgba(230, 126, 34, 0.4); margin-bottom:20px; font-weight:bold; font-size:1.2em;">
+                                    <i class="fas fa-hourglass-half" style="margin-left:8px;"></i>
+                                    تم حظر هذا الفيديو لفترة من الوقت
+                                </div>
+                                <p style="opacity:0.9; margin-bottom:25px; font-size:1.1em; color:#ddd;">${video.ban_reason ? ('السبب: ' + video.ban_reason) : 'بسبب انتهاك سياسات المنصة'}</p>
+                                
+                                <div style="display:flex; gap:15px; font-family:'Courier New', monospace; direction:ltr;">
+                                    <div style="display:flex; flex-direction:column; align-items:center;">
+                                        <span id="banTimerH" style="font-size:2.5em; font-weight:bold; background:rgba(255,255,255,0.1); padding:10px 15px; border-radius:8px; min-width:80px;">00</span>
+                                        <span style="font-size:0.8em; margin-top:5px; opacity:0.7;">ساعة</span>
+                                    </div>
+                                    <div style="font-size:2.5em; font-weight:bold; align-self:start; margin-top:5px;">:</div>
+                                    <div style="display:flex; flex-direction:column; align-items:center;">
+                                        <span id="banTimerM" style="font-size:2.5em; font-weight:bold; background:rgba(255,255,255,0.1); padding:10px 15px; border-radius:8px; min-width:80px;">00</span>
+                                        <span style="font-size:0.8em; margin-top:5px; opacity:0.7;">دقيقة</span>
+                                    </div>
+                                    <div style="font-size:2.5em; font-weight:bold; align-self:start; margin-top:5px;">:</div>
+                                    <div style="display:flex; flex-direction:column; align-items:center;">
+                                        <span id="banTimerS" style="font-size:2.5em; font-weight:bold; background:rgba(255,255,255,0.1); padding:10px 15px; border-radius:8px; min-width:80px; color:#e67e22;">00</span>
+                                        <span style="font-size:0.8em; margin-top:5px; opacity:0.7;">ثانية</span>
+                                    </div>
+                                </div>
+                                <div style="margin-top:20px; opacity:0.6; font-size:0.9em;">سيتم فتح الفيديو تلقائياً عند انتهاء العداد</div>
+                            </div>
+                        `;
+                        
+                        // Countdown update logic
+                        const updateTimer = () => {
+                            const currentNow = Date.now();
+                            const remaining = until - currentNow;
+                            
+                            if (remaining <= 0) {
+                                location.reload();
+                                return;
+                            }
+
+                            const h = Math.floor(remaining / 3600000);
+                            const m = Math.floor((remaining % 3600000) / 60000);
+                            const s = Math.floor((remaining % 60000) / 1000);
+
+                            const hEl = document.getElementById('banTimerH');
+                            const mEl = document.getElementById('banTimerM');
+                            const sEl = document.getElementById('banTimerS');
+
+                            if (hEl) hEl.textContent = h.toString().padStart(2, '0');
+                            if (mEl) mEl.textContent = m.toString().padStart(2, '0');
+                            if (sEl) sEl.textContent = s.toString().padStart(2, '0');
+                        };
+                        
+                        updateTimer(); // Initial call
+                        setInterval(updateTimer, 1000);
+                    }
+
+                    // Hide video details to prevent confusion
+                    // document.getElementById('videoTitle').style.display = 'none';
+                    // document.getElementById('videoMeta').style.display = 'none';
+                    // document.getElementById('videoDescription').style.display = 'none';
+                    // document.querySelector('.video-actions').style.display = 'none';
+                    // document.querySelector('.channel-info').style.display = 'none';
+                    
+                    const commentsSection = document.getElementById('commentsList');
+                    // if (commentsSection) {
+                    //     commentsSection.innerHTML = '<div style="padding:20px; text-align:center; color:#888;">التعليقات غير متاحة لهذا الفيديو</div>';
+                    // }
+                    const commentInput = document.querySelector('.comment-input-area');
+                    if (commentInput) commentInput.style.display = 'none';
+
+                    // Allow falling through
+                    // return;
+                }
+            }
+            // Check for deleted or banned status
+            if (video.deleted || video.ban_status === 'deleted' || video.warning_reason) {
+                // If user is admin, allow viewing but show warning
+                const ADMIN_EMAIL = 'probader671@gmail.com';
+                // Check both DB role and fallback email
+                const isAdmin = (currentUser && currentUser.is_admin) || (currentUser && currentUser.email === ADMIN_EMAIL);
+                
+                if (!isAdmin) {
+                    const reason = video.ban_reason || video.warning_reason || 'هذا الفيديو غير متاح حالياً';
+                    if (wrapper) {
+                        wrapper.innerHTML = `
+                            <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#0b0b0b; color:white; text-align:center;">
+                                <div style="background:linear-gradient(135deg, #c0392b, #e74c3c); color:#fff; padding:14px 20px; border-radius:16px; box-shadow:0 0 25px rgba(231, 76, 60, 0.7); margin-bottom:12px;">
+                                    <i class="fas fa-ban" style="margin-left:8px;"></i>
+                                    فيديو محذوف أو محظور
+                                </div>
+                                <p style="opacity:0.95; font-size:1.1em;">${reason}</p>
+                            </div>
+                        `;
+                    }
+                    
+                    // Hide video details to prevent confusion (DISABLED: User wants to see details)
+                    // document.getElementById('videoTitle').style.display = 'none';
+                    // document.getElementById('videoMeta').style.display = 'none';
+                    // document.getElementById('videoDescription').style.display = 'none';
+                    // document.querySelector('.video-actions').style.display = 'none';
+                    // document.querySelector('.channel-info').style.display = 'none';
+                    
+                    // Clear comments section
+                    const commentsSection = document.getElementById('commentsList');
+                    // if (commentsSection) {
+                    //     commentsSection.innerHTML = '<div style="padding:20px; text-align:center; color:#888;">التعليقات غير متاحة لهذا الفيديو</div>';
+                    // }
+                    const commentInput = document.querySelector('.comment-input-area');
+                    if (commentInput) commentInput.style.display = 'none';
+
+                    // Update UI elements even if banned so user can see context
+                    // document.getElementById('videoTitle').style.display = 'none';
+                    // document.getElementById('videoMeta').style.display = 'none';
+                    // document.getElementById('videoDescription').style.display = 'none';
+                    // document.querySelector('.video-actions').style.display = 'none';
+                    // document.querySelector('.channel-info').style.display = 'none';
+                    
+                    // Allow falling through to update title/meta below
+                } else {
+                    // Admin warning toast
+                    const toast = document.createElement('div');
+                    toast.style.cssText = "position:absolute; top:60px; left:50%; transform:translateX(-50%); background:rgba(192, 57, 43, 0.9); color:white; padding:8px 15px; border-radius:5px; z-index:100; font-weight:bold;";
+                    toast.innerHTML = '<i class="fas fa-eye"></i> أنت تشاهد فيديو محذوف (وضع المسؤول)';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 5000);
+                }
+                
+                // Continue to render title/meta but keep player banned
+            }
+
+            // Title & Meta (Already handled at start of function)
+            // document.getElementById('videoTitle').textContent = video.title;
+            // document.getElementById('videoMeta').textContent = `${(video.views || 0).toLocaleString()} مشاهدة • ${new Date(video.created_at).toLocaleDateString('ar-EG')}`;
+            // document.getElementById('videoDescription').innerText = video.description || 'لا يوجد وصف';
+            
+            // Like Count (Initial Render)
+            // const likesCount = video.likes || 0;
+            // document.getElementById('likeCount').textContent = likesCount.toLocaleString();
+
+            // Admin Tools on video
+            try {
+                const ADMIN_EMAIL = 'probader671@gmail.com';
+                const isAdmin = (currentUser && currentUser.is_admin) || (currentUser && currentUser.email === ADMIN_EMAIL);
+
+                // Check if user is admin (from DB profile or email)
+                if (isAdmin) {
+                    const actions = document.querySelector('.video-actions');
+                    if (actions) {
+                        const tools = document.createElement('div');
+                        tools.className = 'admin-tools-container';
+                        tools.style.cssText = 'display:flex; gap:10px; margin-top:15px; padding:10px; background:rgba(255,0,0,0.05); border-radius:8px; border:1px solid rgba(255,0,0,0.1); align-items:center; flex-wrap:wrap; width:100%;';
+                        
+                        const label = document.createElement('span');
+                        label.innerHTML = '<i class="fas fa-user-shield"></i> أدوات المسؤول:';
+                        label.style.cssText = 'font-weight:bold; color:#e74c3c; font-size:0.9em; margin-left:10px;';
+                        tools.appendChild(label);
+
+                        const btnBanPerm = document.createElement('button');
+                        btnBanPerm.className = 'action-btn admin-btn';
+                        btnBanPerm.style.cssText = 'background:#c0392b; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:0.85em; display:flex; align-items:center; gap:5px; transition:all 0.2s;';
+                        btnBanPerm.innerHTML = '<i class="fas fa-ban"></i><span>حظر دائم</span>';
+                        btnBanPerm.onmouseover = () => btnBanPerm.style.background = '#a93226';
+                        btnBanPerm.onmouseout = () => btnBanPerm.style.background = '#c0392b';
+                        btnBanPerm.onclick = () => {
+                            const reason = prompt('سبب الحظر الدائم:');
+                            if (reason === null) return;
+                            adminBanVideoPermanent(video.id, reason || '');
+                        };
+
+                        const btnBanTemp = document.createElement('button');
+                        btnBanTemp.className = 'action-btn admin-btn';
+                        btnBanTemp.style.cssText = 'background:#e67e22; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:0.85em; display:flex; align-items:center; gap:5px; transition:all 0.2s;';
+                        btnBanTemp.innerHTML = '<i class="fas fa-clock"></i><span>حظر مؤقت</span>';
+                        btnBanTemp.onmouseover = () => btnBanTemp.style.background = '#d35400';
+                        btnBanTemp.onmouseout = () => btnBanTemp.style.background = '#e67e22';
+                        btnBanTemp.onclick = () => {
+                            const modal = document.getElementById('tempBanModal');
+                            const confirmBtn = document.getElementById('confirmBanBtn');
+                            const cancelBtn = document.getElementById('cancelBanBtn');
+                            
+                            if (modal) {
+                                modal.style.display = 'flex';
+                                // Reset inputs
+                                document.getElementById('banDurationInput').value = '';
+                                document.getElementById('banReasonInput').value = '';
+                                
+                                // Clean previous listeners to avoid duplicates
+                                const newConfirm = confirmBtn.cloneNode(true);
+                                confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
+                                
+                                const newCancel = cancelBtn.cloneNode(true);
+                                cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+                                
+                                newCancel.onclick = () => {
+                                    modal.style.display = 'none';
+                                };
+                                
+                                newConfirm.onclick = () => {
+                                    const duration = parseFloat(document.getElementById('banDurationInput').value);
+                                    const unit = document.getElementById('banUnitInput').value;
+                                    const reason = document.getElementById('banReasonInput').value;
+                                    
+                                    if (!duration || duration <= 0) {
+                                        alert('يرجى إدخال مدة صحيحة');
+                                        return;
+                                    }
+                                    
+                                    adminBanVideoTemporary(video.id, duration, unit, reason);
+                                    modal.style.display = 'none';
+                                };
+                            }
+                        };
+
+                        const btnDelete = document.createElement('button');
+                        btnDelete.className = 'action-btn admin-btn';
+                        btnDelete.style.cssText = 'background:#2c3e50; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:0.85em; display:flex; align-items:center; gap:5px; transition:all 0.2s;';
+                        btnDelete.innerHTML = '<i class="fas fa-trash-alt"></i><span>حذف نهائي</span>';
+                        btnDelete.onmouseover = () => btnDelete.style.background = '#34495e';
+                        btnDelete.onmouseout = () => btnDelete.style.background = '#2c3e50';
+                        btnDelete.onclick = () => {
+                            const confirmDelete = confirm('تأكيد حذف الفيديو نهائياً؟ هذا الإجراء سيمنع مشاهدة الفيديو.');
+                            if (confirmDelete) adminDeleteVideo(video.id, 'حذف بواسطة المسؤول');
+                        };
+
+                        tools.appendChild(btnBanPerm);
+                        tools.appendChild(btnBanTemp);
+                        tools.appendChild(btnDelete);
+                        
+                        // Add to DOM - Insert after video info
+                        const infoSection = document.querySelector('.video-info');
+                        if (infoSection && infoSection.parentNode) {
+                            infoSection.parentNode.insertBefore(tools, infoSection.nextSibling);
+                        } else {
+                            actions.appendChild(tools);
+                        }
+                    }
+                }
+            } catch(e) { console.warn('Admin tools error:', e); }
+
+            // Video Source
+            const mainVideo = document.getElementById('mainVideo');
+            
+            // Advanced Error Handler with Exponential Backoff Retry
+            let retryCount = 0;
+            const maxRetries = 5;
+            
+            const handleVideoError = async (e) => {
+                const err = mainVideo.error;
+                console.error("Video Playback Error:", err);
+                
+                // Don't retry if user aborted or if it's not a source error
+                if (err && err.code === 1) return; // Aborted
+                
+                if (retryCount < maxRetries) {
+                    retryCount++;
+                    const delay = Math.pow(2, retryCount) * 1000; // 2s, 4s, 8s, 16s, 32s
+                    console.log(`Retrying playback in ${delay}ms (Attempt ${retryCount}/${maxRetries})...`);
+                    
+                    // Show a toast or small indicator
+                    const toast = document.createElement('div');
+                    toast.id = 'retryToast';
+                    toast.textContent = `جاري محاولة التشغيل... (${retryCount})`;
+                    toast.style.cssText = "position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.7); color:white; padding:5px 10px; border-radius:5px; z-index:100; font-size:12px;";
+                    
+                    // Remove existing toast if any
+                    const existing = document.getElementById('retryToast');
+                    if (existing) existing.remove();
+                    
+                    document.querySelector('.video-player-wrapper').appendChild(toast);
+                    setTimeout(() => { if(toast.parentNode) toast.remove(); }, delay);
+
+                    setTimeout(() => {
+                         // Reload the source
+                         const currentSrc = mainVideo.src;
+                         if (currentSrc) {
+                             mainVideo.src = '';
+                             mainVideo.src = currentSrc;
+                             mainVideo.load();
+                         }
+                    }, delay);
+                } else {
+                    let msg = 'Unknown Error';
+                    if (err) {
+                        switch (err.code) {
+                            case 2: msg = 'Network Error'; break;
+                            case 3: msg = 'Decode Error'; break;
+                            case 4: msg = 'Source Not Supported'; break;
+                        }
+                    }
+                    alert(`عذراً، تعذر تشغيل الفيديو بعد عدة محاولات: ${msg}\nيرجى التأكد من اتصال الإنترنت أو المحاولة لاحقاً.`);
+                }
+            };
+
+            mainVideo.removeEventListener('error', handleVideoError);
+            mainVideo.addEventListener('error', handleVideoError);
+
+            // Set Poster (Thumbnail) with fallback
+            const placeholder = PLACEHOLDER_IMAGE;
+            let posterUrl = video.thumbnail_url;
+            if (!posterUrl || posterUrl.trim() === '') {
+                posterUrl = placeholder;
+            }
+            mainVideo.poster = posterUrl;
+            // Handle poster load error by swapping to placeholder (via image preloading or checking)
+            const img = new Image();
+            img.onerror = function() { mainVideo.poster = placeholder; };
+            img.src = posterUrl;
+
+            const source = mainVideo.querySelector('source');
+            
+            // Handle Archive vs Direct
+            let playUrl = video.video_url || '';
+            if (video.storage_type === 'archive' && video.archive_url) {
+                playUrl = video.archive_url;
+            }
+            
+            console.log("Determined Play URL:", playUrl);
+            console.log("Storage Type:", video.storage_type);
+
+            // Fast path: stream directly so playback starts immediately (range requests).
+            // secureLoadVideo (full blob download) is kept only as a fallback on error.
+            const playDirectWithFallback = (url) => {
+                let triedBlob = false;
+                const onErr = async () => {
+                    if (triedBlob || !url) return;
+                    triedBlob = true;
+                    mainVideo.removeEventListener('error', onErr);
+                    const blobUrl = await window.secureLoadVideo(url);
+                    if (blobUrl) {
+                        mainVideo.src = blobUrl;
+                        mainVideo.load();
+                    }
+                };
+                mainVideo.addEventListener('error', onErr);
+                mainVideo.src = url;
+                mainVideo.load();
+                // Kick off loading immediately; browsers that allow it will autoplay
+                mainVideo.play().catch(() => {});
+            };
+
+            if (playUrl) {
+                playDirectWithFallback(playUrl);
+            } else {
+                mainVideo.removeAttribute('src');
+            }
+
+            // Channel Info
+            const channelName = (profile && profile.full_name) ? profile.full_name : (video.channel_name || 'مستخدم غير معروف');
+            
+            // Ensure avatar_url is a valid string
+            let avatar = (profile && profile.avatar_url) ? profile.avatar_url : (video.channel_avatar || null);
+            
+            if (avatar && !avatar.startsWith('http') && !avatar.startsWith('data:')) {
+                 const config = window.getSecureConfig();
+                 avatar = `${config.url}/storage/v1/object/public/avatars/${avatar}`;
+            }
+
+            if (!avatar || avatar.trim() === '') {
+                avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(channelName)}`;
+            }
+            const channelAvatar = avatar;
+            
+            const followersCount = (profile && profile.followers_count) ? profile.followers_count : 0;
+            const isVerified = (profile && profile.verified);
+
+            const pageNameEl = document.getElementById('pageName');
+            pageNameEl.textContent = channelName;
+            if (isVerified) {
+                const badge = document.createElement('i');
+                badge.className = 'fas fa-check-circle verified-badge';
+                badge.title = 'موثق';
+                pageNameEl.appendChild(badge);
+            }
+            pageNameEl.style.cursor = 'pointer';
+            pageNameEl.onclick = () => {
+                if (video.user_id) window.location.href = `settings.html?id=${video.user_id}&ref_video=${video.id}`;
+            };
+
+            document.getElementById('followerCount').textContent = formatNumber(followersCount) + ' منضم';
+            
+            const pageAvatarEl = document.getElementById('pageAvatar');
+            pageAvatarEl.src = channelAvatar;
+            pageAvatarEl.style.cursor = 'pointer';
+            pageAvatarEl.onclick = () => {
+                if (video.user_id) window.location.href = `settings.html?id=${video.user_id}&ref_video=${video.id}`;
+            };
+            pageAvatarEl.onerror = function() {
+                this.onerror = null;
+                this.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(channelName)}`;
+            };
+        }
+
+
+        // تهيئة مشغل الفيديو المخصص
+        function initCustomVideo() {
+            const video = document.getElementById('mainVideo');
+            const playBtn = document.getElementById('playPauseControl');
+            const muteBtn = document.getElementById('muteControl');
+            const fsBtn = document.getElementById('fullscreenControl');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBarFilled');
+            const progressBuffer = document.getElementById('progressBuffer');
+            const timeDisplay = document.getElementById('timeDisplay');
+
+            // If user presses play before the source is ready, queue it
+            let wantPlayOnLoad = false;
+            video.addEventListener('loadedmetadata', () => {
+                if (wantPlayOnLoad) {
+                    wantPlayOnLoad = false;
+                    video.play().catch(() => {});
+                }
+            });
+
+            // تشغيل/إيقاف
+            const togglePlay = () => {
+                if (video.paused) {
+                    wantPlayOnLoad = true;
+                    video.play()
+                        .then(() => { wantPlayOnLoad = false; })
+                        .catch(() => { /* will retry on loadedmetadata */ });
+                    playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                } else {
+                    wantPlayOnLoad = false;
+                    video.pause();
+                    playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                }
+            };
+
+            // نظام النقر: تشغيل/إيقاف الفيديو
+            video.addEventListener('click', (e) => {
+                togglePlay();
+            });
+            playBtn.addEventListener('click', togglePlay);
+
+            // تحديث الوقت والبار والتخزين المؤقت (Buffering)
+            video.addEventListener('timeupdate', () => {
+                const percent = (video.currentTime / video.duration) * 100;
+                progressBar.style.width = percent + '%';
+
+                // تحديث النص
+                const formatTime = (seconds) => {
+                    const h = Math.floor(seconds / 3600);
+                    const m = Math.floor((seconds % 3600) / 60);
+                    const s = Math.floor(seconds % 60);
+                    return `${h > 0 ? h + ':' : ''}${m}:${s < 10 ? '0' + s : s}`;
+                };
+                timeDisplay.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
+            });
+
+            // تحديث التخزين المؤقت (Buffering Visualization)
+            video.addEventListener('progress', () => {
+                if (video.buffered.length > 0 && video.duration > 0) {
+                    const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+                    const duration = video.duration;
+                    const bufferPercent = (bufferedEnd / duration) * 100;
+                    progressBuffer.style.width = bufferPercent + '%';
+                }
+            });
+
+            // كتم الصوت
+            muteBtn.addEventListener('click', () => {
+                video.muted = !video.muted;
+                muteBtn.innerHTML = video.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+            });
+
+            // ملء الشاشة
+            fsBtn.addEventListener('click', () => {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else {
+                    video.parentElement.requestFullscreen();
+                }
+            });
+
+            // السحب والضغط في شريط التقدم - تحسين الفائق للسلاسة
+            let isDragging = false;
+            let wasPlayingBeforeDrag = false;
+
+            const updateProgressUI = (percent) => {
+                progressBar.style.width = (percent * 100) + '%';
+                const formatTime = (seconds) => {
+                    const h = Math.floor(seconds / 3600);
+                    const m = Math.floor((seconds % 3600) / 60);
+                    const s = Math.floor(seconds % 60);
+                    return `${h > 0 ? h + ':' : ''}${m}:${s < 10 ? '0' + s : s}`;
+                };
+                timeDisplay.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration || 0)}`;
+            };
+
+            const handleMove = (e) => {
+                const rect = progressContainer.getBoundingClientRect();
+                const pos = (rect.right - e.clientX) / rect.width;
+                const percent = Math.max(0, Math.min(pos, 1));
+
+                // تحديث الشكل فوراً للسلاسة
+                progressBar.style.width = (percent * 100) + '%';
+
+                // تحديث وقت الفيديو
+                if (video.duration) {
+                    video.currentTime = percent * video.duration;
+                }
+            };
+
+            progressContainer.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                wasPlayingBeforeDrag = !video.paused;
+                video.pause();
+                handleMove(e);
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    requestAnimationFrame(() => handleMove(e));
+                }
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    if (wasPlayingBeforeDrag) {
+                        video.play();
+                        playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                    }
+                }
+            });
+
+            progressContainer.addEventListener('click', handleMove);
+
+            // إخفاء الأدوات تلقائياً عند عدم التفاعل
+            const videoWrapper = document.getElementById('videoWrapper');
+            const videoControls = document.getElementById('videoControls');
+            let hideTimeout;
+
+            const resetHideTimer = () => {
+                videoControls.classList.remove('hide-controls');
+                videoWrapper.style.cursor = 'default';
+                clearTimeout(hideTimeout);
+                hideTimeout = setTimeout(() => {
+                    if (!video.paused && !isDragging) {
+                        videoControls.classList.add('hide-controls');
+                        videoWrapper.style.cursor = 'none';
+                    }
+                }, 3000);
+            };
+
+            videoWrapper.addEventListener('mousemove', resetHideTimer);
+            videoWrapper.addEventListener('mousedown', resetHideTimer);
+            video.addEventListener('play', resetHideTimer);
+            resetHideTimer();
+
+            // Removed duplicate showSeekEffect
+        }
+
+        function formatDuration(seconds) {
+            if (!seconds) return '0:00';
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        // تحميل الفيديوهات المقترحة مع دعم البحث
+        async function loadSuggestions(currentVideoId = null) {
+            const suggestionsList = document.getElementById('suggestionsList');
+            const suggestionsRail = document.getElementById('suggestionsRail');
+
+            suggestionsList.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+            `;
+            suggestionsRail.innerHTML = suggestionsList.innerHTML;
+
+            try {
+                let query = supabaseClient
+                    .from('videos')
+                    .select('*, profiles(full_name)')
+                    .eq('deleted', false) // Filter out deleted videos
+                    .neq('ban_status', 'deleted'); // Filter out banned videos
+
+                if (currentVideoId) {
+                    query = query.neq('id', currentVideoId);
+                }
+
+                const { data: videos, error } = await query.limit(10);
+
+                if (error) throw error;
+
+                suggestionsList.innerHTML = '';
+                suggestionsRail.innerHTML = '';
+
+                if (!videos || videos.length === 0) {
+                     // Empty State
+                     const emptyHtml = `
+                        <div style="text-align: center; padding: 40px 10px; color: var(--text-sec);">
+                            <div style="font-size: 40px; margin-bottom: 15px; opacity: 0.5;">📹</div>
+                            <h4 style="font-size: 18px; margin-bottom: 8px; color: var(--text-main);">لا يوجد مقترحات</h4>
+                            <p style="font-size: 14px;">كن اول من يصنع فديو</p>
+                            <a href="upload.html" style="display:inline-block; margin-top:15px; font-size:14px; color:var(--primary);">
+                                <i class="fas fa-cloud-upload-alt"></i> رفع فيديو
+                            </a>
+                        </div>
+                     `;
+                     suggestionsList.innerHTML = emptyHtml;
+                     suggestionsRail.innerHTML = emptyHtml;
+                     return;
+                }
+
+                // إضافة الفيديوهات المقترحة
+                videos.forEach(video => {
+                    // Skip banned videos in suggestions
+                    if (video.deleted || video.ban_status === 'deleted' || video.ban_status === 'permanent') {
+                         return;
+                    }
+
+                    const channelName = video.profiles ? video.profiles.full_name : 'مستخدم';
+                    const durationStr = formatDuration(video.duration);
+                    const needsDuration = !video.duration && video.video_url;
+                    
+                    // Use local placeholder when thumbnail is missing
+                    const placeholder = PLACEHOLDER_IMAGE;
+                    
+                    let thumbnail = video.thumbnail_url;
+                    if (!thumbnail || thumbnail.trim() === '') {
+                        thumbnail = placeholder;
+                    }
+
+                    const views = video.views || 0;
+                    const date = new Date(video.created_at).toLocaleDateString('ar-EG');
+                    const safeThumb = window.safeImageUrl ? window.safeImageUrl(thumbnail) : thumbnail;
+                    const safeTitle = window.escapeHtml ? window.escapeHtml(video.title || '') : (video.title || '');
+                    const safeChannel = window.escapeHtml ? window.escapeHtml(channelName) : channelName;
+                    const safeVideoId = window.safeId ? window.safeId(video.id) : video.id;
+                    const safeVideoUrl = window.safeVideoUrl ? window.safeVideoUrl(video.video_url) : (video.video_url || '');
+                    
+                    // الشريط الجانبي
+                    const suggestionCard = document.createElement('div');
+                    suggestionCard.className = 'suggestion-card';
+                    suggestionCard.onclick = () => window.location.href = `?id=${safeVideoId}`;
+
+                    suggestionCard.innerHTML = `
+                        <div class="suggestion-thumbnail">
+                            <img src="${window.escapeAttr(safeThumb)}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;" onerror="this.onerror=null; this.src='${placeholder}'">
+                            <div class="suggestion-duration" id="sug-dur-${window.escapeAttr(safeVideoId)}" ${needsDuration ? `data-video-url="${window.escapeAttr(safeVideoUrl)}"` : ''}>${durationStr}</div>
+                        </div>
+                        <div class="suggestion-info">
+                            <div class="suggestion-title">${safeTitle}</div>
+                            <div class="suggestion-page">${safeChannel}</div>
+                            <div class="suggestion-meta">${views} مشاهدة • ${window.escapeHtml(date)}</div>
+                        </div>
+                    `;
+
+                    suggestionsList.appendChild(suggestionCard);
+
+                    // الشريط الأفقي
+                    const railCard = document.createElement('div');
+                    railCard.className = 'rail-video-card';
+                    railCard.onclick = () => window.location.href = `?id=${safeVideoId}`;
+
+                    railCard.innerHTML = `
+                        <div class="rail-thumbnail">
+                            <img src="${window.escapeAttr(safeThumb)}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;" onerror="this.onerror=null; this.src='${placeholder}'">
+                        </div>
+                        <div class="rail-info">
+                            <div class="rail-video-title">${safeTitle}</div>
+                            <div class="suggestion-meta">${safeChannel} • ${views} مشاهدة</div>
+                        </div>
+                    `;
+
+                    suggestionsRail.appendChild(railCard);
+                });
+
+                // Fetch missing durations
+                fetchMissingDurations();
+
+            } catch (e) {
+                console.error("Error loading suggestions:", e);
+                suggestionsList.innerHTML = '<p style="text-align:center;">فشل تحميل المقترحات</p>';
+            }
+        }
+
+        async function fetchMissingDurations() {
+            const elements = document.querySelectorAll('.suggestion-duration[data-video-url]');
+            for (const el of elements) {
+                const url = el.getAttribute('data-video-url');
+                if (!url) continue;
+
+                try {
+                    const duration = await getVideoDurationFromUrl(url);
+                    if (duration > 0) {
+                        el.textContent = formatDuration(duration);
+                    }
+                } catch (e) {
+                    // Fail silently
+                }
+            }
+        }
+
+        function getVideoDurationFromUrl(url) {
+            return new Promise((resolve) => {
+                const video = document.createElement('video');
+                video.preload = 'metadata';
+                video.onloadedmetadata = function() {
+                    resolve(video.duration);
+                };
+                video.onerror = function() {
+                    resolve(0);
+                };
+                video.src = url;
+            });
+        }
+
+        // تحميل التعليقات
+        async function loadComments() {
+            const commentsList = document.getElementById('commentsList');
+            const commentsCount = document.getElementById('commentsCount');
+            const videoId = appState.currentVideo?.id;
+
+            if (!videoId) return;
+
+            commentsList.innerHTML = '<div style="padding:20px; text-align:center;"><i class="fas fa-spinner fa-spin"></i></div>';
+
+            try {
+                // 1. جلب التعليقات
+                const { data: comments, error } = await supabaseClient
+                    .from('comments')
+                    .select('*, profiles(full_name, avatar_url, verified)')
+                    .eq('video_id', videoId)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                appState.comments = comments || [];
+                
+                // 2. التحقق من إعجابات المستخدم الحالي (إذا كان مسجلاً للدخول)
+                if (currentUser && appState.comments.length > 0) {
+                    const commentIds = appState.comments.map(c => c.id);
+                    const { data: userLikes } = await supabaseClient
+                        .from('comment_likes')
+                        .select('comment_id')
+                        .eq('user_id', currentUser.id)
+                        .in('comment_id', commentIds);
+                    
+                    const likedCommentIds = new Set(userLikes?.map(l => l.comment_id) || []);
+                    
+                    // تحديث حالة التعليقات
+                    appState.comments.forEach(c => {
+                        c.liked = likedCommentIds.has(c.id);
+                    });
+                }
+
+                commentsList.innerHTML = '';
+                
+                if (appState.comments.length === 0) {
+                    commentsList.innerHTML = `
+                        <div style="text-align: center; color: var(--text-sec); padding: 40px 0;">
+                            <i class="far fa-comment" style="font-size: 48px; margin-bottom: 15px;"></i>
+                            <p>لا توجد تعليقات بعد. كن أول من يعلق!</p>
+                        </div>
+                    `;
+                    commentsCount.textContent = '(0)';
+                    return;
+                }
+
+                // عرض التعليقات
+                const isBanned = appState.currentVideo && (
+                    appState.currentVideo.deleted || 
+                    appState.currentVideo.ban_status === 'deleted' || 
+                    appState.currentVideo.ban_status === 'permanent' || 
+                    (appState.currentVideo.ban_status === 'temporary' && new Date(appState.currentVideo.temp_ban_until) > new Date())
+                );
+
+                appState.comments.forEach(comment => {
+                    const profile = comment.profiles || {};
+                    const name = profile.full_name || 'مستخدم';
+                    let avatarUrl = profile.avatar_url;
+                    if (avatarUrl && !avatarUrl.startsWith('http') && !avatarUrl.startsWith('data:')) {
+                         const config = window.getSecureConfig();
+                         avatarUrl = `${config.url}/storage/v1/object/public/avatars/${avatarUrl}`;
+                    }
+
+                    const isVerified = profile.verified === true;
+                    const safeName = window.escapeHtml ? window.escapeHtml(name) : name;
+                    const safeCommentId = window.safeId ? window.safeId(comment.id) : '';
+                    const safeUserId = window.safeId ? window.safeId(comment.user_id) : '';
+                    const safeRefVideoId = window.safeId ? window.safeId(appState.currentVideo && appState.currentVideo.id) : '';
+                    const profileHref = (safeUserId && safeRefVideoId) ? `settings.html?id=${safeUserId}&ref_video=${safeRefVideoId}` : 'settings.html';
+                    
+                    // Fallback to UI Avatars if no URL
+                    if (!avatarUrl) {
+                        avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`;
+                    }
+                    const safeAvatarUrl = window.safeImageUrl ? window.safeImageUrl(avatarUrl) : avatarUrl;
+
+                    const avatar = `<img src="${window.escapeAttr(safeAvatarUrl)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(name)}'">`;
+                    const time = new Date(comment.created_at).toLocaleDateString('ar-EG');
+                    
+                    const likeClass = comment.liked ? 'fas fa-heart' : 'far fa-heart';
+                    const likeColor = comment.liked ? '#ff3366' : 'inherit';
+                    const likesCount = comment.likes || 0;
+
+                    const commentContent = isBanned
+                        ? '<span style="color: #e74c3c; font-style: italic;">لا يمكن رؤية التعليق الان بسبب تم حظر الفديو او حذفة</span>'
+                        : (window.escapeHtml ? window.escapeHtml(comment.content || '') : (comment.content || ''));
+
+                    const commentElement = document.createElement('div');
+                    commentElement.className = 'comment';
+                    commentElement.innerHTML = `
+                        <div class="comment-avatar" style="cursor: pointer;" onclick="window.location.href='${window.escapeAttr(profileHref)}'">${avatar}</div>
+                        <div class="comment-content">
+                        <div class="comment-header">
+                            <span class="comment-author" style="cursor: pointer;" onclick="window.location.href='${window.escapeAttr(profileHref)}'">
+                                ${safeName}
+                                ${isVerified ? '<i class="fas fa-check-circle verified-badge" title="موثق" style="font-size: 12px; margin-right: 4px;"></i>' : ''}
+                            </span>
+                            <span class="comment-time">${window.escapeHtml(time)}</span>
+                        </div>
+                        <div class="comment-text">${commentContent}</div>
+                        <div class="comment-actions" style="margin-top: 8px;">
+                            <button class="action-btn" onclick="${isBanned ? '' : `likeComment('${safeCommentId}')`}" style="padding: 4px 8px; font-size: 12px; color: ${likeColor}; ${isBanned ? 'opacity:0.5;cursor:not-allowed;' : ''}">
+                                <i class="${likeClass}" id="like-icon-${window.escapeAttr(safeCommentId)}"></i> <span id="like-count-${window.escapeAttr(safeCommentId)}">${likesCount}</span>
+                            </button>
+                        </div>
+                    </div>
+                    `;
+
+                    commentsList.appendChild(commentElement);
+                });
+
+                commentsCount.textContent = `(${appState.comments.length})`;
+
+            } catch (e) {
+                console.error("Error loading comments:", e);
+                commentsList.innerHTML = '<p>فشل تحميل التعليقات</p>';
+            }
+        }
+
+        // إضافة تعليق جديد
+        async function addComment(commentText) {
+            if (!commentText.trim()) return;
+            
+            if (!currentUser) {
+                showToast('يرجى تسجيل الدخول للتعليق', 'error');
+                return;
+            }
+            
+            if (!appState.currentVideo) return;
+
+            try {
+                // Check Limit Remote (Most Accurate) with Fallback
+                let remoteCount = 0;
+                let limitError = null;
+
+                try {
+                    const { data, error } = await supabaseClient
+                        .rpc('get_user_comment_count', { p_video_id: appState.currentVideo.id });
+                    
+                    if (error) throw error;
+                    remoteCount = data;
+                } catch (rpcError) {
+                    console.warn("RPC Check failed, falling back to direct count:", rpcError);
+                    // Fallback: Direct count query
+                    const { count, error: directError } = await supabaseClient
+                        .from('comments')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('video_id', appState.currentVideo.id)
+                        .eq('user_id', currentUser.id);
+                    
+                    if (!directError) remoteCount = count || 0;
+                }
+                
+                if (remoteCount >= 5) {
+                    document.getElementById('limitExceededOverlay').style.display = 'flex';
+                    return;
+                }
+
+                // Debug log before insert
+                console.log("Attempting to add comment:", {
+                    user_id: currentUser.id,
+                    video_id: appState.currentVideo.id,
+                    content: commentText
+                });
+
+                const { error } = await supabaseClient
+                    .from('comments')
+                    .insert({
+                        user_id: currentUser.id,
+                        video_id: appState.currentVideo.id,
+                        content: commentText
+                    });
+
+                if (error) {
+                    console.error("Supabase Insert Error:", error);
+                    // Check for specific limit exceeded error
+                    if (error.message && error.message.includes('limit_exceeded')) {
+                         document.getElementById('limitExceededOverlay').style.display = 'flex';
+                         return; 
+                    }
+                    
+                    // If video is banned/deleted, show specific error
+                    if (appState.currentVideo && (appState.currentVideo.deleted || (appState.currentVideo.ban_status && appState.currentVideo.ban_status !== 'none'))) {
+                        showToast('لا يمكن إضافة تعليقات لأن الفيديو محظور أو محذوف', 'error');
+                        return;
+                    }
+                    
+                    throw error;
+                }
+
+                // Reload comments
+                loadComments();
+                updateCommentLimitUI();
+                
+                // مسح حقل الإدخال
+                document.getElementById('commentInput').value = '';
+
+            } catch (e) {
+                console.error("Detailed Error adding comment:", e);
+                if (e.message && e.message.includes('limit_exceeded')) {
+                     document.getElementById('limitExceededOverlay').style.display = 'flex';
+                } else if (e.message && (e.message.includes('JWT') || e.code === 'PGRST301' || e.status === 401)) {
+                     showToast('جلسة العمل انتهت، يرجى تسجيل الدخول مرة أخرى', 'error');
+                } else {
+                    showCommentErrorAnimation();
+                }
+            }
+        }
+
+        async function updateCommentLimitUI() {
+            // System hidden: Do not show comment count/limit to user
+            if (!currentUser || !appState.currentVideo) return;
+            const limitInfo = document.getElementById('commentLimitInfo');
+            if (limitInfo) limitInfo.style.display = 'none';
+        }
+
+        function showCommentErrorAnimation(message) {
+            const overlay = document.getElementById('errorAnimationOverlay');
+            if (overlay) {
+                if (message) {
+                     const txt = overlay.querySelector('.error-text');
+                     if (txt) txt.textContent = message;
+                }
+                overlay.style.display = 'flex';
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    // Reset text
+                    setTimeout(() => {
+                        const txt = overlay.querySelector('.error-text');
+                        if (txt) txt.textContent = 'فشل إضافة التعليق';
+                    }, 500);
+                }, 2000);
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            
+            let icon = '<i class="fas fa-info-circle"></i>';
+            if (type === 'error') icon = '<i class="fas fa-exclamation-circle" style="color:#ff4757"></i>';
+            else if (type === 'success') icon = '<i class="fas fa-check-circle" style="color:#4CAF50"></i>';
+            
+            toast.innerHTML = icon;
+            const toastMessage = document.createElement('div');
+            toastMessage.textContent = message;
+            toast.appendChild(toastMessage);
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'toastOut 0.26s forwards';
+                setTimeout(() => toast.remove(), 280);
+            }, 4000);
+        }
+
+        // إعجاب بالتعليق - Make the button work and record the like
+        async function likeComment(commentId, reactionType = 'like') {
+            // التحقق من تسجيل الدخول
+            if (!currentUser) {
+                showToast('يرجى تسجيل الدخول للإعجاب بالتعليق', 'error');
+                return;
+            }
+
+            // العثور على التعليق في الحالة المحلية
+            const comment = appState.comments.find(c => c.id === commentId);
+            if (!comment) return;
+
+            // عناصر الواجهة
+            const likeIcon = document.getElementById(`like-icon-${commentId}`);
+            const likeCountSpan = document.getElementById(`like-count-${commentId}`);
+            const btn = likeIcon?.parentElement;
+
+            // الحالة الحالية
+            const wasLiked = comment.liked;
+            const originalLikes = comment.likes || 0;
+
+            // 1. تحديث الواجهة فوراً (Optimistic UI)
+            if (!wasLiked) {
+                // تسجيل الإعجاب محلياً
+                comment.likes = originalLikes + 1;
+                comment.liked = true;
+                
+                // تحديث الزر
+                if (likeIcon) likeIcon.className = 'fas fa-heart';
+                if (btn) btn.style.color = '#ff3366';
+                
+                // تشغيل الأنيميشن
+                let color = '#ff3366';
+                if (reactionType === 'love') color = '#ff6600';
+                else if (reactionType === 'fire') color = '#ff0000';
+                showCommentLikeAnimation(color);
+            } else {
+                // إلغاء الإعجاب محلياً
+                comment.likes = Math.max(0, originalLikes - 1);
+                comment.liked = false;
+                
+                // تحديث الزر
+                if (likeIcon) likeIcon.className = 'far fa-heart';
+                if (btn) btn.style.color = 'inherit';
+            }
+
+            // تحديث العداد
+            if (likeCountSpan) likeCountSpan.textContent = comment.likes;
+
+            // 2. تسجيل الإعجاب في قاعدة البيانات (The other records the like)
+            try {
+                if (!wasLiked) {
+                    // إضافة سجل في جدول الإعجابات
+                    const { error } = await supabaseClient
+                        .from('comment_likes')
+                        .insert({ user_id: currentUser.id, comment_id: commentId });
+                    
+                    if (error) throw error;
+                } else {
+                    // حذف السجل من جدول الإعجابات
+                    const { error } = await supabaseClient
+                        .from('comment_likes')
+                        .delete()
+                        .eq('user_id', currentUser.id)
+                        .eq('comment_id', commentId);
+                    
+                    if (error) throw error;
+                }
+            } catch (err) {
+                console.error('Error recording like:', err);
+                
+                // التراجع عن التغييرات في حال الفشل
+                comment.likes = originalLikes;
+                comment.liked = wasLiked;
+                
+                if (likeCountSpan) likeCountSpan.textContent = comment.likes;
+                if (likeIcon) {
+                    likeIcon.className = wasLiked ? 'fas fa-heart' : 'far fa-heart';
+                }
+                if (btn) {
+                    btn.style.color = wasLiked ? '#ff3366' : 'inherit';
+                }
+                
+                if (err.message && (err.message.includes('JWT') || err.code === 'PGRST301' || err.status === 401)) {
+                    showToast('جلسة العمل انتهت، يرجى تسجيل الدخول مرة أخرى', 'error');
+                } else {
+                    showToast('فشل تسجيل الإعجاب', 'error');
+                }
+            }
+        }
+
+        // عرض أيقونات التفاعل للتعليقات
+        function showCommentReactions(commentId) {
+            appState.currentlyLikingCommentId = commentId;
+            const reactions = document.getElementById('commentReactions');
+            reactions.classList.add('show');
+
+            // إخفاء الأيقونات بعد 3 ثواني
+            setTimeout(() => {
+                reactions.classList.remove('show');
+            }, 3000);
+        }
+
+        // عرض تأثير القلب للتعليقات
+        function showCommentLikeAnimation(color) {
+            // إضافة حركة الأيقونات الطائرة مع إيموجيهات مضحكة للتعليقات فقط
+            const icons = ['fa-heart', 'fa-fire', 'fa-thumbs-up'];
+            const emojis = ['😂', '😍', '🔥', '👏', '💥'];
+
+            for (let i = 0; i < 45; i++) {
+                setTimeout(() => {
+                    const isEmoji = Math.random() > 0.4;
+                    const floatingElement = document.createElement('div');
+                    floatingElement.className = 'floating-reaction';
+                    floatingElement.style.left = (Math.random() * 90 + 5) + 'vw';
+                    floatingElement.style.fontSize = (Math.random() * 25 + 20) + 'px';
+
+                    if (isEmoji) {
+                        floatingElement.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                    } else {
+                        const iconType = icons[Math.floor(Math.random() * icons.length)];
+                        floatingElement.style.color = color;
+                        floatingElement.innerHTML = `<i class="fas ${iconType}"></i>`;
+                    }
+
+                    document.body.appendChild(floatingElement);
+                    setTimeout(() => floatingElement.remove(), 4000);
+                }, i * 80);
+            }
+            showLikeAnimation();
+        }
+
+        // تحديث الثيم
+        function updateTheme() {
+            const body = document.body;
+            const slider = document.getElementById('iconSlider');
+
+            // إزالة جميع أوضاع الثيم
+            body.classList.remove('light-mode', 'sky-mode');
+
+            // تطبيق الثيم المناسب
+            let translateY = 0;
+            const iconHeight = 50;
+
+            if (appState.themeState === 0) {
+                // الوضع الليلي (الافتراضي)
+                translateY = 0;
+            } else if (appState.themeState === 1) {
+                // الوضع النهاري
+                body.classList.add('light-mode');
+                translateY = -iconHeight;
+            } else if (appState.themeState === 2) {
+                // وضع السحاب
+                body.classList.add('sky-mode');
+                translateY = -(iconHeight * 2);
+            }
+
+            // تحريك السلايدر
+            slider.style.transform = `translateY(${translateY}px)`;
+        }
+
+        // عرض تأثير الحفظ
+        function showSaveAnimation(isSaving) {
+            const overlay = document.getElementById('saveAnimationOverlay');
+            const liquidFill = document.getElementById('liquidFill');
+            const saveFill = document.getElementById('saveFill');
+            const liquidDrops = document.getElementById('liquidDrops');
+
+            overlay.style.display = 'flex';
+
+            if (isSaving) {
+                liquidFill.style.height = '0%';
+                saveFill.style.opacity = '0';
+
+                    setTimeout(() => {
+                    liquidFill.style.height = '100%';
+
+                    // أمواج متحركة داخل الحاوية
+                    const wave1 = document.createElement('div');
+                    wave1.className = 'wave wave-1';
+                    const wave2 = document.createElement('div');
+                    wave2.className = 'wave wave-2';
+                    const wave3 = document.createElement('div');
+                    wave3.className = 'wave wave-3';
+                    // ضبط مواضع عمودية عشوائية لكل موجة
+                    wave1.style.bottom = (Math.random() * 6 + 2) + '%';
+                    wave2.style.bottom = (Math.random() * 10 + 6) + '%';
+                    wave3.style.bottom = (Math.random() * 14 + 8) + '%';
+                    wave1.style.animationDuration = (3.2 + Math.random() * 1.6) + 's';
+                    wave2.style.animationDuration = (4.0 + Math.random() * 1.2) + 's';
+                    wave3.style.animationDuration = (2.6 + Math.random() * 1.4) + 's';
+
+                    liquidFill.appendChild(wave1);
+                    liquidFill.appendChild(wave2);
+                    liquidFill.appendChild(wave3);
+
+                    // حبات داخل الحاوية تتحرك بعشوائية أفقية ودوارة
+                    const dropInterval = setInterval(() => {
+                        const drop = document.createElement('div');
+                        drop.className = 'drop';
+                        // وضع الحبة ضمن 12% - 88% لتجنب الانزلاق عند الحواف
+                        const left = Math.random() * 76 + 12;
+                        drop.style.left = left + '%';
+                        drop.style.top = '-6px';
+                        // حجم متغير قليلًا
+                        const size = Math.floor(Math.random() * 6) + 5;
+                        drop.style.width = size + 'px';
+                        drop.style.height = size + 'px';
+                        // افقي ودوارة عشوائية
+                        const tx = (Math.random() * 40 - 20) + 'px';
+                        const rot = (Math.random() * 360 - 180) + 'deg';
+                        drop.style.setProperty('--tx', tx);
+                        drop.style.setProperty('--rot', rot);
+                        drop.style.animation = 'dropFall 0.95s linear forwards';
+                        liquidDrops.appendChild(drop);
+                        setTimeout(() => drop.remove(), 1050);
+                    }, 120);
+
+                    setTimeout(() => {
+                        clearInterval(dropInterval);
+                        saveFill.style.opacity = '1';
+
+                        // ابقاء الموجات لجزء صغير بعد الانتهاء ثم إزالتها بانتظام
+                        setTimeout(() => {
+                            wave1.remove(); wave2.remove(); wave3.remove();
+                        }, 800);
+                    }, 3500);
+                }, 100);
+
+                document.querySelector('.save-text').textContent = 'جاري الحفظ...';
+                setTimeout(() => {
+                    document.querySelector('.save-text').textContent = 'تم الحفظ بنجاح';
+                }, 3800);
+            } else {
+                liquidFill.style.height = '100%';
+                saveFill.style.opacity = '1';
+
+                setTimeout(() => {
+                    liquidFill.style.height = '0%';
+                    saveFill.style.opacity = '0';
+                    // تفريغ الماء - حبات تصعد داخل الحاوية فقط
+                    const dropInterval = setInterval(() => {
+                        const drop = document.createElement('div');
+                        drop.className = 'drop';
+                        // موضع من 12% إلى 88% من العرض
+                        drop.style.left = (Math.random() * 76 + 12) + '%';
+                        drop.style.bottom = '8px';
+                        drop.style.top = 'auto';
+                        const size = Math.floor(Math.random() * 6) + 5;
+                        drop.style.width = size + 'px';
+                        drop.style.height = size + 'px';
+                        drop.style.animation = 'dropRise 0.9s linear forwards';
+                        liquidDrops.appendChild(drop);
+                        setTimeout(() => drop.remove(), 950);
+                    }, 120);
+
+                    setTimeout(() => clearInterval(dropInterval), 3500);
+                }, 100);
+
+                document.querySelector('.save-text').textContent = 'جاري الإزالة...';
+                setTimeout(() => {
+                    document.querySelector('.save-text').textContent = 'تمت الإزالة';
+                }, 3800);
+            }
+
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                liquidDrops.innerHTML = '';
+            }, 4000);
+        }
+
+        // عرض نافذة التحميل (راجع/احتياطي)
+        function showDownloadModal() {
+            const modal = document.getElementById('downloadModal');
+            modal.style.display = 'flex';
+        }
+
+        // عرض تنبيه جانبي بسيط عند الضغط على زر التحميل لمدة محددة
+        function showDownloadToast(durationMs = 5000) {
+            const container = document.getElementById('toastContainer');
+            if (!container) return showDownloadModal(); // fallback to modal
+
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<i class="fas fa-cloud-download-alt" style="color:#4CAF50;font-size:18px"></i><div>سوف تتوفر ميزة التحميل قريباً</div>`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'toastOut 0.26s forwards';
+                setTimeout(() => toast.remove(), 280);
+            }, durationMs);
+        }
+
+        // عرض مودال تعليق مع عرض car.html ثم رسالة نجاح احترافية
+        function showCommentModal(durationMs = 5000) {
+            const modal = document.getElementById('commentModal');
+            const iframe = document.getElementById('commentIframe');
+            const success = document.getElementById('commentSuccess');
+            const closeBtn = document.getElementById('closeCommentModal');
+            const progressBar = document.getElementById('commentProgress');
+            const confettiContainer = document.getElementById('confettiContainer');
+
+            // تهيئة العرض
+            iframe.src = 'car.html';
+            iframe.style.display = 'block';
+            success.style.display = 'none';
+            progressBar.style.width = '0%';
+            modal.style.display = 'flex';
+            modal.setAttribute('aria-hidden', 'false');
+            // accessibility: focus close button
+            closeBtn.focus();
+
+            // إزالة أي confetti موجود
+            confettiContainer.innerHTML = '';
+
+            let rafId = null;
+            const start = performance.now();
+
+            function updateProgress(now) {
+                const elapsed = now - start;
+                const percent = Math.min(100, (elapsed / durationMs) * 100);
+                progressBar.style.width = percent + '%';
+                if (percent < 100) {
+                    rafId = requestAnimationFrame(updateProgress);
+                }
+            }
+            rafId = requestAnimationFrame(updateProgress);
+
+            // إغلاق يدوي
+            function closeHandler() {
+                modal.style.display = 'none';
+                modal.setAttribute('aria-hidden', 'true');
+                iframe.src = '';
+                progressBar.style.width = '0%';
+                if (rafId) cancelAnimationFrame(rafId);
+                clearConfetti(confettiContainer);
+                closeBtn.removeEventListener('click', closeHandler);
+                modal.removeEventListener('click', overlayHandler);
+            }
+            closeBtn.addEventListener('click', closeHandler);
+
+            // إغلاق عند الضغط على الخلفية خارج المحتوى
+            function overlayHandler(e) {
+                if (e.target === modal) closeHandler();
+            }
+            modal.addEventListener('click', overlayHandler);
+
+            // بعد المدة المحددة، إظهار رسالة النجاح
+            setTimeout(() => {
+                if (rafId) cancelAnimationFrame(rafId);
+                iframe.style.display = 'none';
+                progressBar.style.width = '100%';
+                // تعيين نص النجاح بصيغة مؤكدة
+                if (success && success.querySelector) {
+                    const txt = success.querySelector('.success-text');
+                    if (txt) txt.textContent = 'تم إرسال تعليقك';
+                }
+                success.style.display = 'block';
+                spawnConfetti(confettiContainer, 24);
+
+                // إغلاق تلقائي بعد 3 ثواني
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    modal.setAttribute('aria-hidden', 'true');
+                    iframe.src = '';
+                    progressBar.style.width = '0%';
+                    clearConfetti(confettiContainer);
+                    closeBtn.removeEventListener('click', closeHandler);
+                }, 3000);
+            }, durationMs);
+        }
+
+        // Confetti helpers
+        function spawnConfetti(container, count = 20) {
+            const colors = ['#ff3366', '#ff6600', '#f1c40f', '#4CAF50', '#2196f3'];
+            for (let i = 0; i < count; i++) {
+                const el = document.createElement('div');
+                el.className = 'confetti';
+                const size = Math.floor(Math.random() * 8) + 6;
+                el.style.width = size + 'px';
+                el.style.height = size + 'px';
+                el.style.left = Math.random() * 90 + '%';
+                el.style.background = colors[Math.floor(Math.random() * colors.length)];
+                el.style.transform = 'translateY(-10vh) rotate(' + Math.floor(Math.random() * 360) + 'deg)';
+                container.appendChild(el);
+                // إزالة بعد الانتهاء
+                setTimeout(() => {
+                    el.remove();
+                }, 3500);
+            }
+        }
+
+        function clearConfetti(container) {
+            container.innerHTML = '';
+        }
+
+        // --- Admin Actions (Videos) ---
+        // Helper to execute ban
+        async function executeAdminBan(videoId, status, reason, until = null) {
+            // 1. Try RPC (Best for Admins bypassing RLS)
+            const { error: rpcError } = await supabaseClient.rpc('admin_ban_video', {
+                target_id: videoId,
+                new_status: status,
+                reason: reason,
+                until: until
+            });
+
+            if (!rpcError) return true; // Success
+
+            console.warn("RPC admin_ban_video failed, falling back to direct update:", rpcError);
+
+            // 2. Fallback: Direct Update (Requires RLS policy setup)
+            const updatePayload = { 
+                ban_status: status, 
+                ban_reason: reason 
+            };
+            if (until) updatePayload.temp_ban_until = until;
+            if (status === 'deleted') {
+                updatePayload.deleted = true;
+            }
+
+            const { data, error } = await supabaseClient
+                .from('videos')
+                .update(updatePayload)
+                .eq('id', videoId)
+                .select();
+
+            if (error) throw error;
+            if (!data || data.length === 0) {
+                 throw new Error('لم يتم تحديث الفيديو. يرجى التأكد من تشغيل ملف SQL المحدث (admin_ban_video).');
+            }
+            return true;
+        }
+
+        async function adminBanVideoPermanent(videoId, reason) {
+            try {
+                await executeAdminBan(videoId, 'permanent', reason);
+                
+                await supabaseClient.from('admin_actions').insert({
+                    admin_id: currentUser?.id || null,
+                    target_video_id: videoId,
+                    action: 'ban_video_perm',
+                    reason
+                });
+                alert('تم الحظر الدائم');
+                location.reload();
+            } catch (e) {
+                alert('فشل الحظر: ' + e.message);
+            }
+        }
+
+        async function adminBanVideoTemporary(videoId, duration, unit, reason) {
+            try {
+                let hours = 0;
+                if (unit === 'minutes') {
+                    hours = duration / 60;
+                } else {
+                    hours = duration;
+                }
+                
+                const until = new Date(Date.now() + (hours * 3600000));
+                
+                await executeAdminBan(videoId, 'temporary', reason, until.toISOString());
+
+                try {
+                    await supabaseClient.from('admin_actions').insert({
+                        admin_id: currentUser?.id || null,
+                        target_video_id: videoId,
+                        action: 'ban_video_temp',
+                        reason,
+                        meta: { hours, original_duration: duration, unit }
+                    });
+                } catch (logError) {
+                    console.warn('Failed to log admin action:', logError);
+                }
+
+                alert('تم الحظر المؤقت بنجاح');
+                location.reload();
+            } catch (e) {
+                alert('فشل الحظر: ' + e.message);
+            }
+        }
+
+        async function adminDeleteVideo(videoId, reason) {
+            try {
+                await executeAdminBan(videoId, 'deleted', reason);
+
+                try {
+                    await supabaseClient.from('admin_actions').insert({
+                        admin_id: currentUser?.id || null,
+                        target_video_id: videoId,
+                        action: 'delete_video',
+                        reason
+                    });
+                } catch (logError) {
+                    console.warn('Failed to log admin action:', logError);
+                }
+
+                alert('تم حظر هذا الفيديو لأنه ينتهك سياسات المنصة');
+                location.reload();
+            } catch (e) {
+                alert('فشل الحذف: ' + e.message);
+            }
+        }
+
+        // إعداد مستمعي الأحداث
+        function setupEventListeners() {
+            // زر الإعجاب - تفعيل ميزة إلغاء الإعجاب بنقرة أخرى
+            document.getElementById('likeBtn').addEventListener('click', async function () {
+                if (!currentUser) {
+                    alert('يرجى تسجيل الدخول للإعجاب بالفيديو');
+                    return;
+                }
+
+                const btn = this;
+                const videoId = appState.currentVideo.id;
+
+                if (!appState.isLiked) {
+                    // Optimistic UI Update
+                    appState.isLiked = true;
+                    appState.likesCount++;
+                    btn.classList.add('active');
+                    btn.innerHTML = '<i class="fas fa-heart"></i><span id="likeCount">' + appState.likesCount.toLocaleString() + '</span>';
+                    showLikeAnimation();
+
+                    // DB Update
+                    const { error } = await supabaseClient
+                        .from('likes')
+                        .insert({ user_id: currentUser.id, video_id: videoId });
+                    
+                    if (error) {
+                        console.error('Error adding like:', error);
+                        // Revert on error
+                        appState.isLiked = false;
+                        appState.likesCount--;
+                        btn.classList.remove('active');
+                        btn.innerHTML = '<i class="far fa-heart"></i><span id="likeCount">' + appState.likesCount.toLocaleString() + '</span>';
+                    }
+                } else {
+                    // Optimistic UI Update
+                    appState.isLiked = false;
+                    appState.likesCount--;
+                    btn.classList.remove('active');
+                    btn.innerHTML = '<i class="far fa-heart"></i><span id="likeCount">' + appState.likesCount.toLocaleString() + '</span>';
+
+                    // DB Update
+                    const { error } = await supabaseClient
+                        .from('likes')
+                        .delete()
+                        .eq('user_id', currentUser.id)
+                        .eq('video_id', videoId);
+                    
+                    if (error) {
+                        console.error('Error removing like:', error);
+                        // Revert on error
+                        appState.isLiked = true;
+                        appState.likesCount++;
+                        btn.classList.add('active');
+                        btn.innerHTML = '<i class="fas fa-heart"></i><span id="likeCount">' + appState.likesCount.toLocaleString() + '</span>';
+                    }
+                }
+            });
+
+            // زر الحفظ
+            document.getElementById('saveBtn').addEventListener('click', async function () {
+                if (!currentUser) {
+                    alert('يرجى تسجيل الدخول لحفظ الفيديو');
+                    return;
+                }
+
+                const btn = this;
+                const videoId = appState.currentVideo.id;
+
+                if (appState.isSaved) {
+                    // Optimistic UI
+                    appState.isSaved = false;
+                    btn.classList.remove('active');
+                    btn.innerHTML = '<i class="far fa-bookmark"></i><span>حفظ</span>';
+                    showSaveAnimation(false);
+
+                    // DB Update
+                    const { error } = await supabaseClient
+                        .from('saved_videos')
+                        .delete()
+                        .eq('user_id', currentUser.id)
+                        .eq('video_id', videoId);
+                    
+                    if (error) {
+                        console.error('Error removing save:', error);
+                        // Revert
+                        appState.isSaved = true;
+                        btn.classList.add('active');
+                        btn.innerHTML = '<i class="fas fa-bookmark"></i><span>محفوظ</span>';
+                    }
+                } else {
+                    // Optimistic UI
+                    appState.isSaved = true;
+                    btn.classList.add('active');
+                    btn.innerHTML = '<i class="fas fa-bookmark"></i><span>محفوظ</span>';
+                    showSaveAnimation(true);
+
+                    // DB Update
+                    const { error } = await supabaseClient
+                        .from('saved_videos')
+                        .insert({ user_id: currentUser.id, video_id: videoId });
+                    
+                    if (error) {
+                        console.error('Error saving video:', error);
+                        // Revert
+                        appState.isSaved = false;
+                        btn.classList.remove('active');
+                        btn.innerHTML = '<i class="far fa-bookmark"></i><span>حفظ</span>';
+                    }
+                }
+            });
+
+            // زر المتابعة - Join Button Logic
+            document.getElementById('followBtn').addEventListener('click', async function () {
+                const btn = this;
+                if (btn.disabled) return;
+                
+                if (!appState.currentVideo) {
+                    console.error('Video details not loaded yet');
+                    window.showToast('لحظة من فضلك، جاري تحميل بيانات الفيديو...', 'info');
+                    return;
+                }
+
+                if (!currentUser) {
+                    window.showToast('يرجى تسجيل الدخول لمتابعة القناة', 'error');
+                    setTimeout(() => window.location.href = 'login.html', 1500);
+                    return;
+                }
+
+                // Get channel ID safely
+                const channelId = appState.currentVideo.user_id; // For videos table
+                // Note: If using profiles join, it might be in appState.currentVideo.profiles.id, but usually user_id is on video
+                
+                if (!channelId) {
+                    console.error('Channel ID missing on video object', appState.currentVideo);
+                    alert('تعذر تحديد معرف القناة');
+                    return;
+                }
+                
+                if (channelId === currentUser.id) {
+                    alert('لا يمكنك الانضمام لقناتك الخاصة');
+                    return;
+                }
+
+                // Disable button during operation
+                btn.disabled = true;
+
+                try {
+                    if (!appState.isFollowing) {
+                        // Optimistic Join
+                        await animateJoin(btn); 
+                        
+                        // DB Update
+                        const { error } = await supabaseClient
+                            .from('subscriptions')
+                            .insert({ subscriber_id: currentUser.id, channel_owner_id: channelId });
+                        
+                        if (error) {
+                            console.error('Error subscribing:', error);
+                            alert('حدث خطأ أثناء الانضمام: ' + error.message);
+                            // Revert
+                            await animateLeave(btn); 
+                        }
+                    } else {
+                        // Optimistic Leave
+                        await animateLeave(btn);
+
+                        // DB Update
+                        const { error } = await supabaseClient
+                            .from('subscriptions')
+                            .delete()
+                            .eq('subscriber_id', currentUser.id)
+                            .eq('channel_owner_id', channelId);
+                        
+                        if (error) {
+                            console.error('Error unsubscribing:', error);
+                            alert('حدث خطأ أثناء إلغاء الانضمام: ' + error.message);
+                            // Revert
+                            await animateJoin(btn);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Unexpected error in join:', e);
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+
+            // Helpers for join animation
+            function animateJoin(btn) {
+                return new Promise((resolve) => {
+                    const textEl = btn.querySelector('.follow-text');
+                    const iconWrap = btn.querySelector('.follow-icon');
+                    const pageName = document.getElementById('pageName')?.textContent || '';
+
+                    // Immediately set joined state (no progress, no confetti, no balloons)
+                    btn.classList.add('active');
+                    appState.isFollowing = true;
+                    btn.setAttribute('aria-pressed', 'true');
+                    if (iconWrap) iconWrap.innerHTML = '<i class="fas fa-check"></i>';
+                    if (textEl) textEl.textContent = 'تم الإنضمام';
+
+                    // show only welcome banner
+                    showWelcomeBanner(pageName ? `مرحباً بك في ${pageName}` : 'مرحباً بك');
+
+                    resolve();
+                });
+            }
+
+            function animateLeave(btn) {
+                return new Promise((resolve) => {
+                    const progress = btn.querySelector('.follow-progress');
+                    const textEl = btn.querySelector('.follow-text');
+                    const iconWrap = btn.querySelector('.follow-icon');
+                    btn.disabled = true;
+                    // reverse mini progress
+                    progress.style.transform = 'scaleX(0)';
+                    // subtle shrink effect
+                    btn.classList.add('morphing');
+                    setTimeout(() => {
+                        btn.classList.remove('morphing');
+                        btn.classList.remove('active');
+                        if (iconWrap) iconWrap.innerHTML = '<i class="fas fa-user-plus"></i>';
+                        appState.isFollowing = false;
+                        btn.setAttribute('aria-pressed', 'false');
+                        textEl.textContent = 'إنضمام';
+                        btn.disabled = false;
+                        resolve();
+                    }, 420);
+                });
+            }
+
+            // spawnJoinBubbles intentionally disabled per user preference
+            function spawnJoinBubbles(btn, count = 0, opts = {}) {
+                // No-op: balloons/dots removed. Keeping function to avoid runtime errors if referenced.
+                return;
+            }
+
+            // show welcome banner
+            function showWelcomeBanner(text) {
+                const banner = document.getElementById('welcomeBanner');
+                const txt = document.getElementById('welcomeText');
+                if (!banner || !txt) return;
+                txt.textContent = text;
+                banner.classList.add('show');
+                setTimeout(() => banner.classList.remove('show'), 2200);
+            }
+
+            // زر التحميل: عرض تنبيه جانبي بسيط لمدة 5 ثواني
+            document.getElementById('downloadBtn').addEventListener('click', () => showDownloadToast(5000));
+
+            // زر المشاركة
+            const shareBtn = document.getElementById('shareBtn');
+            if (shareBtn) {
+                shareBtn.addEventListener('click', async function() {
+                    if (!appState.currentVideo) return;
+                    
+                    try {
+                        const videoId = appState.currentVideo.id;
+                        const secureId = btoa(videoId);
+                        // Add decorative parameters
+                        const shareUrl = `${window.location.origin}${window.location.pathname}?v=${secureId}&s=share&t=${Date.now()}`;
+                        
+                        await navigator.clipboard.writeText(shareUrl);
+                        
+                        // Show success feedback
+                        const originalContent = this.innerHTML;
+                        this.innerHTML = '<i class="fas fa-check"></i><span>تم النسخ</span>';
+                        this.classList.add('active');
+                        
+                        showToast('تم نسخ الرابط بنجاح', 'success');
+                        
+                        setTimeout(() => {
+                            this.innerHTML = originalContent;
+                            this.classList.remove('active');
+                        }, 2000);
+                    } catch (err) {
+                        console.error('Share failed:', err);
+                        showToast('فشل نسخ الرابط', 'error');
+                    }
+                });
+            }
+
+            // زر إرسال التعليق مع مودال عرض car.html ثم رسالة نجاح احترافية
+            function submitCommentWithModal() {
+                const commentInput = document.getElementById('commentInput');
+                const submitBtn = document.getElementById('submitCommentBtn');
+                const text = commentInput.value.trim();
+                if (!text) return;
+
+                // تعطيل الزر مؤقتاً لتفادي الإرسال المزدوج
+                if (submitBtn) submitBtn.disabled = true;
+
+                // حاول عرض المودال أولاً
+                let modalShown = false;
+                try {
+                    showCommentModal(5000);
+                    const modal = document.getElementById('commentModal');
+                    modalShown = modal && modal.style.display === 'flex';
+                } catch (err) {
+                    console.error('تعذر عرض مودال التعليق:', err);
+                }
+
+                // إذا لم يظهر المودال (حالة فشل)، افتحه يدوياً كحل احتياطي
+                if (!modalShown) {
+                    const modal = document.getElementById('commentModal');
+                    const iframe = document.getElementById('commentIframe');
+                    const success = document.getElementById('commentSuccess');
+                    const progressBar = document.getElementById('commentProgress');
+                    const confettiContainer = document.getElementById('confettiContainer');
+
+                    if (modal) {
+                        modal.style.display = 'flex';
+                        modal.setAttribute('aria-hidden', 'false');
+                        if (iframe) {
+                            iframe.src = 'car.html';
+                            iframe.style.display = 'block';
+                        }
+
+                        // بعد 5 ثوانٍ، أظهر رسالة النجاح ثم أغلق
+                        setTimeout(() => {
+                            if (iframe) iframe.style.display = 'none';
+                            if (progressBar) progressBar.style.width = '100%';
+                            if (success) success.style.display = 'block';
+                            try { spawnConfetti(confettiContainer, 18); } catch (e) {}
+
+                            setTimeout(() => {
+                                modal.style.display = 'none';
+                                modal.setAttribute('aria-hidden', 'true');
+                                if (iframe) iframe.src = '';
+                            }, 3000);
+                        }, 5000);
+                    }
+                }
+
+                // أضف التعليق بعد فاصل بسيط لضمان عرض المودال (إن ظهر)
+                setTimeout(() => {
+                    try {
+                        addComment(text);
+                    } catch (err) {
+                        console.error('خطأ أثناء إضافة التعليق:', err);
+                    }
+                    // مسح الحقل وإعادة تفعيل الزر
+                    if (commentInput) commentInput.value = '';
+                    if (submitBtn) submitBtn.disabled = false;
+                }, 250);
+            }
+
+            document.getElementById('submitCommentBtn').addEventListener('click', submitCommentWithModal);
+
+            // إرسال التعليق عند الضغط على Enter
+            document.getElementById('commentInput').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitCommentWithModal();
+                }
+            });
+
+            // زر تبديل الثيمات مع ضغطة مطولة
+            const themeToggleBtn = document.getElementById('themeToggle');
+            if (themeToggleBtn) {
+                let pressTimer;
+                let isLongPress = false;
+
+                function startPress(e) {
+                    isLongPress = false;
+                    pressTimer = setTimeout(() => {
+                        isLongPress = true;
+                        if (confirm("هل تريد حذف البيانات المحفوظة (Safe Storage) وإصلاح المشاكل؟")) {
+                            SafeStorage.clear();
+                            location.reload();
+                        }
+                    }, 5000);
+                }
+
+                function endPress(e) {
+                    clearTimeout(pressTimer);
+                    if (isLongPress) {
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                    }
+                }
+
+                function cancelPress() {
+                    clearTimeout(pressTimer);
+                }
+
+                themeToggleBtn.addEventListener('mousedown', startPress);
+                themeToggleBtn.addEventListener('touchstart', startPress, {passive: true});
+                
+                themeToggleBtn.addEventListener('mouseup', endPress);
+                themeToggleBtn.addEventListener('touchend', endPress);
+                themeToggleBtn.addEventListener('mouseleave', cancelPress);
+
+                themeToggleBtn.addEventListener('click', function (e) {
+                    if (isLongPress) {
+                        e.preventDefault();
+                        return;
+                    }
+                    appState.themeState = (appState.themeState + 1) % 3;
+                    updateTheme();
+                    SafeStorage.setItem('themeIndex', appState.themeState);
+                });
+            }
+
+            // زر القائمة - Enhanced with sidebar functionality
+            document.getElementById('menuToggle').addEventListener('click', function () {
+                const sidebar = document.getElementById('sidebar');
+                if (window.innerWidth > 768) {
+                    sidebar.classList.toggle('collapsed');
+                } else {
+                    sidebar.classList.toggle('active');
+                }
+            });
+
+            // Close sidebar when clicking outside on mobile
+            document.addEventListener('click', (e) => {
+                const sidebar = document.getElementById('sidebar');
+                const menuToggle = document.getElementById('menuToggle');
+                if (window.innerWidth <= 768 &&
+                    !sidebar.contains(e.target) &&
+                    !menuToggle.contains(e.target) &&
+                    sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                }
+            });
+
+            // نظام البحث الذكي - توجيه للصفحة الرئيسية
+            const performSearch = () => {
+                const query = document.querySelector('.search-input').value.trim();
+                if (query) {
+                    window.location.href = `index.html?search=${encodeURIComponent(query)}`;
+                }
+            };
+
+            document.querySelector('.search-btn').addEventListener('click', performSearch);
+
+            document.querySelector('.search-input').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+
+            // تعطيل البحث المباشر في هذه الصفحة لتفادي التضارب
+            // document.querySelector('.search-input').addEventListener('input', ...);
+
+            // زر إغلاق نافذة التحميل
+            document.getElementById('closeDownloadModal').addEventListener('click', function () {
+                document.getElementById('downloadModal').style.display = 'none';
+            });
+
+            // اختصارات الكيبورد الاحترافية - نقلناها للخارج لضمان العمل دائماً
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    const video = document.getElementById('mainVideo');
+                    if (video.paused) {
+                        video.play();
+                        document.getElementById('playPauseControl').innerHTML = '<i class="fas fa-pause"></i>';
+                    } else {
+                        video.pause();
+                        document.getElementById('playPauseControl').innerHTML = '<i class="fas fa-play"></i>';
+                    }
+                } else if (e.code === 'ArrowLeft') {
+                    const video = document.getElementById('mainVideo');
+                    video.currentTime = Math.min(video.currentTime + 6, video.duration);
+                    showSeekEffect('forward');
+                } else if (e.code === 'ArrowRight') {
+                    const video = document.getElementById('mainVideo');
+                    video.currentTime = Math.max(video.currentTime - 3, 0);
+                    showSeekEffect('backward');
+                }
+            });
+        }
+
+        // إتاحة showSeekEffect عالمياً للاختصارات
+        function showSeekEffect(direction) {
+            const video = document.getElementById('mainVideo');
+            const icon = direction === 'forward' ? 'fa-backward' : 'fa-forward';
+            const effect = document.createElement('div');
+            effect.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: ${direction === 'forward' ? '30%' : '70%'};
+                transform: translate(-50%, -50%);
+                font-size: 40px;
+                color: white;
+                opacity: 0.8;
+                z-index: 20;
+                pointer-events: none;
+                animation: seekFade 0.5s ease-out forwards;
+            `;
+            effect.innerHTML = `<i class="fas ${icon}"></i>`;
+            video.parentElement.appendChild(effect);
+            setTimeout(() => effect.remove(), 500);
+        }
+
+        // عرض رسوميات الإعجاب
+        function showLikeAnimation() {
+            const overlay = document.getElementById('likeAnimationOverlay');
+            overlay.style.display = 'flex';
+
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 5000); // 5 ثواني
+        }
+
+        // جعل الدوال متاحة عالمياً
+        window.likeComment = likeComment;
+        window.showCommentReactions = showCommentReactions;
+    </script>
+    <!-- Temporary Ban Modal -->
+    <div id="tempBanModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10000; align-items:center; justify-content:center;">
+        <div style="background:#1a1a1a; padding:25px; border-radius:12px; width:90%; max-width:400px; border:1px solid #333; box-shadow:0 15px 40px rgba(0,0,0,0.5);">
+            <h3 style="color:#fff; margin-bottom:20px; text-align:center;">حظر مؤقت للفيديو</h3>
+            
+            <div style="margin-bottom:15px;">
+                <label style="color:#aaa; display:block; margin-bottom:5px;">المدة:</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="number" id="banDurationInput" placeholder="0" style="flex:1; padding:10px; background:#333; border:1px solid #444; color:white; border-radius:6px; outline:none;">
+                    <select id="banUnitInput" style="padding:10px; background:#333; border:1px solid #444; color:white; border-radius:6px; outline:none;">
+                        <option value="hours">ساعات</option>
+                        <option value="minutes">دقائق</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label style="color:#aaa; display:block; margin-bottom:5px;">السبب:</label>
+                <textarea id="banReasonInput" placeholder="سبب الحظر..." style="width:100%; padding:10px; background:#333; border:1px solid #444; color:white; border-radius:6px; min-height:80px; resize:vertical; outline:none; box-sizing:border-box;"></textarea>
+            </div>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button id="cancelBanBtn" style="padding:8px 20px; background:transparent; border:1px solid #555; color:#ccc; border-radius:6px; cursor:pointer;">إلغاء</button>
+                <button id="confirmBanBtn" style="padding:8px 20px; background:#e67e22; border:none; color:white; border-radius:6px; cursor:pointer; font-weight:bold;">حظر</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -15,16 +15,21 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -63,26 +68,143 @@ suspend fun loadStories(): List<Story> {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StoriesStrip(onNeedLogin: () -> Unit) {
+fun StoriesStrip(onNeedLogin: () -> Unit, tallCards: Boolean = false) {
     val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
     var stories by remember { mutableStateOf<List<Story>>(emptyList()) }
+    var storiesLoading by remember { mutableStateOf(true) }
     var viewing by remember { mutableStateOf<Int?>(null) }
     var adding by remember { mutableStateOf(false) }
-    LaunchedEffect(App.userId) { stories = loadStories() }
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(bottom = 12.dp)) {
-        item {
-            Column(Modifier.clickable { if (App.loggedIn) adding = true else onNeedLogin() }, horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.size(64.dp).clip(CircleShape).background(Color(0xFF1E222B)).border(2.dp, MaterialTheme.colorScheme.secondary, CircleShape), contentAlignment = Alignment.Center) {
-                    Text("+", color = MaterialTheme.colorScheme.secondary, fontSize = 28.sp)
+    LaunchedEffect(App.userId) {
+        storiesLoading = true
+        stories = loadStories()
+        storiesLoading = false
+    }
+    if (storiesLoading && stories.isEmpty()) {
+        StoriesSkeletonItems(tallCards)
+    } else if (tallCards) {
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item {
+                Box(
+                    Modifier
+                        .size(104.dp, 184.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .border(0.75.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                        .clickable { if (App.loggedIn) adding = true else onNeedLogin() }
+                ) {
+                    Column(Modifier.fillMaxSize()) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .weight(0.68f)
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), MaterialTheme.colorScheme.surface)
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val av = App.avatar
+                            if (av != null) {
+                                AsyncImage(av, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            } else {
+                                Avatar(null, App.name.ifBlank { "م" }, 52)
+                            }
+                        }
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .weight(0.32f)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(top = 14.dp, start = 6.dp, end = 6.dp, bottom = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "إنشاء قصة",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontFamily = Cairo,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                    Box(
+                        Modifier
+                            .align(Alignment.Center)
+                            .offset(y = 32.dp)
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(3.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Filled.Add, "إنشاء قصة", tint = Color.Black, modifier = Modifier.size(20.dp))
+                    }
                 }
-                Text("قصتك", color = Color.White, fontSize = 11.sp)
+            }
+            items(stories.distinctBy { it.userId }) { s ->
+                Box(
+                    Modifier
+                        .size(104.dp, 184.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .border(0.75.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
+                        .clickable { viewing = stories.indexOfFirst { it.userId == s.userId } }
+                ) {
+                    AsyncImage(s.image, s.author, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .height(74.dp)
+                            .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000))))
+                    )
+                    Box(
+                        Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp)
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                            .padding(2.dp)
+                    ) {
+                        Avatar(s.avatar, s.author, 32)
+                    }
+                    Text(
+                        s.author,
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        lineHeight = 15.sp,
+                        fontFamily = Cairo,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.align(Alignment.BottomStart).padding(8.dp)
+                    )
+                }
             }
         }
-        items(stories.distinctBy { it.userId }) { s ->
-            Column(Modifier.clickable { viewing = stories.indexOfFirst { it.userId == s.userId } }, horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape).padding(3.dp)) { Avatar(s.avatar, s.author, 58) }
-                Text(s.author.take(10), color = Color.White, fontSize = 11.sp, maxLines = 1)
+    } else {
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(bottom = 12.dp)) {
+            item {
+                Column(Modifier.clickable { if (App.loggedIn) adding = true else onNeedLogin() }, horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.size(64.dp).clip(CircleShape).background(Color(0xFF1E222B)).border(2.dp, MaterialTheme.colorScheme.secondary, CircleShape), contentAlignment = Alignment.Center) {
+                        Text("+", color = MaterialTheme.colorScheme.secondary, fontSize = 28.sp)
+                    }
+                    Text("قصتك", color = Color.White, fontSize = 11.sp)
+                }
+            }
+            items(stories.distinctBy { it.userId }) { s ->
+                Column(Modifier.clickable { viewing = stories.indexOfFirst { it.userId == s.userId } }, horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape).padding(3.dp)) { Avatar(s.avatar, s.author, 58) }
+                    Text(s.author.take(10), color = Color.White, fontSize = 11.sp, maxLines = 1)
+                }
             }
         }
     }

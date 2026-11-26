@@ -48,9 +48,26 @@ private suspend fun download(ctx: android.content.Context, url: String, onProgre
     } catch (e: Exception) { null }
 }
 
+@Suppress("DEPRECATION")
+private fun isDebugSigned(ctx: android.content.Context): Boolean = try {
+    val pkg = if (Build.VERSION.SDK_INT >= 28) {
+        ctx.packageManager.getPackageInfo(ctx.packageName, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES)
+            .signingInfo?.apkContentsSigners?.firstOrNull()
+    } else {
+        ctx.packageManager.getPackageInfo(ctx.packageName, android.content.pm.PackageManager.GET_SIGNATURES)
+            .signatures?.firstOrNull()
+    }
+    val cert = pkg?.let {
+        java.security.cert.CertificateFactory.getInstance("X.509")
+            .generateCertificate(it.toByteArray().inputStream()) as? java.security.cert.X509Certificate
+    }
+    cert?.subjectX500Principal?.name?.contains("Android Debug", ignoreCase = true) == true
+} catch (_: Exception) { BuildConfig.DEBUG }
+
 @Composable
 fun UpdatePrompt() {
     val ctx = LocalContext.current
+    if (remember { isDebugSigned(ctx) }) return
     val scope = rememberCoroutineScope()
     var info by remember { mutableStateOf<Pair<Int, String>?>(null) }
     var busy by remember { mutableStateOf(false) }

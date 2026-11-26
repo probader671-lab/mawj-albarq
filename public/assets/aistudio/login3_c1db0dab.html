@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - Matrix Mode</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --matrix-green: #0F0;
+            --matrix-dark: #000;
+            --glass-bg: rgba(0, 20, 0, 0.7);
+            --glass-border: rgba(0, 255, 0, 0.3);
+            --glass-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            overflow-x: hidden;
+            position: relative;
+            padding: 20px;
+        }
+
+        /* Matrix Background Container */
+        #matrix-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        /* Design Switcher */
+        .design-switcher {
+            position: fixed;
+            top: 20px;
+            right: 80px;
+            z-index: 10000;
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 20, 0, 0.8);
+            backdrop-filter: blur(5px);
+            padding: 10px;
+            border-radius: 30px;
+            border: 1px solid var(--matrix-green);
+            box-shadow: 0 0 10px var(--matrix-green);
+        }
+        
+        .design-btn {
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            text-decoration: none;
+            color: var(--matrix-green);
+            font-weight: bold;
+            transition: all 0.3s ease;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--matrix-green);
+        }
+        
+        .design-btn:hover, .design-btn.active {
+            background: var(--matrix-green);
+            color: #000;
+            box-shadow: 0 0 15px var(--matrix-green);
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--matrix-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--matrix-green);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        .back-btn:hover {
+            background: var(--matrix-green);
+            color: #000;
+            box-shadow: 0 0 15px var(--matrix-green);
+        }
+
+        /* Login Card */
+        .login-card {
+            position: relative;
+            z-index: 10;
+            width: 90%;
+            max-width: 450px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: var(--glass-shadow);
+            text-align: right;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .matrix-icon {
+            font-size: 40px;
+            color: var(--matrix-green);
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px var(--matrix-green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { text-shadow: 0 0 10px var(--matrix-green); }
+            50% { text-shadow: 0 0 20px var(--matrix-green), 0 0 30px var(--matrix-green); }
+            100% { text-shadow: 0 0 10px var(--matrix-green); }
+        }
+
+        .login-title {
+            color: #fff;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            text-shadow: 0 0 5px var(--matrix-green);
+        }
+
+        /* Tabs */
+        .tabs-container {
+            display: flex;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 4px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            color: #000;
+            background: var(--matrix-green);
+            box-shadow: 0 0 10px var(--matrix-green);
+        }
+
+        /* Inputs */
+        .input-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .input-group i {
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%);
+            color: var(--matrix-green);
+            font-size: 16px;
+            z-index: 2;
+        }
+
+        /* Hide icon when input has focus or content */
+        .input-group input:focus + i,
+        .input-group input:not(:placeholder-shown) + i {
+            display: none;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 12px 45px 12px 15px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            border-radius: 8px;
+            color: var(--matrix-green);
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .auth-input::placeholder {
+            color: rgba(0, 255, 0, 0.4);
+        }
+
+        .auth-input:focus {
+            border-color: var(--matrix-green);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        /* Buttons */
+        .primary-btn {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            color: var(--matrix-green);
+            border: 1px solid var(--matrix-green);
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .primary-btn:hover {
+            background: var(--matrix-green);
+            color: #000;
+            box-shadow: 0 0 20px var(--matrix-green);
+        }
+
+        .google-btn {
+            width: 100%;
+            padding: 12px;
+            background: #fff;
+            color: #333;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .google-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            color: rgba(0, 255, 0, 0.5);
+            font-size: 12px;
+        }
+
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(0, 255, 0, 0.2);
+        }
+
+        .divider span {
+            padding: 0 10px;
+        }
+
+        /* Forms */
+        .form-section {
+            display: none;
+        }
+        .form-section.active {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Message Box */
+        .message-box {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            display: none;
+            text-align: center;
+        }
+        .message-box.error {
+            background: rgba(255, 0, 0, 0.2);
+            color: #ff5555;
+            border: 1px solid #ff5555;
+        }
+        .message-box.success {
+            background: rgba(0, 255, 0, 0.2);
+            color: #55ff55;
+            border: 1px solid #55ff55;
+        }
+
+        /* Responsive Fixes */
+        @media (max-width: 768px) {
+            .login-card {
+                padding: 20px;
+                margin: 0;
+                width: 100%;
+            }
+            .matrix-icon {
+                font-size: 30px;
+                margin-bottom: 10px;
+            }
+            .login-title {
+                font-size: 20px;
+            }
+            .design-switcher {
+                top: 10px;
+                right: 60px;
+                padding: 5px;
+            }
+            .design-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 12px;
+            }
+            .back-btn {
+                width: 35px;
+                height: 35px;
+                top: 10px;
+                right: 10px;
+            }
+        }
+
+        @media (max-height: 700px) {
+            .login-card {
+                padding: 15px;
+            }
+            .input-group {
+                margin-bottom: 15px;
+            }
+            .auth-input {
+                padding: 10px 45px 10px 15px;
+            }
+        }
+    </style>
+    <!-- Open Graph Tags (WhatsApp Preview) -->
+    <meta property="og:title" content="PageBook - تسجيل الدخول">
+    <meta property="og:description" content="منصة الفيديوهات الرائدة. سجل دخولك الآن.">
+    <meta property="og:image" content="pagebook.jpg">
+    <meta property="og:type" content="website">
+    
+    <!-- Security & Protection -->
+    <script src="protection.js"></script>
+</head>
+<body>
+
+    <div id="matrix-container"></div>
+
+    <div class="design-switcher">
+        <a href="login.html" class="design-btn" title="قلب ثلاثي الأبعاد">1</a>
+        <a href="login2.html" class="design-btn" title="لوحة جانبية">2</a>
+        <a href="login3.html" class="design-btn active" title="ماتريكس">3</a>
+        <a href="login4.html" class="design-btn" title="ريترو">4</a>
+    </div>
+
+    <!-- Back Button -->
+    <a href="index.html" class="back-btn" title="العودة للصفحة الرئيسية">
+        <i class="fas fa-arrow-right"></i>
+    </a>
+
+    <div class="login-card">
+        <div class="login-header">
+            <i class="fas fa-terminal matrix-icon"></i>
+            <h1 class="login-title">نظام الدخول الآمن</h1>
+        </div>
+
+        <div class="tabs-container">
+            <button class="tab-btn active" id="tab-login">تسجيل الدخول</button>
+            <button class="tab-btn" id="tab-signup">حساب جديد</button>
+        </div>
+
+        <div id="messageBox" class="message-box"></div>
+
+        <!-- Login -->
+        <div id="loginSection" class="form-section active">
+            <div class="input-group">
+                <input type="email" class="auth-input" id="loginEmail" placeholder="البريد الإلكتروني">
+                <i class="fas fa-envelope"></i>
+            </div>
+            <div class="input-group">
+                <input type="password" class="auth-input" id="loginPassword" placeholder="كلمة المرور">
+                <i class="fas fa-lock"></i>
+            </div>
+            
+            <button class="primary-btn" id="btnLogin">دخول للنظام</button>
+            
+            <div class="divider"><span>أو</span></div>
+            
+            <button class="google-btn" id="btnGoogleLogin">
+                <i class="fab fa-google" style="color: #DB4437;"></i>
+                <span>الدخول عبر Google</span>
+            </button>
+        </div>
+
+        <!-- Signup -->
+        <div id="signupSection" class="form-section">
+            <div id="signupStep1">
+                <div class="input-group">
+                    <input type="email" class="auth-input" id="signupEmail" placeholder="البريد الإلكتروني">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <button class="primary-btn" id="btnSendCode">إرسال الرمز</button>
+                <div class="divider"><span>أو</span></div>
+                <button class="google-btn" id="btnGoogleSignup">
+                    <i class="fab fa-google" style="color: #DB4437;"></i>
+                    <span>التسجيل عبر Google</span>
+                </button>
+            </div>
+
+            <div id="signupStep2" style="display: none;">
+                <p style="color: var(--matrix-green); text-align: center; margin-bottom: 10px; font-size: 12px;">أدخل الرمز المرسل لبريدك</p>
+                <div class="input-group">
+                    <input type="text" class="auth-input" id="otpCode" placeholder="XXXXXXXX" maxlength="8" style="text-align: center; letter-spacing: 5px; font-weight: bold;">
+                    <i class="fas fa-key"></i>
+                    <style>
+                        #otpCode:focus + i,
+                        #otpCode:not(:placeholder-shown) + i {
+                            display: none;
+                        }
+                    </style>
+                </div>
+                <button class="primary-btn" id="btnVerifyCode">تأكيد الرمز</button>
+                <button class="tab-btn" style="width: 100%; font-size: 12px; margin-top: 5px;" id="btnResetSignup">تغيير البريد</button>
+            </div>
+
+            <div id="signupStep3" style="display: none;">
+                <div class="input-group">
+                    <input type="password" class="auth-input" id="newPassword" placeholder="كلمة المرور الجديدة">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <div class="input-group">
+                    <input type="password" class="auth-input" id="confirmPassword" placeholder="تأكيد كلمة المرور">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <button class="primary-btn" id="btnCreateAccount">إنشاء الحساب</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logic -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="matrix-bg.js"></script>
+
+    <script src="utils-secure.js"></script>
+    <script src="config-secure.js"></script>
+    <script src="auth-secure.js"></script>
+
+    <script>
+        // Init Matrix
+        new MatrixEffect({
+            color: '#0F0',
+            fontSize: 16,
+            speed: 1.5,
+            opacity: 0.15
+        });
+
+        // Global AuthManager usage
+        document.addEventListener('DOMContentLoaded', () => {
+            // UI Config
+            const ui = {
+                btnLogin: document.getElementById('btnLogin'),
+                btnGoogleLogin: document.getElementById('btnGoogleLogin'),
+                btnSendCode: document.getElementById('btnSendCode'),
+                btnVerifyCode: document.getElementById('btnVerifyCode'),
+                btnCreateAccount: document.getElementById('btnCreateAccount'),
+                btnGoogleSignup: document.getElementById('btnGoogleSignup'),
+                btnResetSignup: document.getElementById('btnResetSignup'),
+                
+                loginEmail: document.getElementById('loginEmail'),
+                loginPassword: document.getElementById('loginPassword'),
+                signupEmail: document.getElementById('signupEmail'),
+                otpCode: document.getElementById('otpCode'),
+                newPassword: document.getElementById('newPassword'),
+                confirmPassword: document.getElementById('confirmPassword'),
+                
+                messageBox: document.getElementById('messageBox'),
+                step1: document.getElementById('signupStep1'),
+                step2: document.getElementById('signupStep2'),
+                step3: document.getElementById('signupStep3'),
+
+                switchToSignup: () => document.getElementById('tab-signup').click()
+            };
+
+            const auth = new AuthHandler(ui);
+        });
+
+        // Tab Switching
+        const tabLogin = document.getElementById('tab-login');
+        const tabSignup = document.getElementById('tab-signup');
+        const loginSection = document.getElementById('loginSection');
+        const signupSection = document.getElementById('signupSection');
+        const messageBox = document.getElementById('messageBox');
+
+        function switchTab(tab) {
+            messageBox.style.display = 'none';
+            if (tab === 'login') {
+                tabLogin.classList.add('active');
+                tabSignup.classList.remove('active');
+                loginSection.classList.add('active');
+                signupSection.classList.remove('active');
+            } else {
+                tabSignup.classList.add('active');
+                tabLogin.classList.remove('active');
+                signupSection.classList.add('active');
+                loginSection.classList.remove('active');
+            }
+        }
+
+        tabLogin.addEventListener('click', () => switchTab('login'));
+        tabSignup.addEventListener('click', () => switchTab('signup'));
+    </script>
+</body>
+</html>
