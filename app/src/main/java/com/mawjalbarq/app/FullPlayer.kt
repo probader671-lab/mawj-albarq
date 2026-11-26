@@ -45,6 +45,11 @@ fun FullPlayer(start: Video, onClose: () -> Unit) {
                 TextButton(onClick = onClose) { Text("إغلاق") }
             }
             AndroidView({ c -> PlayerView(c).apply { useController = true; this.player = player } }, Modifier.fillMaxWidth().weight(1f))
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.Center) {
+                TextButton(onClick = { player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0)) }) { Text("-10 ث") }
+                TextButton(onClick = { player.playWhenReady = !player.playWhenReady }) { Text("تشغيل / إيقاف") }
+                TextButton(onClick = { player.seekTo(player.currentPosition + 10_000) }) { Text("+10 ث") }
+            }
             if (!landscape) {
                 Text("مقترحات", color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(12.dp))
                 LazyRow(Modifier.padding(bottom = 16.dp), contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -59,7 +64,7 @@ fun FullPlayer(start: Video, onClose: () -> Unit) {
 
 @Composable
 fun VideoCard(v: Video, onClick: () -> Unit) {
-    Column(Modifier.width(160.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF12141A)).clickable(onClick = onClick)) {
+    Column(Modifier.width(160.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF141A24)).clickable(onClick = onClick)) {
         Box(Modifier.fillMaxWidth().height(100.dp).background(Color(0xFF1E222B))) {
             if (v.thumb != null) AsyncImage(v.thumb, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         }

@@ -100,7 +100,7 @@ fun StoriesStrip(onNeedLogin: () -> Unit) {
             }
         }
     }
-    if (adding) ModalBottomSheet(onDismissRequest = { adding = false }, containerColor = Color(0xFF12141A)) {
+    if (adding) ModalBottomSheet(onDismissRequest = { adding = false }, containerColor = Color(0xFF141A24)) {
         var img by remember { mutableStateOf<Uri?>(null) }
         var cap by remember { mutableStateOf("") }
         var busy by remember { mutableStateOf(false) }
@@ -155,7 +155,7 @@ fun SuggestionsScreen(onBack: () -> Unit) {
         val l = list
         if (l == null) CircularProgressIndicator()
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 110.dp)) {
-            items(l) { s -> Text(s.text, color = Color.White, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFF12141A)).padding(12.dp)) }
+            items(l) { s -> Text(s.text, color = Color.White, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFF141A24)).padding(12.dp)) }
         }
     }
 }

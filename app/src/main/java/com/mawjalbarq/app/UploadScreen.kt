@@ -137,7 +137,14 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
         OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text("العنوان") }, singleLine = true, enabled = !busy)
         OutlinedTextField(desc, { desc = it }, Modifier.fillMaxWidth(), label = { Text("الوصف") }, minLines = 3, enabled = !busy)
         if (status.isNotEmpty()) Text(status, color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
-        if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+        if (busy) androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
+            Column(Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surface).padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                Text(status.ifBlank { "جارٍ المعالجة..." }, color = Color.White, fontSize = 15.sp)
+                LinearProgressIndicator(Modifier.width(200.dp))
+            }
+        }
         Button(enabled = uri != null && title.isNotBlank() && !busy, modifier = Modifier.fillMaxWidth(), onClick = {
             val src = uri!!; busy = true
             scope.launch {

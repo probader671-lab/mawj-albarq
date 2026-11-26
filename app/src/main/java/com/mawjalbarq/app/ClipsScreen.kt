@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -74,6 +75,12 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
     DisposableEffect(Unit) { onDispose { Ui.deep = false } }
     var speed by remember { mutableFloatStateOf(1f) }
     LaunchedEffect(speed, curId) { player.setPlaybackSpeed(speed) }
+    var cinema by remember { mutableStateOf(false) }
+    var hidden by remember { mutableStateOf(false) }
+    var muted by remember { mutableStateOf(false) }
+    val saveAnim = remember { androidx.compose.animation.core.Animatable(0f) }
+    var saveTick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(saveTick) { if (saveTick > 0) { saveAnim.snapTo(0f); saveAnim.animateTo(1f, androidx.compose.animation.core.tween(1200)) } }
     var fullFor by remember { mutableStateOf<Video?>(null) }
     var commentsFor by remember { mutableStateOf<Video?>(null) }
     var reportFor by remember { mutableStateOf<Video?>(null) }
@@ -86,7 +93,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
         val burstAnim = remember { androidx.compose.animation.core.Animatable(0f) }
         LaunchedEffect(burst) { if (burst > 0) { burstAnim.snapTo(0f); burstAnim.animateTo(1f, androidx.compose.animation.core.tween(700)) } }
         Box(Modifier.fillMaxSize().background(Color.Black).pointerInput(v.id) {
-            detectTapGestures(onTap = { player.playWhenReady = !player.playWhenReady }, onDoubleTap = {
+            detectTapGestures(onTap = { if (hidden) hidden = false else player.playWhenReady = !player.playWhenReady }, onDoubleTap = {
                 if (!App.loggedIn) onNeedLogin() else { burst++; if (Feed.liked[v.id] != true) scope.launch { Feed.toggleLike(v.id) } }
             })
         }) {
@@ -120,13 +127,14 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                     Box(Modifier.fillMaxWidth(prog).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
                 }
             }
-            Column(Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(16.dp),
+            if (!cinema) Column(Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {
                 Action(Icons.Filled.Favorite, v.likes.toString(), if (liked) MaterialTheme.colorScheme.primary else Color.White) {
                     if (!App.loggedIn) onNeedLogin() else scope.launch { Feed.toggleLike(v.id) }
                 }
                 Action(Icons.Filled.Comment, v.comments.toString(), Color.White) { commentsFor = v }
                 Action(Icons.Filled.Bookmark, "حفظ", if (saved) MaterialTheme.colorScheme.secondary else Color.White) {
+                    if (!saved) saveTick++
                     scope.launch { Feed.toggleSave(v.id) }
                 }
                 Action(Icons.Filled.Speed, if (speed == 1f) "1x" else "${speed}x", if (speed == 1f) Color.White else MaterialTheme.colorScheme.secondary) {
@@ -140,13 +148,45 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                     ctx.startActivity(Intent.createChooser(i, "مشاركة"))
                 }
             }
+            Box(Modifier.align(Alignment.TopStart).statusBarsPadding().padding(12.dp).size(40.dp).clip(CircleShape).background(Color(0x66000000)).clickable { cinema = !cinema; hidden = false },
+                contentAlignment = Alignment.Center) { Icon(if (cinema) Icons.Filled.ViewAgenda else Icons.Filled.Movie, null, tint = Color.White, modifier = Modifier.size(20.dp)) }
+            if (saveAnim.value > 0f && saveAnim.value < 1f) Box(Modifier.align(Alignment.Center), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(progress = { saveAnim.value }, modifier = Modifier.size(104.dp), color = MaterialTheme.colorScheme.secondary, trackColor = Color(0x33FFFFFF), strokeWidth = 6.dp)
+                Icon(Icons.Filled.Bookmark, null, tint = Color.White, modifier = Modifier.size(36.dp))
+            }
+            if (cinema && page == pager.settledPage && !hidden) {
+                var playing by remember { mutableStateOf(true) }
+                var left by remember { mutableStateOf("") }
+                LaunchedEffect(curId) { while (true) { kotlinx.coroutines.delay(500); playing = player.isPlaying; val d = player.duration
+                    left = if (d > 0) { val r = ((d - player.currentPosition) / 1000).coerceAtLeast(0); "%d:%02d".format(r / 60, r % 60) } else "" } }
+                Column(Modifier.align(Alignment.BottomCenter).padding(start = 12.dp, end = 12.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                        CapBtn(Icons.Filled.Favorite, v.likes.toString(), if (liked) MaterialTheme.colorScheme.primary else Color.White) { if (!App.loggedIn) onNeedLogin() else scope.launch { Feed.toggleLike(v.id) } }
+                        CapBtn(Icons.Filled.Comment, v.comments.toString(), Color.White) { commentsFor = v }
+                        CapBtn(Icons.Filled.Bookmark, "", if (saved) MaterialTheme.colorScheme.secondary else Color.White) { scope.launch { Feed.toggleSave(v.id) } }
+                        CapBtn(Icons.Filled.Share, "", Color.White) {
+                            ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "${v.title} - موج البرق\n${v.url}"), "مشاركة"))
+                        }
+                        CapBtn(Icons.Filled.Flag, "", Color.White) { reportFor = v }
+                    }
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color(0xCC0E131B)).padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconButton(onClick = { player.playWhenReady = !player.playWhenReady }) { Icon(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, null, tint = Color.White) }
+                        Text(left, color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        Text(if (speed == 1f) "1x" else "${speed}x", color = Color.White, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(50)).background(Color(0x33FFFFFF))
+                            .clickable { speed = when (speed) { 1f -> 1.5f; 1.5f -> 2f; 2f -> 0.5f; else -> 1f } }.padding(horizontal = 12.dp, vertical = 6.dp))
+                        IconButton(onClick = { muted = !muted; player.volume = if (muted) 0f else 1f }) { Icon(if (muted) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp, null, tint = Color.White) }
+                        IconButton(onClick = { hidden = true }) { Icon(Icons.Filled.VisibilityOff, null, tint = Color.White) }
+                    }
+                }
+            }
         }
     }
     creatorId?.let { id -> if (id.isNotBlank()) CreatorSheet(id, onPlay = { vid -> creatorId = null; Feed.videos.indexOfFirst { it.id == vid }.let { if (it >= 0) Feed.jumpTo = it } }) { creatorId = null } }
     fullFor?.let { v -> FullPlayer(v) { fullFor = null; player.playWhenReady = true } }
     reportFor?.let { v -> ReportSheet("video", v.id) { reportFor = null } }
     commentsFor?.let { v ->
-        ModalBottomSheet(onDismissRequest = { commentsFor = null }, containerColor = Color(0xFF12141A)) {
+        ModalBottomSheet(onDismissRequest = { commentsFor = null }, containerColor = Color(0xFF141A24)) {
             CommentsSheet(v, onNeedLogin = { commentsFor = null; onNeedLogin() })
         }
     }
@@ -205,5 +245,13 @@ private fun CommentsSheet(v: Video, onNeedLogin: () -> Unit) {
                 }
             }) { Icon(Icons.Filled.Send, "إرسال", tint = MaterialTheme.colorScheme.primary) }
         }
+    }
+}
+
+@Composable
+private fun CapBtn(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, tint: Color, onClick: () -> Unit) {
+    Row(Modifier.clip(RoundedCornerShape(50)).background(Color(0x990E131B)).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
+        if (label.isNotEmpty()) { Spacer(Modifier.width(4.dp)); Text(label, color = Color.White, fontSize = 12.sp) }
     }
 }

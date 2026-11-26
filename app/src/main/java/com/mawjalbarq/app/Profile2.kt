@@ -104,7 +104,7 @@ fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = fals
 fun CreatorSheet(id: String, onPlay: (String) -> Unit, onClose: () -> Unit) {
     var p by remember { mutableStateOf<ProfileData?>(null) }
     LaunchedEffect(id) { p = loadProfile(id) }
-    ModalBottomSheet(onDismissRequest = onClose, containerColor = Color(0xFF12141A)) {
+    ModalBottomSheet(onDismissRequest = onClose, containerColor = Color(0xFF141A24)) {
         Column(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding()) {
             val d = p
             if (d == null) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally)) else ProfileHeader(d, onPlay)
@@ -124,7 +124,7 @@ fun EditProfileSheet(cur: ProfileData, onDone: (Boolean) -> Unit) {
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { u ->
         if (u != null) { busy = true; scope.launch { uploadImageToCloud(ctx, u)?.let { avatar = it }; busy = false } }
     }
-    ModalBottomSheet(onDismissRequest = { onDone(false) }, containerColor = Color(0xFF12141A)) {
+    ModalBottomSheet(onDismissRequest = { onDone(false) }, containerColor = Color(0xFF141A24)) {
         Column(Modifier.fillMaxWidth().padding(20.dp).navigationBarsPadding().imePadding(), verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
             Text("تعديل الملف الشخصي", color = Color.White, fontSize = 18.sp, fontFamily = Cairo)

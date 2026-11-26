@@ -181,7 +181,7 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
             } }
         }
     }
-    if (composing) ModalBottomSheet(onDismissRequest = { composing = false }, containerColor = Color(0xFF12141A)) {
+    if (composing) ModalBottomSheet(onDismissRequest = { composing = false }, containerColor = Color(0xFF141A24)) {
         var text by remember { mutableStateOf("") }
         var img by remember { mutableStateOf<Uri?>(null) }
         var busy by remember { mutableStateOf(false) }
@@ -204,7 +204,7 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
         }
     }
     openComments?.let { p ->
-        ModalBottomSheet(onDismissRequest = { openComments = null; refresh() }, containerColor = Color(0xFF12141A)) {
+        ModalBottomSheet(onDismissRequest = { openComments = null; refresh() }, containerColor = Color(0xFF141A24)) {
             var list by remember { mutableStateOf<List<Comment>?>(null) }
             var text by remember { mutableStateOf("") }
             suspend fun load() {
