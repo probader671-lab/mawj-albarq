@@ -102,7 +102,7 @@ fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = fals
                                 }
                             }
                             if (v.duration > 0) {
-                                Text(formatDuration(v.duration), color = Ink, fontSize = 10.sp,
+                                Text(formatDuration(v.duration), color = Color.White, fontSize = 10.sp,
                                     modifier = Modifier.align(Alignment.TopStart).padding(6.dp).clip(RoundedCornerShape(6.dp))
                                         .background(Color(0xB3000000)).padding(horizontal = 5.dp, vertical = 2.dp))
                             }
