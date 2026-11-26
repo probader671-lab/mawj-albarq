@@ -100,7 +100,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
             if (burstAnim.value > 0f && burstAnim.value < 1f) Icon(Icons.Filled.Favorite, null, tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.Center).size(150.dp).scale(0.6f + 0.7f * burstAnim.value).alpha(1f - burstAnim.value))
             if (page == pager.settledPage) {
-                AndroidView({ c -> PlayerView(c).apply { useController = false; resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM; this.player = player } },
+                AndroidView({ c -> PlayerView(c).apply { useController = false; resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; this.player = player } },
                     Modifier.fillMaxSize(), update = { it.player = player })
             }
             Column(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 120.dp, end = 90.dp)) {

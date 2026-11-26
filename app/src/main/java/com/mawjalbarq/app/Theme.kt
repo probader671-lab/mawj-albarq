@@ -17,11 +17,11 @@ val Tajawal = FontFamily(Font(R.font.tajawal))
 
 data class Accent(val name: String, val main: Color, val second: Color)
 val Accents = listOf(
+    Accent("برتقالي", Color(0xFFFF7A1A), Color(0xFF10B981)),
     Accent("موجة زرقاء", Color(0xFF2EA8FF), Color(0xFFFFD21F)),
     Accent("برق ذهبي", Color(0xFFFFD21F), Color(0xFF2EA8FF)),
     Accent("بنفسجي", Color(0xFFA066FF), Color(0xFFFF5CA8)),
     Accent("أخضر", Color(0xFF2BE38B), Color(0xFF2EA8FF)),
-    Accent("برتقالي", Color(0xFFFF7A1A), Color(0xFF10B981)),
     Accent("قرمزي", Color(0xFFFF3B5C), Color(0xFF10B981)),
     Accent("سماوي", Color(0xFF06D4D4), Color(0xFFF59E0B)),
     Accent("وردي", Color(0xFFEC4899), Color(0xFFF59E0B)),
@@ -30,10 +30,11 @@ val Accents = listOf(
 
 class ThemePrefs(ctx: Context) {
     private val sp = ctx.getSharedPreferences("theme", Context.MODE_PRIVATE)
-    var index by mutableStateOf(sp.getInt("accent", 0).coerceIn(0, Accents.lastIndex))
+    var index by mutableStateOf(sp.getInt("accent2", 0).coerceIn(0, Accents.lastIndex))
         private set
+    fun hasChoice() = sp.contains("accent2")
     fun set(i: Int, sync: Boolean = true) {
-        index = i; sp.edit().putInt("accent", i).apply()
+        index = i; sp.edit().putInt("accent2", i).apply()
         val u = App.userId
         if (sync && u != null) CoroutineScope(Dispatchers.IO).launch {
             val a = Accents[i]

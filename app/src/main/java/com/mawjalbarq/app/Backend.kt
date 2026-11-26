@@ -115,7 +115,7 @@ suspend fun afterLogin() {
         if (!o.isNull("theme_accent_argb")) {
             val v = o.getLong("theme_accent_argb")
             val i = Accents.indexOfFirst { (it.main.toArgb().toLong() and 0xFFFFFFFFL) == v }
-            if (i >= 0) Theme.prefs?.set(i, sync = false)
+            if (i >= 0 && Theme.prefs?.hasChoice() == false && v != 0xFF2EA8FFL) Theme.prefs?.set(i, sync = false)
         }
     } catch (_: Exception) {}
 }
