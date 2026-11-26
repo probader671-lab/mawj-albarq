@@ -62,6 +62,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
     }
     var commentsFor by remember { mutableStateOf<Video?>(null) }
     var reportFor by remember { mutableStateOf<Video?>(null) }
+    var creatorId by remember { mutableStateOf<String?>(null) }
     VerticalPager(pager, Modifier.fillMaxSize()) { page ->
         val v = videos[page]
         val liked = Feed.liked[v.id] == true
@@ -81,7 +82,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                     Modifier.fillMaxSize(), update = { it.player = player })
             }
             Column(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 120.dp, end = 90.dp)) {
-                Text("@" + v.author, color = Color.White, fontSize = 16.sp, fontFamily = Cairo)
+                Text("@" + v.author, color = Color.White, fontSize = 16.sp, fontFamily = Cairo, modifier = Modifier.clickable { creatorId = v.userId })
                 Text(v.title, color = Color.White, fontSize = 14.sp)
                 if (v.desc.isNotBlank()) Text(v.desc, color = Color(0xFFCCCCCC), fontSize = 12.sp, maxLines = 2)
             }
@@ -103,6 +104,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
             }
         }
     }
+    creatorId?.let { id -> if (id.isNotBlank()) CreatorSheet(id, onPlay = { vid -> creatorId = null; Feed.videos.indexOfFirst { it.id == vid }.let { if (it >= 0) Feed.jumpTo = it } }) { creatorId = null } }
     reportFor?.let { v -> ReportSheet("video", v.id) { reportFor = null } }
     commentsFor?.let { v ->
         ModalBottomSheet(onDismissRequest = { commentsFor = null }, containerColor = Color(0xFF12141A)) {

@@ -20,15 +20,25 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
 @Composable
-fun ProfileScreen(prefs: ThemePrefs) {
+fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}) {
+    val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp).padding(bottom = 100.dp)) {
         Text("حسابي", color = Color.White, fontSize = 24.sp, fontFamily = Cairo)
         Spacer(Modifier.height(16.dp))
         if (App.loggedIn) {
-            Text(App.name, color = MaterialTheme.colorScheme.primary, fontSize = 20.sp, fontFamily = Cairo)
-            Text(App.email, color = Color(0xFF8A8F9C), fontSize = 13.sp)
-            Spacer(Modifier.height(10.dp))
-            OutlinedButton(onClick = { App.logout() }) { Text("تسجيل الخروج") }
+            var me by remember { mutableStateOf<ProfileData?>(null) }
+            var edit by remember { mutableStateOf(false) }
+            LaunchedEffect(App.userId) { me = App.userId?.let { loadProfile(it) } }
+            me?.let { d ->
+                ProfileHeader(d, onPlay = { vid -> Feed.videos.indexOfFirst { it.id == vid }.let { if (it >= 0) { Feed.jumpTo = it; onOpenFeed() } } }) {
+                    Text(App.email, color = Color(0xFF8A8F9C), fontSize = 12.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { edit = true }) { Text("تعديل الملف") }
+                        OutlinedButton(onClick = { App.logout() }) { Text("تسجيل الخروج") }
+                    }
+                }
+                if (edit) EditProfileSheet(d) { ok -> edit = false; if (ok) scope.launch { me = App.userId?.let { loadProfile(it) } } }
+            } ?: Text(App.name, color = MaterialTheme.colorScheme.primary, fontSize = 20.sp, fontFamily = Cairo)
         } else AuthForm()
         Spacer(Modifier.height(28.dp))
         Text("لون التطبيق", color = Color.White, fontSize = 16.sp, fontFamily = Cairo)

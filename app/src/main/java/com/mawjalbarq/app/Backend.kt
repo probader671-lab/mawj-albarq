@@ -9,6 +9,8 @@ import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
+import okhttp3.MultipartBody
+import okhttp3.Request
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
@@ -118,10 +120,21 @@ suspend fun afterLogin() {
     } catch (_: Exception) {}
 }
 
+suspend fun uploadImageToCloud(ctx: Context, uri: android.net.Uri): String? = withContext(Dispatchers.IO) {
+    try {
+        val bytes = ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@withContext null
+        val body = MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("upload_preset", Cfg.PRESET)
+            .addFormDataPart("file", "a.jpg", bytes.toRequestBody("image/jpeg".toMediaType())).build()
+        http.newCall(Request.Builder().url("https://api.cloudinary.com/v1_1/${Cfg.CLOUD}/image/upload").post(body).build()).execute().use {
+            if (it.code == 200) JSONObject(it.body!!.string()).getString("secure_url") else null
+        }
+    } catch (e: Exception) { null }
+}
+
 object Theme { var prefs: ThemePrefs? = null }
 
 data class Video(val id: String, val title: String, val desc: String, val url: String, val thumb: String?,
-                 val author: String, val likes: Int, val comments: Int)
+                 val author: String, val likes: Int, val comments: Int, val userId: String = "")
 data class Comment(val id: String, val text: String, val author: String)
 
 object Feed {
@@ -134,7 +147,7 @@ object Feed {
 
     suspend fun load() {
         loading = true; error = false
-        val (c, t) = api("GET", "/rest/v1/videos?select=id,title,description,video_url,thumbnail_url,likes,comments_count,profiles!videos_user_id_fkey(full_name)&status=eq.ready&deleted=eq.false&order=created_at.desc&limit=40")
+        val (c, t) = api("GET", "/rest/v1/videos?select=id,user_id,title,description,video_url,thumbnail_url,likes,comments_count,profiles!videos_user_id_fkey(full_name)&status=eq.ready&deleted=eq.false&order=created_at.desc&limit=40")
         if (c == 200) try {
             val a = JSONArray(t); val list = ArrayList<Video>()
             for (i in 0 until a.length()) {
@@ -142,7 +155,7 @@ object Feed {
                 list.add(Video(o.getString("id"), o.optString("title"), if (o.isNull("description")) "" else o.optString("description"),
                     o.getString("video_url"), if (o.isNull("thumbnail_url")) null else o.optString("thumbnail_url"),
                     o.optJSONObject("profiles")?.optString("full_name").orEmpty().ifBlank { "موج البرق" },
-                    o.optInt("likes"), o.optInt("comments_count")))
+                    o.optInt("likes"), o.optInt("comments_count"), o.optString("user_id")))
             }
             videos.clear(); videos.addAll(list)
         } catch (e: Exception) { error = true } else error = true
