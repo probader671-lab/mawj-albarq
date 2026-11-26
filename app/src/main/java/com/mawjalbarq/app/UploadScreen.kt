@@ -98,12 +98,19 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
     var status by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { if (it != null) uri = it }
+    var camUri by remember { mutableStateOf<Uri?>(null) }
+    val cam = rememberLauncherForActivityResult(ActivityResultContracts.CaptureVideo()) { ok -> if (ok) uri = camUri }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp).padding(bottom = 110.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("رفع مقطع", color = Color.White, fontSize = 24.sp, fontFamily = Cairo)
         OutlinedButton(onClick = { pick.launch("video/*") }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
             Text(if (uri == null) "اختر فيديو من المعرض" else "تم اختيار الفيديو ✓ (اضغط للتغيير)")
         }
+        OutlinedButton(onClick = {
+            val f = File(ctx.cacheDir, "cam").apply { mkdirs() }.let { File(it, "rec_" + System.currentTimeMillis() + ".mp4") }
+            val u = androidx.core.content.FileProvider.getUriForFile(ctx, ctx.packageName + ".fileprovider", f)
+            camUri = u; cam.launch(u)
+        }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("الكاميرا") }
         OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text("العنوان") }, singleLine = true, enabled = !busy)
         OutlinedTextField(desc, { desc = it }, Modifier.fillMaxWidth(), label = { Text("الوصف") }, minLines = 3, enabled = !busy)
         if (status.isNotEmpty()) Text(status, color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)

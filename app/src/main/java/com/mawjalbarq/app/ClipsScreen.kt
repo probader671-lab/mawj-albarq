@@ -61,6 +61,8 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
         player.setMediaItem(MediaItem.fromUri(Uri.parse(videos[cur].url))); player.prepare(); player.playWhenReady = true
         MediaCache.prefetch(ctx, videos.drop(cur + 1).take(2).map { it.url })
     }
+    var speed by remember { mutableFloatStateOf(1f) }
+    LaunchedEffect(speed, curId) { player.setPlaybackSpeed(speed) }
     var commentsFor by remember { mutableStateOf<Video?>(null) }
     var reportFor by remember { mutableStateOf<Video?>(null) }
     var creatorId by remember { mutableStateOf<String?>(null) }
@@ -95,6 +97,9 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                 Action(Icons.Filled.Comment, v.comments.toString(), Color.White) { commentsFor = v }
                 Action(Icons.Filled.Bookmark, "حفظ", if (saved) MaterialTheme.colorScheme.secondary else Color.White) {
                     if (!App.loggedIn) onNeedLogin() else scope.launch { Feed.toggleSave(v.id) }
+                }
+                Action(Icons.Filled.Speed, if (speed == 1f) "1x" else "${speed}x", if (speed == 1f) Color.White else MaterialTheme.colorScheme.secondary) {
+                    speed = when (speed) { 1f -> 1.5f; 1.5f -> 2f; 2f -> 0.5f; else -> 1f }
                 }
                 Action(Icons.Filled.Flag, "إبلاغ", Color.White) { reportFor = v }
                 Action(Icons.Filled.Share, "مشاركة", Color.White) {
