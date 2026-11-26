@@ -58,7 +58,7 @@ fun Avatar(url: String?, name: String, size: Int = 72) {
 fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = false, extra: @Composable () -> Unit = {}) {
     val surf = MaterialTheme.colorScheme.surface
     Column(Modifier.fillMaxWidth()) {
-        Box(Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(24.dp))
+        Box(Modifier.fillMaxWidth().height(104.dp).clip(RoundedCornerShape(16.dp))
             .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f), MaterialTheme.colorScheme.secondary.copy(alpha = 0.55f), surf))))
         Row(Modifier.fillMaxWidth().offset(y = (-47).dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.Bottom) {
             Box(Modifier.size(94.dp).clip(CircleShape).border(3.dp, MaterialTheme.colorScheme.background, CircleShape)) { Avatar(p.avatar, p.name, 94) }

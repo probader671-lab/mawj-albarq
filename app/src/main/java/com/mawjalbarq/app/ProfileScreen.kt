@@ -11,6 +11,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,7 +30,12 @@ fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions:
         return
     }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp).padding(bottom = 100.dp)) {
-        Text("حسابي", color = Color.White, fontSize = 24.sp, fontFamily = Cairo)
+        var settings by remember { mutableStateOf(false) }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("حسابي", color = Color.White, fontSize = 24.sp, fontFamily = Cairo, modifier = Modifier.weight(1f))
+            IconButton(onClick = { settings = true }) { Icon(Icons.Filled.Settings, "الإعدادات", tint = Color.White) }
+        }
+        if (settings) SettingsSheet(prefs) { settings = false }
         Spacer(Modifier.height(16.dp))
         var me by remember { mutableStateOf<ProfileData?>(null) }
         var edit by remember { mutableStateOf(false) }
@@ -61,13 +67,7 @@ fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions:
             Spacer(Modifier.width(6.dp))
             Text("لوحة الاقتراحات")
         }
-        Spacer(Modifier.height(24.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(Icons.Filled.Palette, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-            Text("لون التطبيق", color = Color.White, fontSize = 16.sp, fontFamily = Cairo)
-        }
-        Spacer(Modifier.height(12.dp))
-        AccentPicker(prefs, compact = false)
+
     }
 }
 

@@ -96,3 +96,18 @@ fun AccentPicker(prefs: ThemePrefs, compact: Boolean, modifier: Modifier = Modif
         Text("اللون يُحفظ على هذا الجهاز فقط", color = Color(0xFF8A8F9C), fontSize = 11.sp)
     }
 }
+
+/** Settings sheet reached from the gear next to the account title. Holds the accent color. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsSheet(prefs: ThemePrefs, onClose: () -> Unit) {
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onClose, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp).navigationBarsPadding()) {
+            Text("الإعدادات", color = Color.White, fontSize = 20.sp)
+            Spacer(Modifier.height(14.dp))
+            Text("لون التطبيق", color = Color.White, fontSize = 15.sp)
+            Spacer(Modifier.height(8.dp))
+            AccentPicker(prefs, compact = false)
+        }
+    }
+}

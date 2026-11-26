@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -193,7 +194,15 @@ fun AuthPortalScreen(prefs: ThemePrefs, onSuggestions: () -> Unit) {
                     Icon(Icons.Filled.Lightbulb, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(16.dp))
                     Text("الاقتراحات", color = Color.White, fontSize = 12.sp, fontFamily = Cairo)
                 }
-                AccentPicker(prefs, compact = true, modifier = Modifier.weight(1f).padding(start = 12.dp))
+                var settings by remember { mutableStateOf(false) }
+                Row(
+                    Modifier.clip(RoundedCornerShape(50)).clickable { settings = true }.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(Icons.Filled.Settings, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Text("الإعدادات", color = Color.White, fontSize = 12.sp, fontFamily = Cairo)
+                }
+                if (settings) SettingsSheet(prefs) { settings = false }
             }
         }
     }
