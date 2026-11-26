@@ -39,7 +39,7 @@ fun AppRoot(prefs: ThemePrefs) {
         LaunchedEffect(Unit) { Feed.init(appCtx); if (Feed.videos.isEmpty() && !Feed.loading) Feed.load() }
         UpdatePrompt()
         ShareProgressHost()
-        Box(Modifier.fillMaxSize().background(Color.Black)) {
+        Box(Modifier.fillMaxSize().background(PageBg)) {
             when (sel) {
                 0 -> HomeScreen(onOpen = { sel = 1 }, onNeedLogin = { sel = 4 }, onSuggestions = { suggestions = true }, onNotifs = { notifs = true })
                 1 -> ClipsScreen(onNeedLogin = { sel = 4 })
@@ -64,7 +64,7 @@ private fun PillBar(sel: Int, onSel: (Int) -> Unit, modifier: Modifier) {
         modifier
             .fillMaxWidth()
             .clip(barShape)
-            .background(Color(0xF50B0F17))
+            .background(if (Pal.isDark) Color(0xF50B0F17) else Color(0xF5FFFFFF))
             .border(0.75.dp, Color(0x1EFFFFFF), barShape)
             .navigationBarsPadding()
             .height(56.dp)
@@ -113,7 +113,7 @@ private fun PillBar(sel: Int, onSel: (Int) -> Unit, modifier: Modifier) {
                     Icon(
                         if (on) t.activeIcon else t.idleIcon,
                         t.label,
-                        tint = if (on) MaterialTheme.colorScheme.primary else Color(0xFF8A92A2),
+                        tint = if (on) MaterialTheme.colorScheme.primary else (if (Pal.isDark) Color(0xFF8A92A2) else Color(0xFF6B7384)),
                         modifier = Modifier.size(21.dp)
                     )
                     Spacer(Modifier.height(1.dp))
@@ -123,7 +123,7 @@ private fun PillBar(sel: Int, onSel: (Int) -> Unit, modifier: Modifier) {
                         lineHeight = 12.sp,
                         maxLines = 1,
                         fontFamily = Cairo,
-                        color = if (on) MaterialTheme.colorScheme.primary else Color(0xFF8A92A2)
+                        color = if (on) MaterialTheme.colorScheme.primary else (if (Pal.isDark) Color(0xFF8A92A2) else Color(0xFF6B7384))
                     )
                 }
             }

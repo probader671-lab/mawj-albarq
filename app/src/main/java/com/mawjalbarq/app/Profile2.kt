@@ -64,7 +64,7 @@ fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = fals
             Box(Modifier.size(94.dp).clip(CircleShape).border(3.dp, MaterialTheme.colorScheme.background, CircleShape)) { Avatar(p.avatar, p.name, 94) }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f).padding(top = 52.dp)) {
-                Text(p.name, color = Color.White, fontSize = 22.sp, fontFamily = Cairo, maxLines = 1)
+                Text(p.name, color = Ink, fontSize = 22.sp, fontFamily = Cairo, maxLines = 1)
                 if (p.publicId.isNotBlank()) Text("ID: " + p.publicId, color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, maxLines = 1)
             }
         }
@@ -76,7 +76,7 @@ fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = fals
             .background(MaterialTheme.colorScheme.primaryContainer).padding(vertical = 12.dp)) {
             listOf("المتابعون" to p.followers, "المتابَعون" to p.following, "الإعجابات" to p.videos.sumOf { it.likes }, "المقاطع" to p.videos.size).forEach { (l, n) ->
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(n.toString(), color = Color.White, fontSize = 18.sp, fontFamily = Cairo)
+                    Text(n.toString(), color = Ink, fontSize = 18.sp, fontFamily = Cairo)
                     Text(l, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
@@ -98,15 +98,15 @@ fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = fals
                                 .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000)))))
                             if (!v.portrait) {
                                 Box(Modifier.align(Alignment.TopEnd).padding(6.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xB3000000)).padding(horizontal = 5.dp, vertical = 3.dp)) {
-                                    Icon(Icons.Filled.StayCurrentLandscape, "فيديو عريض", tint = Color.White, modifier = Modifier.size(13.dp))
+                                    Icon(Icons.Filled.StayCurrentLandscape, null, tint = Color.White, modifier = Modifier.size(13.dp))
                                 }
                             }
                             if (v.duration > 0) {
-                                Text(formatDuration(v.duration), color = Color.White, fontSize = 10.sp,
+                                Text(formatDuration(v.duration), color = Ink, fontSize = 10.sp,
                                     modifier = Modifier.align(Alignment.TopStart).padding(6.dp).clip(RoundedCornerShape(6.dp))
                                         .background(Color(0xB3000000)).padding(horizontal = 5.dp, vertical = 2.dp))
                             }
-                            Text(v.title, color = Color.White, fontSize = 11.sp, maxLines = 1, modifier = Modifier.align(Alignment.BottomStart).padding(6.dp))
+                            Text(v.title, color = Ink, fontSize = 11.sp, maxLines = 1, modifier = Modifier.align(Alignment.BottomStart).padding(6.dp))
                         }
                     }
                     repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -149,7 +149,7 @@ fun EditProfileSheet(cur: ProfileData, onDone: (Boolean) -> Unit) {
     ModalBottomSheet(sheetState = fullSheet(), onDismissRequest = { onDone(false) }, containerColor = Color(0xFF141A24)) {
         Column(Modifier.fillMaxWidth().padding(20.dp).navigationBarsPadding().imePadding(), verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("تعديل الملف الشخصي", color = Color.White, fontSize = 18.sp, fontFamily = Cairo)
+            Text("تعديل الملف الشخصي", color = Ink, fontSize = 18.sp, fontFamily = Cairo)
             Avatar(avatar, name, 84)
             OutlinedButton(onClick = { pick.launch("image/*") }, enabled = !busy) { Text("تغيير الصورة") }
             OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("الاسم") }, singleLine = true)

@@ -87,33 +87,21 @@ private fun WatchFeedVideoCard(
     onOpen: () -> Unit,
     onCreator: () -> Unit,
     onNeedLogin: () -> Unit,
-    onReport: () -> Unit
+    onReport: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    val liked = Feed.liked[v.id] == true
     val saved = Feed.saved[v.id] == true
-    val following = Feed.following[v.userId] == true
-    var showDesc by remember(v.id) { mutableStateOf(false) }
-
-    val cardBorder = if (hero) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.48f)
-    } else {
-        WatchCardBorder
-    }
-
     Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 14.dp)
-            .clip(RoundedCornerShape(20.dp))
+        modifier
+            .clip(RoundedCornerShape(12.dp))
             .background(WatchCardBg)
-            .border(if (hero) 1.25.dp else 1.dp, cardBorder, RoundedCornerShape(20.dp))
+            .border(0.75.dp, WatchCardBorder, RoundedCornerShape(12.dp))
     ) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .aspectRatio(ratio)
+                .aspectRatio(16f / 9f)
                 .background(Color.Black)
                 .clickable(onClick = onOpen)
                 .testTag("video_card_${v.id}")
@@ -122,269 +110,72 @@ private fun WatchFeedVideoCard(
                 if (!v.portrait) {
                     AsyncImage(v.thumb, v.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 } else {
-                    AsyncImage(
-                        v.thumb,
-                        null,
-                        Modifier.fillMaxSize().alpha(0.32f),
-                        contentScale = ContentScale.Crop
-                    )
-                    Box(Modifier.fillMaxSize().background(Color(0x55000000)))
+                    AsyncImage(v.thumb, null, Modifier.fillMaxSize().alpha(0.32f), contentScale = ContentScale.Crop)
                     AsyncImage(v.thumb, v.title, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
                 }
             }
-            Box(
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .height(68.dp)
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xD9000000))))
-            )
-            Box(
-                Modifier
-                    .align(Alignment.Center)
-                    .size(54.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary.copy(alpha = 0.85f))
-                        )
-                    )
-                    .border(1.5.dp, Color.White.copy(alpha = 0.72f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Filled.PlayArrow, "تشغيل", tint = Color.White, modifier = Modifier.size(30.dp))
-            }
-
-            if (hero) {
-                Text(
-                    "مميز",
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    fontFamily = Cairo,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(10.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.92f))
-                        .padding(horizontal = 9.dp, vertical = 4.dp)
-                )
-            }
-
-            Row(
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(10.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xB30B1720))
-                    .border(0.75.dp, Color(0x33FFFFFF), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Icon(
-                    if (!v.portrait) Icons.Filled.StayCurrentLandscape else Icons.Filled.Smartphone,
-                    contentDescription = null,
-                    tint = if (!v.portrait) MaterialTheme.colorScheme.primary else Color.White,
-                    modifier = Modifier.size(13.dp)
-                )
-                Text(
-                    if (!v.portrait) "عريض" else "مقطع",
-                    color = Color.White,
-                    fontSize = 10.sp,
-                    fontFamily = Cairo
-                )
-            }
-
             if (v.duration > 0) {
                 Text(
                     formatDuration(v.duration),
                     color = Color.White,
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(10.dp)
-                        .clip(RoundedCornerShape(6.dp))
+                        .padding(6.dp)
+                        .clip(RoundedCornerShape(5.dp))
                         .background(Color(0xCC000000))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
         }
-
-        Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        if (v.desc.isNotBlank()) showDesc = !showDesc else onOpen()
-                    },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Row(Modifier.fillMaxWidth().padding(start = 8.dp, top = 6.dp, bottom = 6.dp, end = 2.dp), verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f).clickable(onClick = onOpen)) {
                 Text(
                     v.title,
                     color = WatchTextMain,
                     fontFamily = Cairo,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
-                    lineHeight = 23.sp,
-                    maxLines = if (showDesc) 5 else 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.5.sp,
+                    lineHeight = 16.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
-                if (v.desc.isNotBlank()) {
-                    Spacer(Modifier.width(6.dp))
-                    Icon(
-                        if (showDesc) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                        contentDescription = "عرض الوصف",
-                        tint = WatchTextSec,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(6.dp))
-
-            val dateText = formatVideoDate(v.createdAt)
-            val meta = buildList {
-                add("${formatCount(v.views)} مشاهدة")
-                if (dateText.isNotBlank()) add(dateText)
-                if (v.comments > 0) add("${v.comments} تعليق")
-            }.joinToString(" • ")
-            Text(
-                meta,
-                color = WatchTextSec,
-                fontSize = 12.5.sp,
-                fontFamily = Cairo,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            AnimatedVisibility(visible = showDesc && v.desc.isNotBlank()) {
                 Text(
-                    v.desc,
-                    color = WatchTextMain.copy(alpha = 0.92f),
-                    fontSize = 13.sp,
-                    lineHeight = 20.sp,
+                    v.author + " • " + formatCount(v.views) + " مشاهدة",
+                    color = WatchTextSec,
+                    fontSize = 10.5.sp,
                     fontFamily = Cairo,
-                    modifier = Modifier
-                        .padding(top = 10.dp)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0x0DFFFFFF))
-                        .padding(12.dp)
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.clickable(enabled = v.userId.isNotBlank(), onClick = onCreator)
                 )
             }
-
-            Spacer(Modifier.height(12.dp))
-
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item {
-                    WatchActionPill(
-                        icon = if (liked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                        label = "${v.likes}",
-                        active = liked,
-                        activeBg = MaterialTheme.colorScheme.primary
-                    ) {
-                        if (!App.loggedIn) onNeedLogin() else scope.launch { Feed.toggleLike(v.id) }
-                    }
-                }
-                item {
-                    WatchActionPill(
-                        icon = if (saved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                        label = if (saved) "محفوظ" else "حفظ",
-                        active = saved,
-                        activeBg = MaterialTheme.colorScheme.primary
-                    ) {
-                        scope.launch { Feed.toggleSave(v.id) }
-                    }
-                }
-                item {
-                    WatchActionPill(
-                        icon = Icons.Outlined.Share,
-                        label = "مشاركة"
-                    ) {
-                        ShareVideo.share(ctx, v)
-                    }
-                }
-                item {
-                    WatchActionPill(
-                        icon = Icons.Outlined.Flag,
-                        label = "إبلاغ",
-                        onClick = onReport
-                    )
-                }
-            }
-
-            HorizontalDivider(
-                Modifier.padding(vertical = 12.dp),
-                thickness = 0.75.dp,
-                color = Color(0x14FFFFFF)
-            )
-
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable(enabled = v.userId.isNotBlank()) { onCreator() },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                            .padding(2.dp)
-                    ) {
-                        Avatar(v.avatar, v.author, 40)
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            Text(
-                                v.author,
-                                color = WatchTextMain,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                fontFamily = Cairo,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            if (v.verified) VerifiedBadge(14)
-                        }
-                        Text(
-                            "${formatCount(v.followers)} منضم",
-                            color = WatchTextSec,
-                            fontSize = 12.sp,
-                            fontFamily = Cairo
-                        )
-                    }
-                }
-                if (v.userId.isNotBlank() && v.userId != App.userId) {
-                    Spacer(Modifier.width(8.dp))
-                    WatchJoinButton(following = following) {
-                        if (!App.loggedIn) {
-                            onNeedLogin()
-                        } else {
-                            val joining = !following
-                            scope.launch {
-                                Feed.toggleFollow(v.userId)
-                                if (joining) {
-                                    Toast.makeText(ctx, "مرحباً بك في ${v.author}", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        }
-                    }
-                }
+            Column {
+                Icon(
+                    if (saved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder, "حفظ",
+                    tint = if (saved) MaterialTheme.colorScheme.primary else WatchTextSec,
+                    modifier = Modifier.size(30.dp).clip(CircleShape).clickable { scope.launch { Feed.toggleSave(v.id) } }.padding(5.dp)
+                )
+                Icon(
+                    Icons.Outlined.Flag, "إبلاغ", tint = WatchTextSec,
+                    modifier = Modifier.size(30.dp).clip(CircleShape).clickable(onClick = onReport).padding(5.dp)
+                )
             }
         }
+    }
+}
+
+/** Two compact cards per row so more videos fit on the home page. */
+@Composable
+private fun CardRow(
+    pair: List<Video>, open: (Video) -> Unit, onCreator: (Video) -> Unit, onNeedLogin: () -> Unit, onReport: (Video) -> Unit
+) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        pair.forEach { v ->
+            WatchFeedVideoCard(v, 16f / 9f, false, { open(v) }, { onCreator(v) }, onNeedLogin, { onReport(v) }, Modifier.weight(1f))
+        }
+        if (pair.size == 1) Spacer(Modifier.weight(1f))
     }
 }
 
@@ -589,7 +380,7 @@ fun HomeScreen(
             LazyColumn(
                 Modifier.fillMaxSize().navigationBarsPadding().nestedScroll(conn),
                 state = list,
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding = PaddingValues(top = 12.dp, bottom = 84.dp)
             ) {
                 if (q.isBlank()) item { Box(Modifier.padding(horizontal = 14.dp)) { StoriesStrip(onNeedLogin) } }
@@ -622,23 +413,15 @@ fun HomeScreen(
                         }
                     }
                     else -> {
-                        val featuredCount = if (q.isBlank()) 3 else vids.size
-                        itemsIndexed(vids.take(featuredCount), key = { _, v -> v.id }) { i, v ->
-                            WatchFeedVideoCard(
-                                v = v,
-                                ratio = 16f / 9f,
-                                hero = i == 0 && q.isBlank(),
-                                onOpen = { open(v) },
-                                onCreator = { if (v.userId.isNotBlank()) creatorId = v.userId },
-                                onNeedLogin = onNeedLogin,
-                                onReport = { reportFor = v }
-                            )
+                        val featuredCount = if (q.isBlank()) minOf(4, vids.size) else vids.size
+                        itemsIndexed(vids.take(featuredCount).chunked(2), key = { _, pr -> "top_${pr.first().id}" }) { _, pr ->
+                            CardRow(pr, { open(it) }, { if (it.userId.isNotBlank()) creatorId = it.userId }, onNeedLogin, { reportFor = it })
                         }
                     }
                 }
 
-                if (q.isBlank() && vids.size > 3) {
-                    val afterThree = vids.drop(3)
+                if (q.isBlank() && vids.size > 4) {
+                    val afterThree = vids.drop(4)
                     item(key = "home_rail") {
                         WatchRailSection(
                             title = "اقتراحات قد تعجبك",
@@ -656,16 +439,8 @@ fun HomeScreen(
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 2.dp)
                         )
                     }
-                    itemsIndexed(afterThree, key = { _, v -> "feed_${v.id}" }) { _, v ->
-                        WatchFeedVideoCard(
-                            v = v,
-                            ratio = 16f / 9f,
-                            hero = false,
-                            onOpen = { open(v) },
-                            onCreator = { if (v.userId.isNotBlank()) creatorId = v.userId },
-                            onNeedLogin = onNeedLogin,
-                            onReport = { reportFor = v }
-                        )
+                    itemsIndexed(afterThree.chunked(2), key = { _, pr -> "feed_${pr.first().id}" }) { _, pr ->
+                        CardRow(pr, { open(it) }, { if (it.userId.isNotBlank()) creatorId = it.userId }, onNeedLogin, { reportFor = it })
                     }
                 }
 

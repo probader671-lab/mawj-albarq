@@ -36,12 +36,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 
-val WatchBg = Color(0xFF0B1720)
-val WatchCardBg = Color(0xFF101C26)
-val WatchCardBorder = Color(0x16FFFFFF)
-val WatchPillBg = Color(0x14FFFFFF)
-val WatchTextMain = Color(0xFFE6EEF8)
-val WatchTextSec = Color(0xFFAEB6BD)
+val WatchBg: Color get() = if (Pal.isDark) Color(0xFF0B1720) else Color(0xFFF2F4F8)
+val WatchCardBg: Color get() = if (Pal.isDark) Color(0xFF101C26) else Color(0xFFFFFFFF)
+val WatchCardBorder: Color get() = if (Pal.isDark) Color(0x16FFFFFF) else Color(0x1A000000)
+val WatchPillBg: Color get() = if (Pal.isDark) Color(0x14FFFFFF) else Color(0x0F000000)
+val WatchTextMain: Color get() = if (Pal.isDark) Color(0xFFE6EEF8) else Color(0xFF111827)
+val WatchTextSec: Color get() = if (Pal.isDark) Color(0xFFAEB6BD) else Color(0xFF5B6577)
 val VerifiedBlue = Color(0xFF1DA1F2)
 val ProgressThumbGreen = Color(0xFF4CAF50)
 

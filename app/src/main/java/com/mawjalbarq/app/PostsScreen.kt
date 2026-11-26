@@ -248,7 +248,7 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
             }
             Spacer(Modifier.width(6.dp))
             BadgedBox(badge = {
-                if (savedIds.isNotEmpty()) Badge(containerColor = Color(0xFFFF2D55)) { Text(savedIds.size.toString(), color = Color.White, fontSize = 10.sp) }
+                if (savedIds.isNotEmpty()) Badge(containerColor = Color(0xFFFF2D55)) { Text(savedIds.size.toString(), color = Ink, fontSize = 10.sp) }
             }) {
                 HeaderIconBtn(Icons.Filled.Bookmark, "المحفوظات", "posts_saved_button") {
                     showSaved = true
@@ -484,7 +484,7 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
             dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0x55FFFFFF)) }
         ) {
             Column(Modifier.fillMaxWidth().padding(20.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("المحفوظات", color = Color.White, fontSize = 18.sp, fontFamily = Cairo)
+                Text("المحفوظات", color = Ink, fontSize = 18.sp, fontFamily = Cairo)
                 val sp = posts?.filter { savedIds.contains(it.id) }.orEmpty()
                 if (sp.isEmpty()) {
                     Text("لا توجد منشورات محفوظة", color = muted)
@@ -503,7 +503,7 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
                             Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(p.author, color = MaterialTheme.colorScheme.primary, fontFamily = Cairo, fontSize = 14.sp)
-                                Text(p.text.ifBlank { "منشور وسائط" }, color = Color.White, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text(p.text.ifBlank { "منشور وسائط" }, color = Ink, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             }
                             IconButton(onClick = { toggleSaved(p.id) }) {
                                 Icon(Icons.Filled.Bookmark, "إزالة", tint = MaterialTheme.colorScheme.secondary)
@@ -537,7 +537,7 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("إنشاء منشور", color = Color.White, fontSize = 18.sp, fontFamily = Cairo, modifier = Modifier.weight(1f))
+                    Text("إنشاء منشور", color = Ink, fontSize = 18.sp, fontFamily = Cairo, modifier = Modifier.weight(1f))
                     IconButton(onClick = { composing = false }) {
                         Icon(Icons.Filled.Close, "إغلاق", tint = muted)
                     }
@@ -545,7 +545,7 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Avatar(App.avatar, App.name.ifBlank { "م" }, 40)
                     Spacer(Modifier.width(10.dp))
-                    Text(App.name.ifBlank { "مستخدم" }, color = Color.White, fontFamily = Cairo, fontSize = 15.sp)
+                    Text(App.name.ifBlank { "مستخدم" }, color = Ink, fontFamily = Cairo, fontSize = 15.sp)
                 }
                 OutlinedTextField(
                     value = text,
@@ -662,7 +662,7 @@ private fun PostFeedItem(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         p.author,
-                        color = Color.White,
+                        color = Ink,
                         fontFamily = Cairo,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 15.sp,
@@ -724,7 +724,7 @@ private fun PostFeedItem(
             ) {
                 Text(
                     text = annotated,
-                    color = Color.White,
+                    color = Ink,
                     fontSize = 15.sp,
                     lineHeight = 22.sp,
                     maxLines = if (expanded) Int.MAX_VALUE else 3,
@@ -949,7 +949,7 @@ private fun PostCommentsSheet(post: Post, onNeedLogin: () -> Unit, onClose: () -
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.ModeComment, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("التعليقات", color = Color.White, fontSize = 18.sp, fontFamily = Cairo)
+                Text("التعليقات", color = Ink, fontSize = 18.sp, fontFamily = Cairo)
                 Spacer(Modifier.width(8.dp))
                 Text(
                     "${list?.size ?: post.comments}",
@@ -980,7 +980,7 @@ private fun PostCommentsSheet(post: Post, onNeedLogin: () -> Unit, onClose: () -
                     l.isEmpty() -> Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Outlined.ModeComment, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(38.dp))
                         Spacer(Modifier.height(8.dp))
-                        Text("لا توجد تعليقات بعد", color = Color.White, fontSize = 15.sp, fontFamily = Cairo)
+                        Text("لا توجد تعليقات بعد", color = Ink, fontSize = 15.sp, fontFamily = Cairo)
                         Text("كن أول من يشارك رأيه!", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                     }
                     else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 6.dp)) {
@@ -1005,7 +1005,7 @@ private fun PostCommentsSheet(post: Post, onNeedLogin: () -> Unit, onClose: () -
                                         }
                                     }
                                     Spacer(Modifier.height(4.dp))
-                                    Text(c.text, color = Color.White, fontSize = 14.sp, lineHeight = 20.sp)
+                                    Text(c.text, color = Ink, fontSize = 14.sp, lineHeight = 20.sp)
                                 }
                             }
                         }

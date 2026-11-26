@@ -74,6 +74,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ClipsScreen(onNeedLogin: () -> Unit) {
+    DarkLock()
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val videos = Feed.clips

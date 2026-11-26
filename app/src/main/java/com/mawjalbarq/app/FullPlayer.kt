@@ -72,6 +72,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun FullPlayer(start: Video, onClose0: () -> Unit) {
+    DarkLock()
     val onClose = { Ui.barVisible = true; Ui.deep = false; onClose0() }
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()

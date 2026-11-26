@@ -82,7 +82,7 @@ fun AccentPicker(prefs: ThemePrefs, compact: Boolean, modifier: Modifier = Modif
         Spacer(Modifier.height(10.dp))
         // live preview of the chosen color
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF141A24)).padding(14.dp)) {
-            Text("معاينة اللون: " + cur.name, color = Color.White, fontSize = 13.sp)
+            Text("معاينة اللون: " + cur.name, color = Ink, fontSize = 13.sp)
             Spacer(Modifier.height(10.dp))
             Box(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(50)).background(Brush.horizontalGradient(listOf(cur.main, cur.second))))
             Spacer(Modifier.height(12.dp))
@@ -103,11 +103,52 @@ fun AccentPicker(prefs: ThemePrefs, compact: Boolean, modifier: Modifier = Modif
 fun SettingsSheet(prefs: ThemePrefs, onClose: () -> Unit) {
     androidx.compose.material3.ModalBottomSheet(onDismissRequest = onClose, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp).navigationBarsPadding()) {
-            Text("الإعدادات", color = Color.White, fontSize = 20.sp)
+            Text("الإعدادات", color = Ink, fontSize = 20.sp)
             Spacer(Modifier.height(14.dp))
-            Text("لون التطبيق", color = Color.White, fontSize = 15.sp)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(if (prefs.dark) "الوضع الداكن" else "الوضع الفاتح", color = Ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                DayNightToggle(dark = prefs.dark) { prefs.setDark(!prefs.dark) }
+            }
+            Spacer(Modifier.height(16.dp))
+            Text("لون التطبيق", color = Ink, fontSize = 15.sp)
             Spacer(Modifier.height(8.dp))
             AccentPicker(prefs, compact = false)
         }
+    }
+}
+
+/** Animated sun/moon switch: the knob slides and turns between a moon (night, stars) and a sun (day, rays, clouds). */
+@Composable
+fun DayNightToggle(dark: Boolean, onToggle: () -> Unit) {
+    val p by androidx.compose.animation.core.animateFloatAsState(if (dark) 0f else 1f, androidx.compose.animation.core.tween(650), label = "dn")
+    androidx.compose.foundation.Canvas(Modifier.size(width = 84.dp, height = 42.dp).clip(RoundedCornerShape(50)).clickable(onClick = onToggle)) {
+        val w = size.width; val h = size.height
+        drawRoundRect(androidx.compose.ui.graphics.lerp(Color(0xFF1B2540), Color(0xFF7CC4FF), p), cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2, h / 2))
+        // stars (night)
+        val starA = (1f - p).coerceIn(0f, 1f)
+        listOf(0.62f to 0.30f, 0.74f to 0.62f, 0.50f to 0.68f, 0.82f to 0.25f).forEach { (fx, fy) ->
+            drawCircle(Color.White.copy(alpha = starA), radius = h * 0.04f, center = androidx.compose.ui.geometry.Offset(w * fx, h * fy))
+        }
+        // clouds (day)
+        val cloudA = p.coerceIn(0f, 1f)
+        drawCircle(Color.White.copy(alpha = cloudA * 0.9f), radius = h * 0.13f, center = androidx.compose.ui.geometry.Offset(w * 0.32f, h * 0.66f))
+        drawCircle(Color.White.copy(alpha = cloudA * 0.9f), radius = h * 0.17f, center = androidx.compose.ui.geometry.Offset(w * 0.42f, h * 0.60f))
+        drawCircle(Color.White.copy(alpha = cloudA * 0.9f), radius = h * 0.12f, center = androidx.compose.ui.geometry.Offset(w * 0.52f, h * 0.68f))
+        // knob
+        val r = h * 0.38f
+        val cx = h / 2 + (w - h) * p
+        val c = androidx.compose.ui.geometry.Offset(cx, h / 2)
+        val knob = androidx.compose.ui.graphics.lerp(Color(0xFFE8EAF2), Color(0xFFFFC83D), p)
+        androidx.compose.ui.graphics.drawscope.rotate(degrees = p * 180f, pivot = c) {
+            for (k in 0 until 8) {
+                androidx.compose.ui.graphics.drawscope.rotate(degrees = k * 45f, pivot = c) {
+                    drawLine(Color(0xFFFFC83D).copy(alpha = cloudA), androidx.compose.ui.geometry.Offset(cx, h / 2 - r * 1.25f), androidx.compose.ui.geometry.Offset(cx, h / 2 - r * 1.55f), strokeWidth = h * 0.06f)
+                }
+            }
+        }
+        drawCircle(knob, radius = r, center = c)
+        // moon craters
+        drawCircle(Color(0xFFC9CDDA).copy(alpha = starA), radius = r * 0.22f, center = androidx.compose.ui.geometry.Offset(cx - r * 0.3f, h / 2 - r * 0.25f))
+        drawCircle(Color(0xFFC9CDDA).copy(alpha = starA), radius = r * 0.15f, center = androidx.compose.ui.geometry.Offset(cx + r * 0.25f, h / 2 + r * 0.3f))
     }
 }

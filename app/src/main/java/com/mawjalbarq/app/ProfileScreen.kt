@@ -32,7 +32,7 @@ fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions:
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp).padding(bottom = 100.dp)) {
         var settings by remember { mutableStateOf(false) }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("حسابي", color = Color.White, fontSize = 24.sp, fontFamily = Cairo, modifier = Modifier.weight(1f))
+            Text("حسابي", color = Ink, fontSize = 24.sp, fontFamily = Cairo, modifier = Modifier.weight(1f))
             IconButton(onClick = { settings = true }) { Icon(Icons.Filled.Settings, "الإعدادات", tint = Color.White) }
         }
         if (settings) SettingsSheet(prefs) { settings = false }

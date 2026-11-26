@@ -92,6 +92,7 @@ private class AuthFormHolder {
 
 @Composable
 fun AuthPortalScreen(prefs: ThemePrefs, onSuggestions: () -> Unit) {
+    DarkLock()
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var design by remember { mutableStateOf(AuthDesignPrefs.load(ctx)) }

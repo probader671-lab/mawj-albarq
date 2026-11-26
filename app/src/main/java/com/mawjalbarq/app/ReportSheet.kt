@@ -19,10 +19,10 @@ fun ReportSheet(targetType: String, targetId: String, onClose: () -> Unit) {
     var sent by remember { mutableStateOf(false) }
     ModalBottomSheet(sheetState = fullSheet(), onDismissRequest = onClose, containerColor = Color(0xFF141A24)) {
         Column(Modifier.fillMaxWidth().padding(20.dp).navigationBarsPadding()) {
-            Text(if (sent) "شكراً، وصلنا بلاغك" else "الإبلاغ عن المحتوى", color = Color.White, fontSize = 18.sp, fontFamily = Cairo)
+            Text(if (sent) "شكراً، وصلنا بلاغك" else "الإبلاغ عن المحتوى", color = Ink, fontSize = 18.sp, fontFamily = Cairo)
             Spacer(Modifier.height(10.dp))
             if (!sent) reasons.forEach { r ->
-                Text(r, color = Color.White, fontSize = 15.sp, modifier = Modifier.fillMaxWidth().clickable {
+                Text(r, color = Ink, fontSize = 15.sp, modifier = Modifier.fillMaxWidth().clickable {
                     scope.launch {
                         val b = JSONObject().put("target_type", targetType).put("target_id", targetId).put("reason", r)
                         App.userId?.let { b.put("reporter_user_id", it) }

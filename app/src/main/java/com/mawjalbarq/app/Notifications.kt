@@ -62,7 +62,7 @@ fun NotificationsScreen(onBack: () -> Unit, onOpenVideo: (String) -> Unit) {
     LaunchedEffect(Unit) { val r = Notifs.load(); if (r == null) failed = true else list = r; Notifs.markAllRead() }
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("الإشعارات", color = Color.White, fontSize = 24.sp, fontFamily = Cairo, modifier = Modifier.weight(1f))
+            Text("الإشعارات", color = Ink, fontSize = 24.sp, fontFamily = Cairo, modifier = Modifier.weight(1f))
             TextButton(onClick = onBack) { Text("رجوع") }
         }
         val l = list
@@ -84,7 +84,7 @@ fun NotificationsScreen(onBack: () -> Unit, onOpenVideo: (String) -> Unit) {
                         Avatar(n.actorAvatar, n.actor, 44)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(n.actor, color = Color.White, fontFamily = Cairo, fontSize = 15.sp, maxLines = 1)
+                            Text(n.actor, color = Ink, fontFamily = Cairo, fontSize = 15.sp, maxLines = 1)
                             Text(msg, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                             Text(n.at, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                         }
