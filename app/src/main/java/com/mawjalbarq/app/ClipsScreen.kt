@@ -383,9 +383,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                             scope.launch { Feed.toggleSave(v.id) }
                         }
                         val doShare: () -> Unit = {
-                            val i = Intent(Intent.ACTION_SEND).setType("text/plain")
-                                .putExtra(Intent.EXTRA_TEXT, "${v.title} - موج البرق\n${v.url}")
-                            ctx.startActivity(Intent.createChooser(i, "مشاركة"))
+                            ShareVideo.share(ctx, v)
                         }
                         val doFollow: () -> Unit = {
                             if (!App.loggedIn) onNeedLogin() else scope.launch { Feed.toggleFollow(v.userId) }

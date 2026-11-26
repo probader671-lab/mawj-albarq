@@ -907,13 +907,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
                                 }
                                 item {
                                     WatchActionPill(icon = Icons.Outlined.Share, label = "مشاركة", compact = true) {
-                                        ctx.startActivity(
-                                            Intent.createChooser(
-                                                Intent(Intent.ACTION_SEND).setType("text/plain")
-                                                    .putExtra(Intent.EXTRA_TEXT, "${cur.title} - موج البرق\n${cur.url}"),
-                                                "مشاركة"
-                                            )
-                                        )
+                                        ShareVideo.share(ctx, cur)
                                     }
                                 }
                                 item {

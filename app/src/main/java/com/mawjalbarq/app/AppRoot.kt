@@ -38,6 +38,7 @@ fun AppRoot(prefs: ThemePrefs) {
         val appCtx = androidx.compose.ui.platform.LocalContext.current
         LaunchedEffect(Unit) { Feed.init(appCtx); if (Feed.videos.isEmpty() && !Feed.loading) Feed.load() }
         UpdatePrompt()
+        ShareProgressHost()
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             when (sel) {
                 0 -> HomeScreen(onOpen = { sel = 1 }, onNeedLogin = { sel = 4 }, onSuggestions = { suggestions = true }, onNotifs = { notifs = true })

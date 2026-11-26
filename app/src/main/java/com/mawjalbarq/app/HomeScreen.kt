@@ -304,13 +304,7 @@ private fun WatchFeedVideoCard(
                         icon = Icons.Outlined.Share,
                         label = "مشاركة"
                     ) {
-                        ctx.startActivity(
-                            Intent.createChooser(
-                                Intent(Intent.ACTION_SEND).setType("text/plain")
-                                    .putExtra(Intent.EXTRA_TEXT, "${v.title} - موج البرق\n${v.url}"),
-                                "مشاركة"
-                            )
-                        )
+                        ShareVideo.share(ctx, v)
                     }
                 }
                 item {
