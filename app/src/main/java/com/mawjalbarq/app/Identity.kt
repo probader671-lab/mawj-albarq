@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.json.JSONArray
@@ -139,9 +140,9 @@ fun DayNightToggle(dark: Boolean, onToggle: () -> Unit) {
         val cx = h / 2 + (w - h) * p
         val c = androidx.compose.ui.geometry.Offset(cx, h / 2)
         val knob = androidx.compose.ui.graphics.lerp(Color(0xFFE8EAF2), Color(0xFFFFC83D), p)
-        androidx.compose.ui.graphics.drawscope.rotate(degrees = p * 180f, pivot = c) {
+        rotate(degrees = p * 180f, pivot = c) {
             for (k in 0 until 8) {
-                androidx.compose.ui.graphics.drawscope.rotate(degrees = k * 45f, pivot = c) {
+                rotate(degrees = k * 45f, pivot = c) {
                     drawLine(Color(0xFFFFC83D).copy(alpha = cloudA), androidx.compose.ui.geometry.Offset(cx, h / 2 - r * 1.25f), androidx.compose.ui.geometry.Offset(cx, h / 2 - r * 1.55f), strokeWidth = h * 0.06f)
                 }
             }
