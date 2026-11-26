@@ -11,6 +11,7 @@ import android.media.MediaMetadataRetriever
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -144,7 +145,7 @@ object ShareVideo {
                 val effects = ArrayList<Effect>()
                 effects.add(Presentation.createForHeight(h))
                 effects.add(OverlayEffect(ImmutableList.of(MovingLogoOverlay(w, h, logo))))
-                val item = EditedMediaItem.Builder(MediaItem.fromFile(src)).setEffects(Effects(emptyList(), effects)).build()
+                val item = EditedMediaItem.Builder(MediaItem.fromUri(android.net.Uri.fromFile(src))).setEffects(Effects(emptyList(), effects)).build()
                 val enc = DefaultEncoderFactory.Builder(ctx)
                     .setRequestedVideoEncoderSettings(VideoEncoderSettings.Builder().setBitrate(3_000_000).build()).build()
                 val t = Transformer.Builder(ctx).setVideoMimeType(MimeTypes.VIDEO_H264).setEncoderFactory(enc)
