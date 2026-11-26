@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: radial-gradient(1200px 700px at 50% -10%, #1b2340 0%, #0a0d18 55%, #05070d 100%);
+    min-height:100vh; display:flex; align-items:center; justify-content:center; gap:56px;
+    font-family:'Tajawal',sans-serif; padding:36px;
+  }
+  .brand {
+    position:absolute; top:26px; left:0; right:0; text-align:center;
+  }
+  .brand h1 { font-family:'Cairo'; font-weight:900; font-size:30px; color:#fff; letter-spacing:.5px; }
+  .brand h1 span { color:#f5c518; }
+  .brand p { color:#8b93b0; font-size:14px; margin-top:2px; }
+  .phone {
+    width:340px; height:736px; border-radius:44px; background:#0c0e14;
+    border:3px solid #232838; box-shadow:0 30px 80px rgba(0,0,0,.7), 0 0 0 8px #05060a;
+    position:relative; overflow:hidden; direction:rtl; flex-shrink:0;
+  }
+  .notch { position:absolute; top:10px; left:50%; transform:translateX(-50%); width:110px; height:24px; background:#05060a; border-radius:14px; z-index:60; }
+
+  /* ===== clips screen ===== */
+  .clips-bg {
+    position:absolute; inset:0;
+    background:linear-gradient(160deg,#2b1a4d 0%,#4a1d5e 30%,#8e2f6f 55%,#d9486b 80%,#f7b267 100%);
+  }
+  .clips-bg::after { content:''; position:absolute; inset:0;
+    background:radial-gradient(340px 340px at 70% 30%, rgba(255,255,255,.16), transparent 60%); }
+  .clips-scrim-top { position:absolute; top:0; left:0; right:0; height:120px; background:linear-gradient(#000a,transparent); z-index:2;}
+  .clips-scrim-bottom { position:absolute; bottom:0; left:0; right:0; height:300px; background:linear-gradient(transparent,#000d); z-index:2;}
+  .clips-logo {
+    position:absolute; top:46px; right:16px; z-index:5; width:40px; height:40px; border-radius:50%;
+    background:rgba(255,255,255,.14); backdrop-filter:blur(6px); border:1.5px solid rgba(255,255,255,.35);
+    display:flex; align-items:center; justify-content:center; font-size:19px;
+  }
+  .clips-tabs { position:absolute; top:56px; left:0; right:0; text-align:center; z-index:5;
+    font-family:'Cairo'; font-weight:700; font-size:15px; color:#fffc; }
+  .clips-tabs b { color:#fff; border-bottom:2.5px solid #f5c518; padding-bottom:3px; }
+  .action-rail { position:absolute; bottom:110px; left:12px; z-index:5; display:flex; flex-direction:column; gap:18px; align-items:center; }
+  .action { display:flex; flex-direction:column; align-items:center; gap:3px; color:#fff; }
+  .action .ic { width:46px; height:46px; border-radius:50%; background:rgba(0,0,0,.35); backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center; font-size:21px; }
+  .action .cnt { font-size:12px; font-weight:700; font-family:'Cairo'; }
+  .creator { position:absolute; bottom:96px; right:14px; left:74px; z-index:5; color:#fff; }
+  .creator .row { display:flex; align-items:center; gap:8px; }
+  .creator .avatar { width:40px; height:40px; border-radius:50%;
+    background:linear-gradient(135deg,#f5c518,#e2543e); border:2px solid #fff; flex-shrink:0; }
+  .creator .name { font-family:'Cairo'; font-weight:700; font-size:14.5px; }
+  .follow { background:#f5c518; color:#1a1a1a; font-family:'Cairo'; font-weight:700; font-size:11.5px;
+    border-radius:999px; padding:4px 14px; }
+  .creator .desc { margin-top:8px; font-size:12.5px; color:#fffd; line-height:1.55; }
+  .creator .music { margin-top:7px; font-size:11.5px; color:#fffb; display:flex; gap:5px; align-items:center; }
+  .clips-progress { position:absolute; bottom:86px; right:0; left:0; height:3px; background:rgba(255,255,255,.22); z-index:5; }
+  .clips-progress i { display:block; height:100%; width:38%; background:#f5c518; }
+
+  /* pill bottom bar (shared) */
+  .pillbar {
+    position:absolute; bottom:12px; right:14px; left:14px; height:58px; z-index:20;
+    background:rgba(18,20,30,.88); backdrop-filter:blur(14px);
+    border-radius:999px; border:1px solid rgba(255,255,255,.09);
+    display:flex; align-items:center; justify-content:space-around; padding:0 6px;
+    box-shadow:0 8px 28px rgba(0,0,0,.5);
+  }
+  .tab { display:flex; flex-direction:column; align-items:center; gap:1px; color:#7d8496; font-size:9.5px; font-family:'Cairo'; font-weight:600; width:52px;}
+  .tab .ti { font-size:17px; }
+  .tab.active { color:#f5c518; }
+  .upload-fab {
+    width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg,#f5c518,#f08c0a);
+    display:flex; align-items:center; justify-content:center; color:#1a1a1a; font-size:22px; font-weight:900;
+    box-shadow:0 4px 14px rgba(245,197,24,.45); margin-top:-16px; border:2.5px solid #0c0e14;
+  }
+
+  /* ===== home screen ===== */
+  .home { position:absolute; inset:0; background:#0e1017; display:flex; flex-direction:column; }
+  .home-header { display:flex; align-items:center; justify-content:space-between; padding:46px 16px 10px; }
+  .home-logo { display:flex; align-items:center; gap:8px; }
+  .home-logo .mark { width:32px; height:32px; border-radius:50%;
+    background:linear-gradient(135deg,#f5c518,#e2543e); display:flex; align-items:center; justify-content:center; font-size:15px; }
+  .home-logo .t { font-family:'Cairo'; font-weight:900; font-size:18px; color:#fff; }
+  .home-icons { display:flex; gap:8px; }
+  .hic { width:34px; height:34px; border-radius:50%; background:#181b26; display:flex; align-items:center; justify-content:center; font-size:15px; color:#cfd4e2;}
+  .stories { display:flex; gap:12px; padding:12px 14px 6px; overflow:hidden; }
+  .story { display:flex; flex-direction:column; align-items:center; gap:5px; flex-shrink:0; }
+  .story .ring { width:58px; height:58px; border-radius:50%; padding:2.5px;
+    background:conic-gradient(#f5c518,#e2543e,#8e2f6f,#f5c518); }
+  .story .ring .in { width:100%; height:100%; border-radius:50%; border:2.5px solid #0e1017;
+    background:linear-gradient(135deg,#3b4a6b,#232a3d); position:relative; display:flex; align-items:center; justify-content:center; font-size:13px; color:#e8ebf5; font-family:'Cairo'; font-weight:700;}
+  .story .plus { position:absolute; bottom:-2px; left:-2px; width:19px; height:19px; border-radius:50%;
+    background:#f5c518; color:#1a1a1a; font-size:13px; font-weight:900; display:flex; align-items:center; justify-content:center; border:2px solid #0e1017;}
+  .story .nm { font-size:9.5px; color:#aab0c2; font-family:'Cairo'; }
+  .continue { margin:8px 14px 0; background:#151824; border:1px solid #232838; border-radius:16px; padding:10px;
+    display:flex; gap:10px; align-items:center; }
+  .continue .thumb { width:86px; height:52px; border-radius:10px; flex-shrink:0;
+    background:linear-gradient(135deg,#1f4e5f,#3f8f8b); position:relative; }
+  .continue .thumb .pb { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:16px; color:#fff; }
+  .continue .meta { flex:1; }
+  .continue .meta .tt { font-family:'Cairo'; font-weight:700; font-size:12px; color:#fff; }
+  .continue .meta .bar { margin-top:7px; height:3.5px; border-radius:2px; background:#2a2f40; }
+  .continue .meta .bar i { display:block; height:100%; width:62%; background:#f5c518; border-radius:2px; }
+  .continue .x { color:#7d8496; font-size:13px; padding:4px; }
+  .sec-title { font-family:'Cairo'; font-weight:700; font-size:14px; color:#fff; padding:14px 16px 8px; display:flex; justify-content:space-between; align-items:center;}
+  .sec-title small { color:#7d8496; font-size:10.5px; font-weight:400; }
+  .hero-card { margin:0 14px; border-radius:18px; overflow:hidden; background:#151824; border:1px solid #222737; }
+  .hero-thumb { height:158px; background:linear-gradient(140deg,#123c5e,#1f7a8c 45%,#4fc08d); position:relative; }
+  .hero-thumb::after { content:''; position:absolute; inset:0; background:radial-gradient(220px 120px at 60% 30%, rgba(255,255,255,.14), transparent 65%); }
+  .hero-thumb .play { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+  .hero-thumb .play div { width:52px; height:52px; border-radius:50%; background:rgba(0,0,0,.45); backdrop-filter:blur(4px);
+    border:1.5px solid rgba(255,255,255,.5); display:flex; align-items:center; justify-content:center; color:#fff; font-size:19px; }
+  .hero-thumb .dur { position:absolute; bottom:8px; left:10px; background:rgba(0,0,0,.65); color:#fff; font-size:10px;
+    padding:2px 8px; border-radius:6px; font-family:'Cairo'; }
+  .hero-thumb .prog { position:absolute; bottom:0; right:0; left:0; height:3px; background:rgba(255,255,255,.25); }
+  .hero-thumb .prog i { display:block; height:100%; width:24%; background:#f5c518; }
+  .hero-meta { display:flex; align-items:center; gap:9px; padding:10px 12px; }
+  .hero-meta .av { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#1f7a8c,#4fc08d); flex-shrink:0; }
+  .hero-meta .tx { flex:1; }
+  .hero-meta .tx .t1 { font-family:'Cairo'; font-weight:700; font-size:12.5px; color:#fff; }
+  .hero-meta .tx .t2 { font-size:10.5px; color:#8b93b0; margin-top:2px; }
+  .hero-actions { display:flex; gap:6px; }
+  .hero-actions .a { width:30px; height:30px; border-radius:50%; background:#1d2130; display:flex; align-items:center; justify-content:center; font-size:12.5px; color:#cfd4e2; }
+  .clip-row { display:flex; gap:10px; padding:4px 14px 0; overflow:hidden; }
+  .clip-card { width:88px; height:134px; border-radius:14px; flex-shrink:0; position:relative;
+    background:linear-gradient(160deg,#4a1d5e,#d9486b); border:1px solid #ffffff14; }
+  .clip-card:nth-child(2) { background:linear-gradient(160deg,#123c5e,#4fc08d); }
+  .clip-card:nth-child(3) { background:linear-gradient(160deg,#5e3a12,#f7b267); }
+  .clip-card .p { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fffc; font-size:15px; }
+  .clip-card .b { position:absolute; bottom:6px; right:6px; left:6px; font-size:8.5px; color:#fff; font-family:'Cairo'; font-weight:600; }
+  .caption { position:absolute; bottom:24px; left:0; right:0; text-align:center; color:#5d6residents480; }
+  .svgi { display:inline-flex; vertical-align:-2px; }
+  .music .svgi { vertical-align:-1px; color:#fff; }
+</style>
+</head>
+<body>
+  <div class="brand"><h1>موج <span>البرق</span></h1><p>التصور الأولي للتصميم — فيديوهات ومنشورات بالعربي</p></div>
+
+  <!-- Phone 1: Clips -->
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="clips-bg"></div>
+    <div class="clips-scrim-top"></div>
+    <div class="clips-scrim-bottom"></div>
+    <div class="clips-logo"><svg viewBox="0 0 24 24" width="19" height="19" fill="#fff"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg></div>
+    <div class="clips-tabs">متابَعون &nbsp;·&nbsp; <b>لك</b></div>
+
+    <div class="action-rail">
+      <div class="action"><div class="ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="#ff3b5c"><path d="M12 21s-7.5-4.7-10-9.3C.4 8.6 2.3 5 5.7 5c2 0 3.4 1.1 4.3 2.6h4c.9-1.5 2.3-2.6 4.3-2.6 3.4 0 5.3 3.6 3.7 6.7C19.5 16.3 12 21 12 21z" transform="scale(0.9) translate(1.3,1)"/></svg></div><div class="cnt">12.4K</div></div>
+      <div class="action"><div class="ic"><svg viewBox="0 0 24 24" width="21" height="21" fill="#fff"><path d="M12 3C6.5 3 2 6.9 2 11.7c0 2.7 1.4 5.1 3.7 6.7-.2 1.2-.9 2.6-1.9 3.6 2.3-.1 4.2-1 5.4-1.9.9.2 1.8.3 2.8.3 5.5 0 10-3.9 10-8.7S17.5 3 12 3z"/></svg></div><div class="cnt">1,208</div></div>
+      <div class="action"><div class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg></div><div class="cnt">حفظ</div></div>
+      <div class="action"><div class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><path d="M13 5v4C7 10 4 14.5 3 20c2.5-3.5 5.5-5 10-5v4l8-7z"/></svg></div><div class="cnt">مشاركة</div></div>
+      <div class="action"><div class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></div><div class="cnt"></div></div>
+    </div>
+
+    <div class="creator">
+      <div class="row">
+        <div class="avatar"></div>
+        <div class="name">أحمد الشهري</div>
+        <div class="follow">متابعة</div>
+      </div>
+      <div class="desc">تجربة غروب الشمس من أعلى الجبل  لقطة واحدة بدون مونتاج!</div>
+      <div class="music"><span class="svgi" ><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M9 18.5a2.5 2.5 0 1 1-2.5-2.5c.4 0 .8.1 1.2.2V5l11-2.5v12.3a2.5 2.5 0 1 1-2.5-2.5c.4 0 .8.1 1.2.2V6.3L9 8.3z"/></svg></span> الصوت الأصلي — أحمد الشهري</div>
+    </div>
+    <div class="clips-progress"><i></i></div>
+
+    <div class="pillbar">
+      <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></div>الرئيسية</div>
+      <div class="tab active"><div class="ti"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg></div>clips</div>
+      <div class="upload-fab">↑</div>
+      <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="15" height="16" rx="2"/><path d="M7 8h7M7 12h7M7 16h4"/></svg></div>المنشورات</div>
+      <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-6.5 8-6.5s8 2.5 8 6.5"/></svg></div>حسابي</div>
+    </div>
+  </div>
+
+  <!-- Phone 2: Home -->
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="home">
+      <div class="home-header">
+        <div class="home-logo"><div class="mark"><svg viewBox="0 0 24 24" width="19" height="19" fill="#fff"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg></div><div class="t">clips</div></div>
+        <div class="home-icons"><div class="hic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg></div><div class="hic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg></div></div>
+      </div>
+      <div class="stories">
+        <div class="story"><div class="ring"><div class="in">أنا<div class="plus"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#1a1a1a" stroke-width="3.4" stroke-linecap="round"><path d="M12 4v16M4 12h16"/></svg></div></div></div><div class="nm">قصتك</div></div>
+        <div class="story"><div class="ring"><div class="in">س</div></div><div class="nm">سارة</div></div>
+        <div class="story"><div class="ring"><div class="in">ن</div></div><div class="nm">نورة</div></div>
+        <div class="story"><div class="ring"><div class="in">خ</div></div><div class="nm">خالد</div></div>
+        <div class="story"><div class="ring"><div class="in">ر</div></div><div class="nm">ريم</div></div>
+      </div>
+      <div class="continue">
+        <div class="thumb"><div class="pb"><svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><path d="M8 5v14l11-7z"/></svg></div></div>
+        <div class="meta">
+          <div class="tt">متابعة المشاهدة: رحلة العلا </div>
+          <div class="bar"><i></i></div>
+        </div>
+        <div class="x"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="m5 5 14 14M19 5 5 19"/></svg></div>
+      </div>
+      <div class="sec-title">أحدث الفيديوهات <small>عرض الكل</small></div>
+      <div class="hero-card">
+        <div class="hero-thumb">
+          <div class="play"><div><svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><path d="M8 5v14l11-7z"/></svg></div></div>
+          <div class="dur">08:24</div>
+          <div class="prog"><i></i></div>
+        </div>
+        <div class="hero-meta">
+          <div class="av"></div>
+          <div class="tx">
+            <div class="t1">جولة في أسواق جدة القديمة </div>
+            <div class="t2">قناة جوّال · 24 ألف مشاهدة · قبل ساعتين</div>
+          </div>
+          <div class="hero-actions"><div class="a"><svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg></div><div class="a"><svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><path d="M13 5v4C7 10 4 14.5 3 20c2.5-3.5 5.5-5 10-5v4l8-7z"/></svg></div><div class="a"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 21V4"/><path d="M5 4h13l-3 4 3 4H5"/></svg></div></div>
+        </div>
+      </div>
+      <div class="sec-title">كليبات مميزة</div>
+      <div class="clip-row">
+        <div class="clip-card"><div class="p"><svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><path d="M8 5v14l11-7z"/></svg></div><div class="b">تحدي الطبخ</div></div>
+        <div class="clip-card"><div class="p"><svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><path d="M8 5v14l11-7z"/></svg></div><div class="b">البحر وقت الغروب</div></div>
+        <div class="clip-card"><div class="p"><svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><path d="M8 5v14l11-7z"/></svg></div><div class="b">كورة مع الشباب</div></div>
+      </div>
+    </div>
+    <div class="pillbar">
+      <div class="tab active"><div class="ti"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></div>الرئيسية</div>
+      <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg></div>clips</div>
+      <div class="upload-fab">↑</div>
+      <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="15" height="16" rx="2"/><path d="M7 8h7M7 12h7M7 16h4"/></svg></div>المنشورات</div>
+      <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-6.5 8-6.5s8 2.5 8 6.5"/></svg></div>حسابي</div>
+    </div>
+  </div>
+</body>
+</html>

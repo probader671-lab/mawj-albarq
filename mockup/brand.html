@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#07080C;font-family:'Tajawal',sans-serif;color:#F2F3F7;padding:44px 48px;
+    background-image:radial-gradient(900px 500px at 80% -5%, #161a2e 0%, transparent 55%);}
+  .head{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid #1d2130;padding-bottom:18px}
+  .head h1{font-family:'Cairo';font-weight:900;font-size:26px}
+  .head h1 span{color:#F5C518}
+  .head p{color:#8B93B0;font-size:13px}
+  .grid{display:flex;gap:44px;margin-top:36px;align-items:flex-start}
+  .col{display:flex;flex-direction:column;gap:14px}
+  .label{font-family:'Cairo';font-weight:700;font-size:13px;color:#8B93B0;letter-spacing:.3px}
+
+  .icon-big{width:196px;height:196px;border-radius:46px;background:linear-gradient(145deg,#181B28,#0C0E14);
+    border:1px solid #262a3a;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 24px 60px rgba(0,0,0,.6), inset 0 1px 0 #ffffff12}
+  .icon-big .bolt{width:118px;height:118px;border-radius:50%;background:#F5C518;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 10px 34px rgba(245,197,24,.35)}
+  /* home screen context */
+  .homescreen{width:196px;border-radius:26px;background:#10121B;border:1px solid #232838;padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;justify-items:center}
+  .app{width:46px;display:flex;flex-direction:column;align-items:center;gap:5px}
+  .app .ic{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#cfd4e2;font-family:'Cairo';font-weight:600}
+  .app small{font-size:8.5px;color:#8B93B0;font-family:'Cairo'}
+  .a1{background:#34a853}.a2{background:#ea4335}.a3{background:#4285f4}.a4{background:#1d9bf0}.a5{background:#8e44ad}
+  .mawj-ic{background:linear-gradient(145deg,#181B28,#0C0E14);border:1px solid #2c3040}
+  .mawj-ic div{width:28px;height:28px;border-radius:50%;background:#F5C518;display:flex;align-items:center;justify-content:center}
+
+  .lockup-dark{background:#0C0E14;border:1px solid #232838;border-radius:22px;padding:30px 40px;display:flex;align-items:center;gap:18px}
+  .lockup-light{background:#F4F3EE;border-radius:22px;padding:30px 40px;display:flex;align-items:center;gap:18px;color:#0C0E14}
+  .lockup-dark .mark, .lockup-light .mark{width:64px;height:64px;border-radius:50%;background:#F5C518;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .wordmark{font-family:'Cairo';font-weight:900;font-size:34px;line-height:1.1}
+  .wordmark em{font-style:normal;color:#F5C518}
+  .lockup-light .wordmark em{color:#c99a06}
+  .tagline{font-size:12px;color:#8B93B0;margin-top:4px;font-weight:400}
+  .lockup-light .tagline{color:#6d7261}
+
+  .splash{width:170px;height:320px;border-radius:30px;background:#0C0E14;border:1px solid #232838;position:relative;overflow:hidden;flex-shrink:0}
+  .splash::before{content:'';position:absolute;inset:0;background:radial-gradient(240px 240px at 50% 38%, rgba(245,197,24,.16), transparent 65%)}
+  .splash .mark{position:absolute;top:110px;left:50%;transform:translateX(-50%);width:74px;height:74px;border-radius:50%;background:#F5C518;display:flex;align-items:center;justify-content:center;box-shadow:0 0 60px rgba(245,197,24,.45)}
+  .splash .wm{position:absolute;top:200px;left:0;right:0;text-align:center;font-family:'Cairo';font-weight:900;font-size:19px}
+  .splash .wm em{font-style:normal;color:#F5C518}
+  .splash .ft{position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:9px;color:#5d6478;font-family:'Cairo'}
+
+  .swatches{display:flex;gap:14px;margin-top:34px}
+  .sw{flex:1;border-radius:16px;padding:14px 16px;border:1px solid #232838}
+  .sw .c{height:52px;border-radius:10px;margin-bottom:10px}
+  .sw .n{font-family:'Cairo';font-weight:700;font-size:12.5px}
+  .sw .h{font-size:10.5px;color:#8B93B0;direction:ltr;text-align:right;margin-top:2px}
+  .sw .u{font-size:10px;color:#5d6478;margin-top:4px}
+</style>
+</head>
+<body>
+  <div class="head"><h1>هوية <span>موج البرق</span></h1><p>Brand Identity — v1</p></div>
+
+  <div class="grid">
+    <div class="col">
+      <div class="label">أيقونة التطبيق</div>
+      <div class="icon-big"><div class="bolt"><svg viewBox="0 0 24 24" width="64" height="64" fill="#0C0E14"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg></div></div>
+      <div class="label" style="margin-top:8px">على شاشة الهاتف</div>
+      <div class="homescreen">
+        <div class="app"><div class="ic a1">واتس</div><small>واتساب</small></div>
+        <div class="app"><div class="ic a2">يوت</div><small>يوتيوب</small></div>
+        <div class="app mawj-ic"><div><svg viewBox="0 0 24 24" width="16" height="16" fill="#0C0E14"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg></div><small style="color:#F2F3F7">موج البرق</small></div>
+        <div class="app"><div class="ic a3">قوقل</div><small>خرائط</small></div>
+        <div class="app"><div class="ic a4">إكس</div><small>إكس</small></div>
+        <div class="app"><div class="ic a5">كام</div><small>الكاميرا</small></div>
+      </div>
+    </div>
+
+    <div class="col" style="flex:1">
+      <div class="label">الشعار — النسخة الداكنة</div>
+      <div class="lockup-dark">
+        <div class="mark"><svg viewBox="0 0 24 24" width="36" height="36" fill="#0C0E14"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg></div>
+        <div><div class="wordmark">موج <em>البرق</em></div><div class="tagline">فيديوهات ومنشورات، بسرعة البرق</div></div>
+      </div>
+      <div class="label">النسخة الفاتحة</div>
+      <div class="lockup-light">
+        <div class="mark" style="background:#0C0E14"><svg viewBox="0 0 24 24" width="36" height="36" fill="#F5C518"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg></div>
+        <div><div class="wordmark">موج <em>البرق</em></div><div class="tagline">فيديوهات ومنشورات، بسرعة البرق</div></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="label">شاشة البداية</div>
+      <div class="splash">
+        <div class="mark"><svg viewBox="0 0 24 24" width="40" height="40" fill="#0C0E14"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg></div>
+        <div class="wm">موج <em>البرق</em></div>
+        <div class="ft">MAWJ AL-BARQ</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="swatches">
+    <div class="sw"><div class="c" style="background:#F5C518"></div><div class="n">أصفر البرق</div><div class="h">#F5C518</div><div class="u">اللون الرئيسي — الأزرار والتفاعل</div></div>
+    <div class="sw"><div class="c" style="background:#0C0E14"></div><div class="n">حبر الليل</div><div class="h">#0C0E14</div><div class="u">الخلفية الأساسية</div></div>
+    <div class="sw"><div class="c" style="background:#181B28"></div><div class="n">سطح غامق</div><div class="h">#181B28</div><div class="u">البطاقات والشريط العائم</div></div>
+    <div class="sw"><div class="c" style="background:#E2543E"></div><div class="n">جمرة</div><div class="h">#E2543E</div><div class="u">تدرجات القصص والتنبيهات</div></div>
+    <div class="sw"><div class="c" style="background:#F2F3F7"></div><div class="n">أبيض ضبابي</div><div class="h">#F2F3F7</div><div class="u">النصوص الرئيسية</div></div>
+    <div class="sw"><div class="c" style="background:#8B93B0"></div><div class="n">رمادي مزرق</div><div class="h">#8B93B0</div><div class="u">النصوص الثانوية</div></div>
+  </div>
+</body>
+</html>
