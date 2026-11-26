@@ -9,13 +9,13 @@ android {
         applicationId = "com.mawjalbarq.app"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = System.getenv("BUILD_VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = "1.0." + (System.getenv("BUILD_VERSION_CODE") ?: "0")
     }
     buildTypes { debug { isMinifyEnabled = false } }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
     composeOptions { kotlinCompilerExtensionVersion = "1.5.14" }
 }
 dependencies {

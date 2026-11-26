@@ -113,8 +113,13 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
 
 @Composable
 private fun Action(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, tint: Color, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = onClick)) {
-        Icon(icon, label, tint = tint, modifier = Modifier.size(34.dp))
+    val sc = remember { androidx.compose.animation.core.Animatable(1f) }
+    val scope = rememberCoroutineScope()
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable {
+        scope.launch { sc.animateTo(1.35f, androidx.compose.animation.core.tween(110)); sc.animateTo(1f, androidx.compose.animation.core.spring()) }
+        onClick()
+    }) {
+        Icon(icon, label, tint = tint, modifier = Modifier.size(34.dp).scale(sc.value))
         Text(label, color = Color.White, fontSize = 12.sp)
     }
 }

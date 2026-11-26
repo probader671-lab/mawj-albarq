@@ -29,6 +29,7 @@ fun AppRoot(prefs: ThemePrefs) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         var sel by remember { mutableIntStateOf(1) }
         LaunchedEffect(Unit) { Feed.load() }
+        UpdatePrompt()
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             when (sel) {
                 0 -> HomeScreen { sel = 1 }
