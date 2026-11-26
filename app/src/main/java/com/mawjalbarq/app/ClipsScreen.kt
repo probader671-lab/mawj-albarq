@@ -132,29 +132,32 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                     Box(Modifier.fillMaxWidth(prog).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
                 }
             }
-            if (!cinema) Column(Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 130.dp), verticalArrangement = Arrangement.spacedBy(22.dp),
+            if (!cinema) Column(Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 130.dp), verticalArrangement = Arrangement.spacedBy(14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {
                 Action(Icons.Filled.Favorite, v.likes.toString(), if (liked) MaterialTheme.colorScheme.primary else Color.White) {
                     if (!App.loggedIn) onNeedLogin() else scope.launch { Feed.toggleLike(v.id) }
                 }
                 Action(Icons.Filled.Comment, v.comments.toString(), Color.White) { commentsFor = v }
-                Action(Icons.Filled.Bookmark, "حفظ", if (saved) MaterialTheme.colorScheme.secondary else Color.White) {
-                    if (!saved) saveTick++
-                    scope.launch { Feed.toggleSave(v.id) }
-                }
-                Action(Icons.Filled.Speed, if (speed == 1f) "1x" else "${speed}x", if (speed == 1f) Color.White else MaterialTheme.colorScheme.secondary) {
-                    speed = when (speed) { 1f -> 1.5f; 1.5f -> 2f; 2f -> 0.5f; else -> 1f }
-                }
-                Action(Icons.Filled.Fullscreen, "ملء الشاشة", Color.White) { player.playWhenReady = false; fullFor = v }
-                Action(Icons.Filled.Flag, "إبلاغ", Color.White) { reportFor = v }
                 Action(Icons.Filled.Share, "مشاركة", Color.White) {
                     val i = Intent(Intent.ACTION_SEND).setType("text/plain")
                         .putExtra(Intent.EXTRA_TEXT, "${v.title} - موج البرق\n${v.url}")
                     ctx.startActivity(Intent.createChooser(i, "مشاركة"))
                 }
             }
-            Box(Modifier.align(Alignment.TopStart).statusBarsPadding().padding(12.dp).size(40.dp).clip(CircleShape).background(Color(0x66000000)).clickable { cinema = !cinema; hidden = false },
-                contentAlignment = Alignment.Center) { Icon(if (cinema) Icons.Filled.ViewAgenda else Icons.Filled.Movie, null, tint = Color.White, modifier = Modifier.size(20.dp)) }
+            Box(Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp)) {
+                var menu by remember { mutableStateOf(false) }
+                Box(Modifier.size(38.dp).clip(CircleShape).background(Color(0x66000000)).clickable { menu = true }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Settings, "الإعدادات", tint = Color.White, modifier = Modifier.size(20.dp))
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(text = { Text(if (cinema) "الوضع العادي" else "وضع السينما") }, onClick = { cinema = !cinema; hidden = false; menu = false })
+                    DropdownMenuItem(text = { Text("السرعة: " + (if (speed == 1f) "1x" else "${speed}x")) }, onClick = { speed = when (speed) { 1f -> 1.5f; 1.5f -> 2f; 2f -> 0.5f; else -> 1f }; menu = false })
+                    DropdownMenuItem(text = { Text(if (muted) "تشغيل الصوت" else "كتم الصوت") }, onClick = { muted = !muted; player.volume = if (muted) 0f else 1f; menu = false })
+                    DropdownMenuItem(text = { Text(if (saved) "إزالة من المحفوظات" else "حفظ") }, onClick = { if (!saved) saveTick++; scope.launch { Feed.toggleSave(v.id) }; menu = false })
+                    DropdownMenuItem(text = { Text("ملء الشاشة") }, onClick = { player.playWhenReady = false; fullFor = v; menu = false })
+                    DropdownMenuItem(text = { Text("إبلاغ") }, onClick = { reportFor = v; menu = false })
+                }
+            }
             if (saveAnim.value > 0f && saveAnim.value < 1f) Box(Modifier.align(Alignment.Center), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(progress = { saveAnim.value }, modifier = Modifier.size(104.dp), color = MaterialTheme.colorScheme.secondary, trackColor = Color(0x33FFFFFF), strokeWidth = 6.dp)
                 Icon(Icons.Filled.Bookmark, null, tint = Color.White, modifier = Modifier.size(36.dp))
@@ -191,7 +194,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
     fullFor?.let { v -> FullPlayer(v) { fullFor = null; player.playWhenReady = true } }
     reportFor?.let { v -> ReportSheet("video", v.id) { reportFor = null } }
     commentsFor?.let { v ->
-        ModalBottomSheet(onDismissRequest = { commentsFor = null }, containerColor = Color(0xFF141A24)) {
+        ModalBottomSheet(sheetState = fullSheet(), onDismissRequest = { commentsFor = null }, containerColor = Color(0xFF141A24)) {
             CommentsSheet(v, onNeedLogin = { commentsFor = null; onNeedLogin() })
         }
     }
@@ -205,8 +208,8 @@ private fun Action(icon: androidx.compose.ui.graphics.vector.ImageVector, label:
         scope.launch { sc.animateTo(1.35f, androidx.compose.animation.core.tween(110)); sc.animateTo(1f, androidx.compose.animation.core.spring()) }
         onClick()
     }.padding(horizontal = 8.dp, vertical = 6.dp)) {
-        Icon(icon, label, tint = tint, modifier = Modifier.size(36.dp).scale(sc.value))
-        Text(label, color = Color.White, fontSize = 13.sp)
+        Icon(icon, label, tint = tint, modifier = Modifier.size(28.dp).scale(sc.value))
+        Text(label, color = Color.White, fontSize = 12.sp)
     }
 }
 

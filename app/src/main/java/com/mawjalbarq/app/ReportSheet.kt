@@ -17,7 +17,7 @@ private val reasons = listOf("محتوى غير لائق", "إزعاج أو سب
 fun ReportSheet(targetType: String, targetId: String, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     var sent by remember { mutableStateOf(false) }
-    ModalBottomSheet(onDismissRequest = onClose, containerColor = Color(0xFF141A24)) {
+    ModalBottomSheet(sheetState = fullSheet(), onDismissRequest = onClose, containerColor = Color(0xFF141A24)) {
         Column(Modifier.fillMaxWidth().padding(20.dp).navigationBarsPadding()) {
             Text(if (sent) "شكراً، وصلنا بلاغك" else "الإبلاغ عن المحتوى", color = Color.White, fontSize = 18.sp, fontFamily = Cairo)
             Spacer(Modifier.height(10.dp))
@@ -34,3 +34,7 @@ fun ReportSheet(targetType: String, targetId: String, onClose: () -> Unit) {
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun fullSheet() = rememberModalBottomSheetState(skipPartiallyExpanded = true)

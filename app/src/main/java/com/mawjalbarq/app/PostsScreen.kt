@@ -170,7 +170,7 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
         }
     }
     reportPost?.let { p -> ReportSheet("post", p.id) { reportPost = null } }
-    if (showSaved) ModalBottomSheet(onDismissRequest = { showSaved = false }, containerColor = Color(0xFF141A24)) {
+    if (showSaved) ModalBottomSheet(sheetState = fullSheet(), onDismissRequest = { showSaved = false }, containerColor = Color(0xFF141A24)) {
         Column(Modifier.fillMaxWidth().padding(20.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("المحفوظات", color = Color.White, fontSize = 18.sp, fontFamily = Cairo)
             val sp = posts?.filter { savedIds.contains(it.id) }.orEmpty()
@@ -181,7 +181,7 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
             } }
         }
     }
-    if (composing) ModalBottomSheet(onDismissRequest = { composing = false }, containerColor = Color(0xFF141A24)) {
+    if (composing) ModalBottomSheet(sheetState = fullSheet(), onDismissRequest = { composing = false }, containerColor = Color(0xFF141A24)) {
         var text by remember { mutableStateOf("") }
         var img by remember { mutableStateOf<Uri?>(null) }
         var busy by remember { mutableStateOf(false) }
@@ -204,7 +204,7 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
         }
     }
     openComments?.let { p ->
-        ModalBottomSheet(onDismissRequest = { openComments = null; refresh() }, containerColor = Color(0xFF141A24)) {
+        ModalBottomSheet(sheetState = fullSheet(), onDismissRequest = { openComments = null; refresh() }, containerColor = Color(0xFF141A24)) {
             var list by remember { mutableStateOf<List<Comment>?>(null) }
             var text by remember { mutableStateOf("") }
             suspend fun load() {

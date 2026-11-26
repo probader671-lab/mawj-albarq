@@ -113,7 +113,7 @@ fun StoriesStrip(onNeedLogin: () -> Unit) {
             }
         }
     }
-    if (adding) ModalBottomSheet(onDismissRequest = { adding = false }, containerColor = Color(0xFF141A24)) {
+    if (adding) ModalBottomSheet(sheetState = fullSheet(), onDismissRequest = { adding = false }, containerColor = Color(0xFF141A24)) {
         var img by remember { mutableStateOf<Uri?>(null) }
         var cap by remember { mutableStateOf("") }
         var busy by remember { mutableStateOf(false) }
