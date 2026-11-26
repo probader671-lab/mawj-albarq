@@ -6,6 +6,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,10 +34,10 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class Post(val id: String, val text: String, val image: String?, val author: String, val likes: Int, val liked: Boolean, val comments: Int)
+data class Post(val id: String, val text: String, val image: String?, val author: String, val likes: Int, val liked: Boolean, val comments: Int, val at: String = "")
 
 private suspend fun loadPosts(): List<Post>? {
-    val (c, t) = api("GET", "/rest/v1/social_posts?select=id,content,media_url,media_type,profiles!social_posts_user_id_fkey(full_name),post_likes(user_id),post_comments(id)&is_deleted=eq.false&order=created_at.desc&limit=50")
+    val (c, t) = api("GET", "/rest/v1/social_posts?select=id,created_at,content,media_url,media_type,profiles!social_posts_user_id_fkey(full_name),post_likes(user_id),post_comments(id)&is_deleted=eq.false&order=created_at.desc&limit=50")
     if (c != 200) return null
     return try {
         val a = JSONArray(t); val me = App.userId
@@ -44,7 +47,7 @@ private suspend fun loadPosts(): List<Post>? {
                 if (o.isNull("media_url") || o.optString("media_type") != "image") null else o.optString("media_url"),
                 o.optJSONObject("profiles")?.optString("full_name").orEmpty().ifBlank { "مستخدم" }, likes.length(),
                 me != null && (0 until likes.length()).any { i -> likes.getJSONObject(i).optString("user_id") == me },
-                o.optJSONArray("post_comments")?.length() ?: 0)
+                o.optJSONArray("post_comments")?.length() ?: 0, o.optString("created_at").take(10))
         }
     } catch (e: Exception) { null }
 }
@@ -69,44 +72,113 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
     var failed by remember { mutableStateOf(false) }
     var composing by remember { mutableStateOf(false) }
     var openComments by remember { mutableStateOf<Post?>(null) }
+    var reportPost by remember { mutableStateOf<Post?>(null) }
     fun refresh() { scope.launch { val r = loadPosts(); if (r == null) failed = true else { posts = r; failed = false } } }
     LaunchedEffect(Unit) { refresh() }
+    val savedIds = remember { mutableStateListOf<String>().apply { addAll(ctx.getSharedPreferences("posts", android.content.Context.MODE_PRIVATE).getStringSet("saved", emptySet())!!) } }
+    var showSaved by remember { mutableStateOf(false) }
+    fun toggleSaved(id: String) {
+        if (savedIds.contains(id)) savedIds.remove(id) else savedIds.add(id)
+        ctx.getSharedPreferences("posts", android.content.Context.MODE_PRIVATE).edit().putStringSet("saved", savedIds.toSet()).apply()
+    }
+    val conn = remember { object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+        override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+            if (available.y < -12f) Ui.barVisible = false else if (available.y > 12f) Ui.barVisible = true
+            return androidx.compose.ui.geometry.Offset.Zero
+        }
+    } }
+    val ob = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("المنشورات", color = Color.White, fontSize = 24.sp, fontFamily = Cairo, modifier = Modifier.weight(1f))
-            Button(onClick = { if (App.loggedIn) composing = true else onNeedLogin() }) { Text("منشور جديد") }
+            BadgedBox(badge = { if (savedIds.isNotEmpty()) Badge { Text(savedIds.size.toString()) } }) {
+                Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant).clickable { showSaved = true }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Bookmark, null, tint = MaterialTheme.colorScheme.secondary)
+                }
+            }
         }
         val l = posts
-        when {
-            failed -> Text("تعذر تحميل المنشورات", color = Color.Gray)
-            l == null -> CircularProgressIndicator()
-            l.isEmpty() -> Text("لا توجد منشورات بعد. كن أول من ينشر!", color = Color.Gray)
-            else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 110.dp)) {
-                items(l, key = { it.id }) { p ->
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFF12141A)).padding(14.dp)) {
-                        Text(p.author, color = MaterialTheme.colorScheme.primary, fontFamily = Cairo, fontSize = 15.sp)
-                        if (p.text.isNotBlank()) Text(p.text, color = Color.White, fontSize = 15.sp, modifier = Modifier.padding(top = 6.dp))
-                        if (p.image != null) AsyncImage(p.image, null, Modifier.fillMaxWidth().padding(top = 8.dp).heightIn(max = 320.dp).clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop)
-                        Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                            Row(Modifier.clickable {
+        LazyColumn(Modifier.nestedScroll(conn), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 110.dp)) {
+            item {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.primaryContainer).border(1.dp, ob, RoundedCornerShape(20.dp)).padding(14.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Avatar(null, App.name.ifBlank { "؟" }, 42)
+                        Spacer(Modifier.width(10.dp))
+                        Text("بماذا تفكر؟", color = muted, fontSize = 14.sp, modifier = Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant).clickable { if (App.loggedIn) composing = true else onNeedLogin() }.padding(horizontal = 16.dp, vertical = 12.dp))
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(Icons.Filled.Image to "صورة", Icons.Filled.Videocam to "فيديو", Icons.Filled.Edit to "منشور").forEach { (ic, t) ->
+                            Row(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable { if (App.loggedIn) composing = true else onNeedLogin() }.padding(vertical = 10.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                Icon(ic, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(t, color = Color.White, fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+            }
+            when {
+                failed -> item { Text("تعذر تحميل المنشورات", color = Color.Gray) }
+                l == null -> item { CircularProgressIndicator() }
+                l.isEmpty() -> item { Text("لا توجد منشورات بعد. كن أول من ينشر!", color = Color.Gray) }
+                else -> items(l, key = { it.id }) { p ->
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.primaryContainer).border(1.dp, ob, RoundedCornerShape(20.dp)).padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Avatar(null, p.author, 40)
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(p.author, color = Color.White, fontFamily = Cairo, fontSize = 15.sp)
+                                Text(p.at, color = muted, fontSize = 11.sp)
+                            }
+                            Icon(Icons.Filled.MoreVert, null, tint = muted, modifier = Modifier.clickable { reportPost = p })
+                        }
+                        if (p.text.isNotBlank()) Text(p.text, color = Color.White, fontSize = 15.sp, modifier = Modifier.padding(top = 10.dp))
+                        if (p.image != null) AsyncImage(p.image, null, Modifier.fillMaxWidth().padding(top = 10.dp).heightIn(max = 320.dp).clip(RoundedCornerShape(14.dp)), contentScale = ContentScale.Crop)
+                        HorizontalDivider(Modifier.padding(top = 10.dp), thickness = 0.5.dp, color = ob)
+                        Row(Modifier.padding(top = 6.dp)) {
+                            val act = Modifier.weight(1f)
+                            Row(act.clip(RoundedCornerShape(12.dp)).clickable {
                                 if (!App.loggedIn) onNeedLogin() else scope.launch {
                                     val u = App.userId!!
                                     if (p.liked) api("DELETE", "/rest/v1/post_likes?user_id=eq.$u&post_id=eq.${p.id}")
                                     else api("POST", "/rest/v1/post_likes", JSONObject().put("user_id", u).put("post_id", p.id).toString())
                                     posts = posts?.map { x -> if (x.id == p.id) x.copy(liked = !p.liked, likes = x.likes + if (p.liked) -1 else 1) else x }
                                 }
-                            }, verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Filled.Favorite, "إعجاب", tint = if (p.liked) MaterialTheme.colorScheme.primary else Color(0xFF8A8F9C), modifier = Modifier.size(20.dp))
-                                Text(" ${p.likes}", color = Color(0xFF8A8F9C), fontSize = 13.sp)
+                            }.padding(vertical = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Favorite, "إعجاب", tint = if (p.liked) MaterialTheme.colorScheme.primary else muted, modifier = Modifier.size(20.dp))
+                                Text(" ${p.likes}", color = muted, fontSize = 13.sp)
                             }
-                            Row(Modifier.clickable { openComments = p }, verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Filled.Comment, "تعليقات", tint = Color(0xFF8A8F9C), modifier = Modifier.size(20.dp))
-                                Text(" ${p.comments}", color = Color(0xFF8A8F9C), fontSize = 13.sp)
+                            Row(act.clip(RoundedCornerShape(12.dp)).clickable { openComments = p }.padding(vertical = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Comment, "تعليقات", tint = muted, modifier = Modifier.size(20.dp))
+                                Text(" ${p.comments}", color = muted, fontSize = 13.sp)
+                            }
+                            Row(act.clip(RoundedCornerShape(12.dp)).clickable {
+                                ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                                    .putExtra(android.content.Intent.EXTRA_TEXT, "${p.text}\n- ${p.author} على موج البرق"), "مشاركة"))
+                            }.padding(vertical = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Share, "مشاركة", tint = muted, modifier = Modifier.size(20.dp))
+                            }
+                            Row(act.clip(RoundedCornerShape(12.dp)).clickable { toggleSaved(p.id) }.padding(vertical = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Bookmark, "حفظ", tint = if (savedIds.contains(p.id)) MaterialTheme.colorScheme.secondary else muted, modifier = Modifier.size(20.dp))
                             }
                         }
                     }
                 }
             }
+        }
+    }
+    reportPost?.let { p -> ReportSheet("post", p.id) { reportPost = null } }
+    if (showSaved) ModalBottomSheet(onDismissRequest = { showSaved = false }, containerColor = Color(0xFF141A24)) {
+        Column(Modifier.fillMaxWidth().padding(20.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("المحفوظات", color = Color.White, fontSize = 18.sp, fontFamily = Cairo)
+            val sp = posts?.filter { savedIds.contains(it.id) }.orEmpty()
+            if (sp.isEmpty()) Text("لا توجد منشورات محفوظة", color = Color.Gray)
+            sp.forEach { p -> Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(12.dp)) {
+                Text(p.author, color = MaterialTheme.colorScheme.primary, fontFamily = Cairo, fontSize = 14.sp)
+                Text(p.text.ifBlank { "صورة" }, color = Color.White, fontSize = 14.sp, maxLines = 3)
+            } }
         }
     }
     if (composing) ModalBottomSheet(onDismissRequest = { composing = false }, containerColor = Color(0xFF12141A)) {

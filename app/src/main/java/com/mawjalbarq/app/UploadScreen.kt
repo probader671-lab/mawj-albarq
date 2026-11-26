@@ -14,6 +14,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -102,15 +107,33 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
     val cam = rememberLauncherForActivityResult(ActivityResultContracts.CaptureVideo()) { ok -> if (ok) uri = camUri }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp).padding(bottom = 110.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("رفع مقطع", color = Color.White, fontSize = 24.sp, fontFamily = Cairo)
-        OutlinedButton(onClick = { pick.launch("video/*") }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-            Text(if (uri == null) "اختر فيديو من المعرض" else "تم اختيار الفيديو ✓ (اضغط للتغيير)")
+        Text("استوديو الرفع", color = Color.White, fontSize = 24.sp, fontFamily = Cairo)
+        var frame by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+        LaunchedEffect(uri) {
+            frame = uri?.let { u -> withContext(Dispatchers.IO) { try { val r = MediaMetadataRetriever(); r.setDataSource(ctx, u); val f = r.getFrameAtTime(500_000); r.release(); f } catch (e: Exception) { null } } }
         }
-        OutlinedButton(onClick = {
-            val f = File(ctx.cacheDir, "cam").apply { mkdirs() }.let { File(it, "rec_" + System.currentTimeMillis() + ".mp4") }
-            val u = androidx.core.content.FileProvider.getUriForFile(ctx, ctx.packageName + ".fileprovider", f)
-            camUri = u; cam.launch(u)
-        }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("الكاميرا") }
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Box(Modifier.width(176.dp).aspectRatio(9f / 16f).clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), androidx.compose.foundation.shape.RoundedCornerShape(20.dp)), contentAlignment = Alignment.Center) {
+                val f = frame
+                if (f != null) androidx.compose.foundation.Image(f.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                else Icon(androidx.compose.material.icons.Icons.Filled.Videocam, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(40.dp))
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(onClick = { pick.launch("video/*") }, enabled = !busy, modifier = Modifier.weight(1f).height(56.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp), colors = ButtonDefaults.filledTonalButtonColors()) {
+                Icon(androidx.compose.material.icons.Icons.Filled.PhotoLibrary, null); Spacer(Modifier.width(6.dp)); Text("من المعرض")
+            }
+            Button(onClick = {
+                val f = File(ctx.cacheDir, "cam").apply { mkdirs() }.let { File(it, "rec_" + System.currentTimeMillis() + ".mp4") }
+                val u = androidx.core.content.FileProvider.getUriForFile(ctx, ctx.packageName + ".fileprovider", f)
+                camUri = u; cam.launch(u)
+            }, enabled = !busy, modifier = Modifier.weight(1f).height(56.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)) {
+                Icon(androidx.compose.material.icons.Icons.Filled.CameraAlt, null); Spacer(Modifier.width(6.dp)); Text("الكاميرا")
+            }
+        }
         OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text("العنوان") }, singleLine = true, enabled = !busy)
         OutlinedTextField(desc, { desc = it }, Modifier.fillMaxWidth(), label = { Text("الوصف") }, minLines = 3, enabled = !busy)
         if (status.isNotEmpty()) Text(status, color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
