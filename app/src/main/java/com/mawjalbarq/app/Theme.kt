@@ -26,6 +26,9 @@ val Accents = listOf(
     Accent("سماوي", Color(0xFF06D4D4), Color(0xFFF59E0B)),
     Accent("وردي", Color(0xFFEC4899), Color(0xFFF59E0B)),
     Accent("أحمر", Color(0xFFFF4D5E), Color(0xFFFFD21F)),
+    Accent("نيلي", Color(0xFF5B6CFF), Color(0xFF2BE38B)),
+    Accent("ليموني", Color(0xFFB6F23A), Color(0xFFA066FF)),
+    Accent("كرزي", Color(0xFFD81B60), Color(0xFFFFD21F)),
 )
 
 class ThemePrefs(ctx: Context) {
@@ -33,16 +36,8 @@ class ThemePrefs(ctx: Context) {
     var index by mutableStateOf(sp.getInt("accent2", 0).coerceIn(0, Accents.lastIndex))
         private set
     fun hasChoice() = sp.contains("accent2")
-    fun set(i: Int, sync: Boolean = true) {
-        index = i; sp.edit().putInt("accent2", i).apply()
-        val u = App.userId
-        if (sync && u != null) CoroutineScope(Dispatchers.IO).launch {
-            val a = Accents[i]
-            api("PATCH", "/rest/v1/profiles?id=eq.$u", org.json.JSONObject()
-                .put("theme_accent_argb", a.main.toArgb().toLong() and 0xFFFFFFFFL)
-                .put("theme_secondary_argb", a.second.toArgb().toLong() and 0xFFFFFFFFL).toString())
-        }
-    }
+    // local only: the accent choice stays on this device and is never sent to the account
+    fun set(i: Int) { index = i.coerceIn(0, Accents.lastIndex); sp.edit().putInt("accent2", index).apply() }
 }
 
 @Composable

@@ -67,14 +67,7 @@ fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions:
             Text("لون التطبيق", color = Color.White, fontSize = 16.sp, fontFamily = Cairo)
         }
         Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Accents.forEachIndexed { i, a ->
-                Box(Modifier.size(44.dp).clip(CircleShape).background(a.main)
-                    .border(if (i == prefs.index) 3.dp else 0.dp, Color.White, CircleShape).clickable { prefs.set(i) })
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        Text(Accents[prefs.index].name, color = Color(0xFF8A8F9C), fontSize = 13.sp)
+        AccentPicker(prefs, compact = false)
     }
 }
 

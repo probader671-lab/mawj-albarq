@@ -379,7 +379,7 @@ fun BoxScope.XPillClipOverlay(
                         }
                     }
                     Text(
-                        "@" + v.author.trim().replace(" ", "_"),
+                        pidOf(v.userId),
                         color = Color(0xFFC2CAD6),
                         fontSize = 11.sp,
                         maxLines = 1,

@@ -34,14 +34,15 @@ object App {
     var email by mutableStateOf("")
     var name by mutableStateOf("")
     var avatar by mutableStateOf<String?>(null)
+    var publicId by mutableStateOf("")
     val loggedIn get() = token != null && userId != null
     fun init(ctx: Context) {
         sp = ctx.getSharedPreferences("session", Context.MODE_PRIVATE)
         token = sp.getString("t", null); refresh = sp.getString("r", null); userId = sp.getString("u", null)
-        email = sp.getString("e", "") ?: ""; name = sp.getString("n", "") ?: ""; avatar = sp.getString("av", null)
+        email = sp.getString("e", "") ?: ""; name = sp.getString("n", "") ?: ""; avatar = sp.getString("av", null); publicId = sp.getString("pid", "") ?: ""
     }
-    fun save() { sp.edit().putString("t", token).putString("r", refresh).putString("u", userId).putString("e", email).putString("n", name).putString("av", avatar).apply() }
-    fun logout() { token = null; refresh = null; userId = null; email = ""; name = ""; avatar = null; save(); Feed.liked.clear(); Feed.saved.clear() }
+    fun save() { sp.edit().putString("t", token).putString("r", refresh).putString("u", userId).putString("e", email).putString("n", name).putString("av", avatar).putString("pid", publicId).apply() }
+    fun logout() { token = null; refresh = null; userId = null; email = ""; name = ""; avatar = null; publicId = ""; save(); Feed.liked.clear(); Feed.saved.clear() }
     fun fromAuth(j: JSONObject) {
         token = j.optString("access_token"); refresh = j.optString("refresh_token")
         val u = j.optJSONObject("user")
@@ -98,30 +99,27 @@ suspend fun signIn(email: String, pass: String): String? {
     App.fromAuth(JSONObject(t)); afterLogin(); return null
 }
 
-suspend fun signUp(name: String, email: String, pass: String): String? {
-    val data = JSONObject().put("full_name", name)
+suspend fun signUp(name: String, email: String, pass: String, avatarUrl: String): String? {
+    val data = JSONObject().put("full_name", name).put("avatar_url", avatarUrl)
     val (c, t) = api("POST", "/auth/v1/signup", JSONObject().put("email", email).put("password", pass).put("data", data).toString())
     if (c !in 200..299) return authError(c, t)
     val j = JSONObject(t)
     if (!j.has("access_token")) return "تحقق من بريدك لتأكيد الحساب"
-    App.fromAuth(j); App.name = name.ifBlank { App.name }; App.save()
-    api("PATCH", "/rest/v1/profiles?id=eq.${App.userId}", JSONObject().put("full_name", App.name).toString())
+    App.fromAuth(j); App.name = name.ifBlank { App.name }; App.avatar = avatarUrl; App.save()
+    api("PATCH", "/rest/v1/profiles?id=eq.${App.userId}", JSONObject().put("full_name", App.name).put("avatar_url", avatarUrl).toString())
     afterLogin(); return null
 }
 
 suspend fun afterLogin() {
     Feed.loadUserState()
-    val (c, t) = api("GET", "/rest/v1/profiles?id=eq.${App.userId}&select=full_name,avatar_url,theme_accent_argb")
+    val (c, t) = api("GET", "/rest/v1/profiles?id=eq.${App.userId}&select=full_name,avatar_url,public_id")
     if (c == 200) try {
         val o = JSONArray(t).optJSONObject(0) ?: return
         if (!o.isNull("full_name")) { App.name = o.getString("full_name") }
         if (!o.isNull("avatar_url")) { App.avatar = o.getString("avatar_url") }
         App.save()
-        if (!o.isNull("theme_accent_argb")) {
-            val v = o.getLong("theme_accent_argb")
-            val i = Accents.indexOfFirst { (it.main.toArgb().toLong() and 0xFFFFFFFFL) == v }
-            if (i >= 0 && Theme.prefs?.hasChoice() == false && v != 0xFF2EA8FFL) Theme.prefs?.set(i, sync = false)
-        }
+        if (!o.isNull("public_id")) { App.publicId = o.getString("public_id") }
+        App.save()
     } catch (_: Exception) {}
 }
 

@@ -27,10 +27,10 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class ProfileData(val id: String, val name: String, val bio: String, val avatar: String?, val videos: List<Video>, val followers: Int = 0, val following: Int = 0)
+data class ProfileData(val id: String, val name: String, val bio: String, val avatar: String?, val videos: List<Video>, val followers: Int = 0, val following: Int = 0, val publicId: String = "")
 
 suspend fun loadProfile(id: String): ProfileData? {
-    val (c, t) = api("GET", "/rest/v1/profiles?id=eq.$id&select=id,full_name,bio,avatar_url,verified,followers_count")
+    val (c, t) = api("GET", "/rest/v1/profiles?id=eq.$id&select=id,full_name,bio,avatar_url,verified,followers_count,public_id")
     if (c != 200) return null
     val o = try { JSONArray(t).optJSONObject(0) } catch (e: Exception) { null } ?: return null
     val (c2, t2) = api("GET", "/rest/v1/videos?user_id=eq.$id&status=eq.ready&deleted=eq.false&select=id,width,height,duration,views,created_at,title,description,video_url,thumbnail_url,likes,comments_count&order=created_at.desc")
@@ -43,7 +43,7 @@ suspend fun loadProfile(id: String): ProfileData? {
             v.optString("created_at"), o.optBoolean("verified", false), o.optLong("followers_count", 0L).coerceAtLeast(0L))) } } catch (_: Exception) {}
     suspend fun cnt(q: String): Int { return try { val (c3, t3) = api("GET", "/rest/v1/follows?$q"); if (c3 == 200) JSONArray(t3).length() else 0 } catch (_: Exception) { 0 } }
     return ProfileData(id, o.optString("full_name").ifBlank { "مستخدم" }, if (o.isNull("bio")) "" else o.optString("bio"),
-        if (o.isNull("avatar_url")) null else o.optString("avatar_url"), vids, cnt("following_id=eq.$id&select=follower_id"), cnt("follower_id=eq.$id&select=following_id"))
+        if (o.isNull("avatar_url")) null else o.optString("avatar_url"), vids, cnt("following_id=eq.$id&select=follower_id"), cnt("follower_id=eq.$id&select=following_id"), o.optString("public_id"))
 }
 
 @Composable
@@ -65,7 +65,7 @@ fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = fals
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f).padding(top = 52.dp)) {
                 Text(p.name, color = Color.White, fontSize = 22.sp, fontFamily = Cairo, maxLines = 1)
-                Text("@" + p.name.replace(" ", "_"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, maxLines = 1)
+                if (p.publicId.isNotBlank()) Text("ID: " + p.publicId, color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, maxLines = 1)
             }
         }
         Column(Modifier.offset(y = (-38).dp).padding(horizontal = 16.dp)) {

@@ -84,6 +84,7 @@ private class AuthFormHolder {
     var pass by mutableStateOf("")
     var confirmPass by mutableStateOf("")
     var showPass by mutableStateOf(false)
+    var avatarUri by mutableStateOf<android.net.Uri?>(null)
     var busy by mutableStateOf(false)
     var error by mutableStateOf<String?>(null)
 }
@@ -105,10 +106,19 @@ fun AuthPortalScreen(prefs: ThemePrefs, onSuggestions: () -> Unit) {
             form.error = "كلمتا المرور غير متطابقتين"
             return
         }
+        val pic = form.avatarUri
+        if (form.isSignup && pic == null) {
+            form.error = "صورة الحساب إجبارية، اختر صورة لإنشاء الحساب"
+            return
+        }
         form.busy = true
         form.error = null
         scope.launch {
-            form.error = if (form.isSignup) signUp(form.name.trim(), em, form.pass) else signIn(em, form.pass)
+            if (form.isSignup) {
+                val url = uploadImageToCloud(ctx, pic!!)
+                form.error = if (url == null) "تعذر رفع الصورة، تحقق من الاتصال وحاول مرة أخرى"
+                else signUp(form.name.trim(), em, form.pass, url)
+            } else form.error = signIn(em, form.pass)
             form.busy = false
         }
     }
@@ -183,18 +193,7 @@ fun AuthPortalScreen(prefs: ThemePrefs, onSuggestions: () -> Unit) {
                     Icon(Icons.Filled.Lightbulb, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(16.dp))
                     Text("الاقتراحات", color = Color.White, fontSize = 12.sp, fontFamily = Cairo)
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Accents.forEachIndexed { i, a ->
-                        Box(
-                            Modifier
-                                .size(22.dp)
-                                .clip(CircleShape)
-                                .background(a.main)
-                                .border(if (i == prefs.index) 2.dp else 0.dp, Color.White, CircleShape)
-                                .clickable { prefs.set(i) }
-                        )
-                    }
-                }
+                AccentPicker(prefs, compact = true, modifier = Modifier.weight(1f).padding(start = 12.dp))
             }
         }
     }
@@ -348,6 +347,7 @@ private fun OrbsFlipCard(form: AuthFormHolder, onSubmit: () -> Unit) {
             ErrorBanner(form.error, bg = Color(0x33FF6B6B), fg = Color(0xFFFF8E8E))
 
             if (showBack) {
+                AvatarPickerField(form)
                 StyledDarkField(form.name, { form.name = it }, "الاسم (اختياري)", Color(0xFF4FACFE))
                 Spacer(Modifier.height(10.dp))
             }
@@ -464,6 +464,7 @@ private fun PurpleSlideCard(form: AuthFormHolder, onSubmit: () -> Unit) {
             ErrorBanner(form.error, bg = Color(0x22FF4D4D), fg = Color(0xFFD32F2F))
 
             if (form.isSignup) {
+                AvatarPickerField(form)
                 LightFilledInput(form.name, { form.name = it }, "الاسم (اختياري)")
                 Spacer(Modifier.height(8.dp))
             }
@@ -578,6 +579,7 @@ private fun MatrixAuthCard(form: AuthFormHolder, onSubmit: () -> Unit) {
         ErrorBanner(form.error, bg = Color(0x33FF0000), fg = Color(0xFFFF6666))
 
         if (form.isSignup) {
+            AvatarPickerField(form)
             MatrixField(form.name, { form.name = it }, "الاسم (اختياري)", Icons.Filled.Person)
             Spacer(Modifier.height(10.dp))
         }
@@ -695,6 +697,7 @@ private fun RetroCyberCard(form: AuthFormHolder, onSubmit: () -> Unit) {
         ErrorBanner(form.error, bg = Color(0x44FF0055), fg = Color(0xFFFFB3C6))
 
         if (form.isSignup) {
+            AvatarPickerField(form)
             CyberLabeledField("الاسم // NAME", form.name, { form.name = it }, "مستخدم جديد")
             Spacer(Modifier.height(10.dp))
         }
@@ -976,5 +979,31 @@ private fun GoogleWhiteButton(border: Color = Color.Transparent) {
                 )
             }
         }
+    }
+}
+
+
+@Composable
+private fun AvatarPickerField(form: AuthFormHolder) {
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) form.avatarUri = uri
+    }
+    val pic = form.avatarUri
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier.size(84.dp).clip(CircleShape)
+                .background(Color(0x33FFFFFF))
+                .border(2.dp, if (pic == null) MaterialTheme.colorScheme.primary else Color.White, CircleShape)
+                .clickable { launcher.launch("image/*") },
+            contentAlignment = Alignment.Center
+        ) {
+            if (pic != null) coil.compose.AsyncImage(pic, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+            else Icon(Icons.Filled.Person, null, tint = Color.White, modifier = Modifier.size(38.dp))
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            if (pic == null) "صورة الحساب (إجبارية) - اضغط للاختيار" else "اضغط لتغيير الصورة",
+            color = if (pic == null) MaterialTheme.colorScheme.primary else Color(0xCCFFFFFF), fontSize = 12.sp, fontFamily = Cairo
+        )
     }
 }
