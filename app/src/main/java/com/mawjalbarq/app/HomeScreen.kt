@@ -148,15 +148,15 @@ private fun WatchFeedVideoCard(
                     modifier = Modifier.clickable(enabled = v.userId.isNotBlank(), onClick = onCreator)
                 )
             }
-            Column {
+            Row {
                 Icon(
                     if (saved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder, "حفظ",
                     tint = if (saved) MaterialTheme.colorScheme.primary else WatchTextSec,
-                    modifier = Modifier.size(30.dp).clip(CircleShape).clickable { scope.launch { Feed.toggleSave(v.id) } }.padding(5.dp)
+                    modifier = Modifier.size(28.dp).clip(CircleShape).clickable { scope.launch { Feed.toggleSave(v.id) } }.padding(5.dp)
                 )
                 Icon(
                     Icons.Outlined.Flag, "إبلاغ", tint = WatchTextSec,
-                    modifier = Modifier.size(30.dp).clip(CircleShape).clickable(onClick = onReport).padding(5.dp)
+                    modifier = Modifier.size(28.dp).clip(CircleShape).clickable(onClick = onReport).padding(5.dp)
                 )
             }
         }
