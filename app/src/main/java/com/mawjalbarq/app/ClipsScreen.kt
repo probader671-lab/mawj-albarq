@@ -15,6 +15,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -47,20 +51,30 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
         return
     }
     val pager = rememberPagerState { videos.size }
-    val player = remember { ExoPlayer.Builder(ctx).build().apply { repeatMode = Player.REPEAT_MODE_ONE; playWhenReady = true } }
+    val player = remember { ExoPlayer.Builder(ctx).setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(MediaCache.factory(ctx))).build().apply { repeatMode = Player.REPEAT_MODE_ONE; playWhenReady = true } }
     DisposableEffect(Unit) { onDispose { player.release() } }
     LaunchedEffect(Feed.jumpTo) { Feed.jumpTo?.let { pager.scrollToPage(it.coerceAtMost(videos.size - 1)); Feed.jumpTo = null } }
     val cur = pager.settledPage.coerceAtMost(videos.size - 1)
     val curId = videos[cur].id
     LaunchedEffect(curId) {
         player.setMediaItem(MediaItem.fromUri(Uri.parse(videos[cur].url))); player.prepare(); player.playWhenReady = true
+        MediaCache.prefetch(ctx, videos.drop(cur + 1).take(2).map { it.url })
     }
     var commentsFor by remember { mutableStateOf<Video?>(null) }
     VerticalPager(pager, Modifier.fillMaxSize()) { page ->
         val v = videos[page]
         val liked = Feed.liked[v.id] == true
         val saved = Feed.saved[v.id] == true
-        Box(Modifier.fillMaxSize().background(Color.Black).clickable { player.playWhenReady = !player.playWhenReady }) {
+        var burst by remember { mutableIntStateOf(0) }
+        val burstAnim = remember { androidx.compose.animation.core.Animatable(0f) }
+        LaunchedEffect(burst) { if (burst > 0) { burstAnim.snapTo(0f); burstAnim.animateTo(1f, androidx.compose.animation.core.tween(700)) } }
+        Box(Modifier.fillMaxSize().background(Color.Black).pointerInput(v.id) {
+            detectTapGestures(onTap = { player.playWhenReady = !player.playWhenReady }, onDoubleTap = {
+                if (!App.loggedIn) onNeedLogin() else { burst++; if (Feed.liked[v.id] != true) scope.launch { Feed.toggleLike(v.id) } }
+            })
+        }) {
+            if (burstAnim.value > 0f && burstAnim.value < 1f) Icon(Icons.Filled.Favorite, null, tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.align(Alignment.Center).size(110.dp).scale(0.6f + 0.7f * burstAnim.value).alpha(1f - burstAnim.value))
             if (page == pager.settledPage) {
                 AndroidView({ c -> PlayerView(c).apply { useController = false; resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM; this.player = player } },
                     Modifier.fillMaxSize(), update = { it.player = player })
