@@ -211,9 +211,7 @@ fun WatchRailSection(
                             .clickable { onSelect(v) }
                     ) {
                         Box(Modifier.fillMaxWidth().height(114.dp).background(Color(0xFF070F16))) {
-                            if (v.thumb != null) {
-                                AsyncImage(v.thumb, v.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                            }
+                            VideoThumb(v, Modifier.fillMaxSize(), ContentScale.Crop)
                             Box(
                                 Modifier
                                     .align(Alignment.BottomCenter)
@@ -324,13 +322,11 @@ fun WatchSuggestionRowCard(
                 .clip(RoundedCornerShape(10.dp))
                 .background(Color(0xFF070F16))
         ) {
-            if (v.thumb != null) {
-                if (!v.portrait) {
-                    AsyncImage(v.thumb, v.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                } else {
-                    AsyncImage(v.thumb, null, Modifier.fillMaxSize().alpha(0.32f), contentScale = ContentScale.Crop)
-                    AsyncImage(v.thumb, v.title, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-                }
+            if (!v.portrait) {
+                VideoThumb(v, Modifier.fillMaxSize(), ContentScale.Crop)
+            } else {
+                VideoThumb(v, Modifier.fillMaxSize().alpha(0.32f), ContentScale.Crop)
+                VideoThumb(v, Modifier.fillMaxSize(), ContentScale.Fit)
             }
             if (!v.portrait) {
                 Icon(

@@ -67,7 +67,6 @@ private fun RoundBtn(
 ) {
     Box(
         modifier
-            .minimumInteractiveComponentSize()
             .size(size.dp)
             .clip(CircleShape)
             .background(WatchPillBg)
@@ -106,13 +105,11 @@ private fun WatchFeedVideoCard(
                 .clickable(onClick = onOpen)
                 .testTag("video_card_${v.id}")
         ) {
-            if (v.thumb != null) {
-                if (!v.portrait) {
-                    AsyncImage(v.thumb, v.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                } else {
-                    AsyncImage(v.thumb, null, Modifier.fillMaxSize().alpha(0.32f), contentScale = ContentScale.Crop)
-                    AsyncImage(v.thumb, v.title, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-                }
+            if (!v.portrait) {
+                VideoThumb(v, Modifier.fillMaxSize(), ContentScale.Crop)
+            } else {
+                VideoThumb(v, Modifier.fillMaxSize().alpha(0.32f), ContentScale.Crop)
+                VideoThumb(v, Modifier.fillMaxSize(), ContentScale.Fit)
             }
             if (v.duration > 0) {
                 Text(
@@ -230,8 +227,8 @@ fun HomeScreen(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .background(Color(0xA60C1218))
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                    .background(WatchBg)
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Image38()
@@ -241,13 +238,13 @@ fun HomeScreen(
                     color = WatchTextMain,
                     fontFamily = Cairo,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
+                    fontSize = 17.sp,
+                    maxLines = 1,
                     modifier = Modifier.weight(1f)
                 )
                 Box(
                     Modifier
-                        .minimumInteractiveComponentSize()
-                        .size(42.dp)
+                        .size(34.dp)
                         .clip(CircleShape)
                         .background(WatchPillBg)
                         .border(1.dp, WatchCardBorder, CircleShape)
@@ -256,22 +253,22 @@ fun HomeScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     if (Feed.loading) {
-                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
                     } else {
-                        Icon(Icons.Filled.Refresh, "تحديث", tint = WatchTextMain, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Filled.Refresh, "تحديث", tint = WatchTextMain, modifier = Modifier.size(18.dp))
                     }
                 }
                 Spacer(Modifier.width(6.dp))
                 BadgedBox(badge = { if (Notifs.unread > 0) Badge { Text(Notifs.unread.toString()) } }) {
-                    RoundBtn(Icons.Filled.Notifications, "الإشعارات", 42, WatchTextMain, onClick = onNotifs)
+                    RoundBtn(Icons.Filled.Notifications, "الإشعارات", 34, WatchTextMain, onClick = onNotifs)
                 }
                 Spacer(Modifier.width(6.dp))
-                RoundBtn(Icons.Filled.Lightbulb, "الاقتراحات", 42, MaterialTheme.colorScheme.secondary, onClick = onSuggestions)
+                RoundBtn(Icons.Filled.Lightbulb, "الاقتراحات", 34, MaterialTheme.colorScheme.secondary, onClick = onSuggestions)
                 Spacer(Modifier.width(6.dp))
                 RoundBtn(
                     if (searching) Icons.Filled.Close else Icons.Filled.Search,
                     "بحث",
-                    42
+                    34
                 ) { searching = !searching; if (!searching) q = "" }
             }
 
@@ -467,5 +464,5 @@ fun HomeScreen(
 
 @Composable
 private fun Image38() {
-    androidx.compose.foundation.Image(painterResource(R.drawable.logo_mark), "شعار موج البرق", Modifier.size(38.dp).clip(CircleShape))
+    androidx.compose.foundation.Image(painterResource(R.drawable.logo_mark), "شعار موج البرق", Modifier.size(30.dp).clip(CircleShape))
 }
