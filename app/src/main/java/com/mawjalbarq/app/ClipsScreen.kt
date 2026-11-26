@@ -61,6 +61,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
         MediaCache.prefetch(ctx, videos.drop(cur + 1).take(2).map { it.url })
     }
     var commentsFor by remember { mutableStateOf<Video?>(null) }
+    var reportFor by remember { mutableStateOf<Video?>(null) }
     VerticalPager(pager, Modifier.fillMaxSize()) { page ->
         val v = videos[page]
         val liked = Feed.liked[v.id] == true
@@ -93,6 +94,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                 Action(Icons.Filled.Bookmark, "حفظ", if (saved) MaterialTheme.colorScheme.secondary else Color.White) {
                     if (!App.loggedIn) onNeedLogin() else scope.launch { Feed.toggleSave(v.id) }
                 }
+                Action(Icons.Filled.Flag, "إبلاغ", Color.White) { reportFor = v }
                 Action(Icons.Filled.Share, "مشاركة", Color.White) {
                     val i = Intent(Intent.ACTION_SEND).setType("text/plain")
                         .putExtra(Intent.EXTRA_TEXT, "${v.title} - موج البرق\n${v.url}")
@@ -101,6 +103,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
             }
         }
     }
+    reportFor?.let { v -> ReportSheet("video", v.id) { reportFor = null } }
     commentsFor?.let { v ->
         ModalBottomSheet(onDismissRequest = { commentsFor = null }, containerColor = Color(0xFF12141A)) {
             CommentsSheet(v, onNeedLogin = { commentsFor = null; onNeedLogin() })
