@@ -13,6 +13,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -66,7 +70,14 @@ fun AuthForm() {
     var pass by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var err by remember { mutableStateOf<String?>(null) }
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    val tr = androidx.compose.animation.core.rememberInfiniteTransition(label = "glow")
+    val ang by tr.animateFloat(0f, 360f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(4000, easing = androidx.compose.animation.core.LinearEasing)), label = "a")
+    val c1 = MaterialTheme.colorScheme.primary; val c2 = MaterialTheme.colorScheme.secondary
+    Box(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(26.dp))
+        .drawBehind {
+            rotate(ang) { drawRect(Brush.sweepGradient(listOf(c1, c2, Color.Transparent, c1)), topLeft = Offset(-size.width, -size.width), size = androidx.compose.ui.geometry.Size(size.width * 3, size.width * 3)) }
+        }.padding(2.dp)) {
+    Column(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surface).padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(if (signup) "إنشاء حساب" else "تسجيل الدخول", color = Color.White, fontSize = 18.sp, fontFamily = Cairo)
         if (signup) OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("الاسم") }, singleLine = true)
         OutlinedTextField(email, { email = it.trim() }, Modifier.fillMaxWidth(), label = { Text("البريد الإلكتروني") }, singleLine = true,
@@ -85,6 +96,7 @@ fun AuthForm() {
             Text(if (signup) "لديك حساب؟ سجّل الدخول" else "ليس لديك حساب؟ أنشئ حساباً")
         }
         GoogleButton()
+    }
     }
 }
 

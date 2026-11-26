@@ -36,7 +36,7 @@ suspend fun loadProfile(id: String): ProfileData? {
     if (c2 == 200) try { val a = JSONArray(t2); for (i in 0 until a.length()) { val v = a.getJSONObject(i)
         vids.add(Video(v.getString("id"), v.optString("title"), if (v.isNull("description")) "" else v.optString("description"), v.getString("video_url"),
             if (v.isNull("thumbnail_url")) null else v.optString("thumbnail_url"), o.optString("full_name"), v.optInt("likes"), v.optInt("comments_count"), id)) } } catch (_: Exception) {}
-    fun cnt(q: String): Int { return try { val (c3, t3) = api("GET", "/rest/v1/follows?$q"); if (c3 == 200) JSONArray(t3).length() else 0 } catch (_: Exception) { 0 } }
+    suspend fun cnt(q: String): Int { return try { val (c3, t3) = api("GET", "/rest/v1/follows?$q"); if (c3 == 200) JSONArray(t3).length() else 0 } catch (_: Exception) { 0 } }
     return ProfileData(id, o.optString("full_name").ifBlank { "مستخدم" }, if (o.isNull("bio")) "" else o.optString("bio"),
         if (o.isNull("avatar_url")) null else o.optString("avatar_url"), vids, cnt("following_id=eq.$id&select=follower_id"), cnt("follower_id=eq.$id&select=following_id"))
 }
