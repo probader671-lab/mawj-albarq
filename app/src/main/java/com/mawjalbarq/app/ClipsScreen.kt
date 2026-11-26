@@ -163,7 +163,6 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                     DropdownMenuItem(text = { Text("السرعة: " + (if (speed == 1f) "1x" else "${speed}x")) }, onClick = { speed = when (speed) { 1f -> 1.5f; 1.5f -> 2f; 2f -> 0.5f; else -> 1f }; menu = false })
                     DropdownMenuItem(text = { Text(if (muted) "تشغيل الصوت" else "كتم الصوت") }, onClick = { muted = !muted; player.volume = if (muted) 0f else 1f; menu = false })
                     DropdownMenuItem(text = { Text(if (saved) "إزالة من المحفوظات" else "حفظ") }, onClick = { if (!saved) saveTick++; scope.launch { Feed.toggleSave(v.id) }; menu = false })
-                    DropdownMenuItem(text = { Text("ملء الشاشة") }, onClick = { player.playWhenReady = false; fullFor = v; menu = false })
                     DropdownMenuItem(text = { Text("إبلاغ") }, onClick = { reportFor = v; menu = false })
                 }
             }
@@ -207,7 +206,6 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
         }
     }
     creatorId?.let { id -> if (id.isNotBlank()) CreatorSheet(id, onPlay = { vid -> creatorId = null; Feed.videos.indexOfFirst { it.id == vid }.let { if (it >= 0) Feed.jumpTo = it } }) { creatorId = null } }
-    fullFor?.let { v -> FullPlayer(v) { fullFor = null; player.playWhenReady = true } }
     reportFor?.let { v -> ReportSheet("video", v.id) { reportFor = null } }
     commentsFor?.let { v ->
         ModalBottomSheet(sheetState = fullSheet(), onDismissRequest = { commentsFor = null }, containerColor = Color(0xFF141A24)) {

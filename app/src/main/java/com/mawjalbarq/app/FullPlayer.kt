@@ -32,12 +32,14 @@ import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 
 @Composable
-fun FullPlayer(start: Video, onClose: () -> Unit) {
+fun FullPlayer(start: Video, onClose0: () -> Unit) {
+    val onClose = { Ui.barVisible = true; Ui.deep = false; onClose0() }
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var cur by remember { mutableStateOf(start) }
     var fs by remember { mutableStateOf(false) }
     var showDesc by remember { mutableStateOf(false) }
+    var speed by remember { mutableStateOf(1f) }
     var disliked by remember { mutableStateOf(false) }
     var comments by remember { mutableStateOf<List<Comment>?>(null) }
     var cText by remember { mutableStateOf("") }
@@ -54,15 +56,15 @@ fun FullPlayer(start: Video, onClose: () -> Unit) {
     val ratio = if (cur.w > 0 && cur.h > 0) (cur.w.toFloat() / cur.h).coerceIn(1f, 2.4f) else 16f / 9f
     val white = Color.White; val grey = Color(0xFF9AA0AC); val chip = Color(0xFF272B33)
     fun needLogin(): Boolean { if (!App.loggedIn) { android.widget.Toast.makeText(ctx, "سجّل الدخول أولاً", android.widget.Toast.LENGTH_SHORT).show(); return true }; return false }
-    @Composable fun pv(m: Modifier) = AndroidView({ c -> PlayerView(c).apply { useController = true; resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT; setShowNextButton(false); setShowPreviousButton(false); setFullscreenButtonClickListener { fs = !fs }; this.player = player } }, m)
+    @Composable fun pv(m: Modifier) = AndroidView({ c -> PlayerView(c).apply { useController = true; keepScreenOn = true; controllerShowTimeoutMs = 2500; resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT; setShowNextButton(false); setShowPreviousButton(false); setFullscreenButtonClickListener { fs = !fs }; this.player = player } }, m)
     Dialog(onDismissRequest = { if (fs) fs = false else onClose() }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         androidx.activity.compose.BackHandler { if (fs) fs = false else onClose() }
         if (fs) {
-            Box(Modifier.fillMaxSize().background(Color.Black)) { pv(Modifier.fillMaxSize()) }
+            Box(Modifier.fillMaxSize().background(Color.Black)) { pv(Modifier.fillMaxSize()); ExitBtn(Modifier.align(Alignment.TopStart).statusBarsPadding(), onClose) }
         } else Column(Modifier.fillMaxSize().background(Color(0xFF0F1115)).statusBarsPadding()) {
             Box(Modifier.fillMaxWidth().aspectRatio(ratio).background(Color.Black)) {
                 pv(Modifier.fillMaxSize())
-                IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopStart)) { Icon(Icons.Filled.KeyboardArrowDown, "إغلاق", tint = white) }
+                ExitBtn(Modifier.align(Alignment.TopStart), onClose)
             }
             LazyColumn(Modifier.fillMaxWidth().weight(1f).navigationBarsPadding(), contentPadding = PaddingValues(bottom = 24.dp)) {
                 item {
@@ -90,7 +92,7 @@ fun FullPlayer(start: Video, onClose: () -> Unit) {
                         item { Pill(Icons.Filled.ThumbDown, "", if (disliked) MaterialTheme.colorScheme.primary else white, chip) { disliked = !disliked } }
                         item { Pill(Icons.Filled.Share, "مشاركة", white, chip) { ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, "${cur.title} - موج البرق\n${cur.url}"), "مشاركة")) } }
                         item { Pill(Icons.Filled.Bookmark, if (saved) "تم الحفظ" else "حفظ", if (saved) Color(0xFFFFC107) else white, chip) { scope.launch { Feed.toggleSave(cur.id) } } }
-                        item { Pill(Icons.Filled.Fullscreen, "ملء الشاشة", white, chip) { fs = true } }
+                        item { Pill(Icons.Filled.Speed, if (speed == 1f) "السرعة" else "${speed}x", white, chip) { speed = when (speed) { 1f -> 1.25f; 1.25f -> 1.5f; 1.5f -> 2f; 2f -> 0.5f; else -> 1f }; player.setPlaybackSpeed(speed) } }
                     }
                 }
                 item {
@@ -131,6 +133,16 @@ fun FullPlayer(start: Video, onClose: () -> Unit) {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ExitBtn(m: Modifier, onClick: () -> Unit) {
+    val rtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+    Box(Modifier.fillMaxWidth().then(m.let { Modifier }), contentAlignment = if (rtl) Alignment.TopStart else Alignment.TopEnd) {
+        Box(Modifier.padding(10.dp).size(38.dp).clip(CircleShape).background(Color(0x99000000)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.Close, "خروج", tint = Color.White, modifier = Modifier.size(22.dp))
         }
     }
 }
