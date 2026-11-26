@@ -63,6 +63,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
     }
     var speed by remember { mutableFloatStateOf(1f) }
     LaunchedEffect(speed, curId) { player.setPlaybackSpeed(speed) }
+    var fullFor by remember { mutableStateOf<Video?>(null) }
     var commentsFor by remember { mutableStateOf<Video?>(null) }
     var reportFor by remember { mutableStateOf<Video?>(null) }
     var creatorId by remember { mutableStateOf<String?>(null) }
@@ -96,11 +97,12 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                 }
                 Action(Icons.Filled.Comment, v.comments.toString(), Color.White) { commentsFor = v }
                 Action(Icons.Filled.Bookmark, "حفظ", if (saved) MaterialTheme.colorScheme.secondary else Color.White) {
-                    if (!App.loggedIn) onNeedLogin() else scope.launch { Feed.toggleSave(v.id) }
+                    scope.launch { Feed.toggleSave(v.id) }
                 }
                 Action(Icons.Filled.Speed, if (speed == 1f) "1x" else "${speed}x", if (speed == 1f) Color.White else MaterialTheme.colorScheme.secondary) {
                     speed = when (speed) { 1f -> 1.5f; 1.5f -> 2f; 2f -> 0.5f; else -> 1f }
                 }
+                Action(Icons.Filled.Fullscreen, "ملء الشاشة", Color.White) { player.playWhenReady = false; fullFor = v }
                 Action(Icons.Filled.Flag, "إبلاغ", Color.White) { reportFor = v }
                 Action(Icons.Filled.Share, "مشاركة", Color.White) {
                     val i = Intent(Intent.ACTION_SEND).setType("text/plain")
@@ -111,6 +113,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
         }
     }
     creatorId?.let { id -> if (id.isNotBlank()) CreatorSheet(id, onPlay = { vid -> creatorId = null; Feed.videos.indexOfFirst { it.id == vid }.let { if (it >= 0) Feed.jumpTo = it } }) { creatorId = null } }
+    fullFor?.let { v -> FullPlayer(v) { fullFor = null; player.playWhenReady = true } }
     reportFor?.let { v -> ReportSheet("video", v.id) { reportFor = null } }
     commentsFor?.let { v ->
         ModalBottomSheet(onDismissRequest = { commentsFor = null }, containerColor = Color(0xFF12141A)) {

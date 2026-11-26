@@ -189,8 +189,20 @@ object Feed {
         }
     }
 
+    private var gp: android.content.SharedPreferences? = null
+    fun init(ctx: Context) {
+        if (gp != null) return
+        gp = ctx.applicationContext.getSharedPreferences("guest_saved", Context.MODE_PRIVATE)
+        if (App.userId == null) gp!!.getStringSet("ids", emptySet())!!.forEach { saved[it] = true }
+    }
+
     suspend fun toggleSave(id: String) {
-        val u = App.userId ?: return
+        val u = App.userId
+        if (u == null) {
+            if (saved[id] == true) saved.remove(id) else saved[id] = true
+            gp?.edit()?.putStringSet("ids", saved.keys.toSet())?.apply()
+            return
+        }
         if (saved[id] == true) {
             saved.remove(id); api("DELETE", "/rest/v1/saved_videos?user_id=eq.$u&video_id=eq.$id")
         } else {

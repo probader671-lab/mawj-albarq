@@ -29,7 +29,8 @@ fun AppRoot(prefs: ThemePrefs) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         var sel by remember { mutableIntStateOf(1) }
         var suggestions by remember { mutableStateOf(false) }
-        LaunchedEffect(Unit) { Feed.load() }
+        val appCtx = androidx.compose.ui.platform.LocalContext.current
+        LaunchedEffect(Unit) { Feed.init(appCtx); Feed.load() }
         UpdatePrompt()
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             when (sel) {
