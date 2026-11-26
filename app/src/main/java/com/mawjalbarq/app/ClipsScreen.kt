@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
 fun ClipsScreen(onNeedLogin: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    val videos = Feed.videos
+    val videos = Feed.clips
     if (videos.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             when {
@@ -56,7 +56,12 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
     val pager = rememberPagerState { videos.size }
     val player = remember { ExoPlayer.Builder(ctx).setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(MediaCache.factory(ctx))).build().apply { repeatMode = Player.REPEAT_MODE_ONE; playWhenReady = true } }
     DisposableEffect(Unit) { onDispose { player.release() } }
-    LaunchedEffect(Feed.jumpTo) { Feed.jumpTo?.let { pager.scrollToPage(it.coerceAtMost(videos.size - 1)); Feed.jumpTo = null } }
+    var landscapeFor by remember { mutableStateOf<Video?>(null) }
+    LaunchedEffect(Feed.jumpTo) { Feed.jumpTo?.let { j ->
+        val tv = Feed.videos.getOrNull(j); Feed.jumpTo = null
+        if (tv != null) { val k = videos.indexOfFirst { it.id == tv.id }; if (k >= 0) pager.scrollToPage(k) else landscapeFor = tv }
+    } }
+    landscapeFor?.let { FullPlayer(it) { landscapeFor = null } }
     val cur = pager.settledPage.coerceAtMost(videos.size - 1)
     val curId = videos[cur].id
     LaunchedEffect(curId) { Watch.save(ctx, curId) }
@@ -127,7 +132,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                     Box(Modifier.fillMaxWidth(prog).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
                 }
             }
-            if (!cinema) Column(Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(16.dp),
+            if (!cinema) Column(Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 130.dp), verticalArrangement = Arrangement.spacedBy(22.dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {
                 Action(Icons.Filled.Favorite, v.likes.toString(), if (liked) MaterialTheme.colorScheme.primary else Color.White) {
                     if (!App.loggedIn) onNeedLogin() else scope.launch { Feed.toggleLike(v.id) }
@@ -196,12 +201,12 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
 private fun Action(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, tint: Color, onClick: () -> Unit) {
     val sc = remember { androidx.compose.animation.core.Animatable(1f) }
     val scope = rememberCoroutineScope()
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clip(CircleShape).clickable {
         scope.launch { sc.animateTo(1.35f, androidx.compose.animation.core.tween(110)); sc.animateTo(1f, androidx.compose.animation.core.spring()) }
         onClick()
-    }) {
-        Icon(icon, label, tint = tint, modifier = Modifier.size(34.dp).scale(sc.value))
-        Text(label, color = Color.White, fontSize = 12.sp)
+    }.padding(horizontal = 8.dp, vertical = 6.dp)) {
+        Icon(icon, label, tint = tint, modifier = Modifier.size(36.dp).scale(sc.value))
+        Text(label, color = Color.White, fontSize = 13.sp)
     }
 }
 

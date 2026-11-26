@@ -134,11 +134,14 @@ suspend fun uploadImageToCloud(ctx: Context, uri: android.net.Uri): String? = wi
 object Theme { var prefs: ThemePrefs? = null }
 
 data class Video(val id: String, val title: String, val desc: String, val url: String, val thumb: String?,
-                 val author: String, val likes: Int, val comments: Int, val userId: String = "")
+                 val author: String, val likes: Int, val comments: Int, val userId: String = "", val w: Int = 0, val h: Int = 0) {
+    val portrait get() = h == 0 || h >= w
+}
 data class Comment(val id: String, val text: String, val author: String)
 
 object Feed {
     val videos = mutableStateListOf<Video>()
+    val clips: List<Video> get() = videos.filter { it.portrait }
     var loading by mutableStateOf(false)
     var error by mutableStateOf(false)
     val liked = mutableStateMapOf<String, Boolean>()
@@ -147,7 +150,7 @@ object Feed {
 
     suspend fun load() {
         loading = true; error = false
-        val (c, t) = api("GET", "/rest/v1/videos?select=id,user_id,title,description,video_url,thumbnail_url,likes,comments_count,profiles!videos_user_id_fkey(full_name)&status=eq.ready&deleted=eq.false&order=created_at.desc&limit=40")
+        val (c, t) = api("GET", "/rest/v1/videos?select=id,user_id,width,height,title,description,video_url,thumbnail_url,likes,comments_count,profiles!videos_user_id_fkey(full_name)&status=eq.ready&deleted=eq.false&order=created_at.desc&limit=40")
         if (c == 200) try {
             val a = JSONArray(t); val list = ArrayList<Video>()
             for (i in 0 until a.length()) {
@@ -155,9 +158,9 @@ object Feed {
                 list.add(Video(o.getString("id"), o.optString("title"), if (o.isNull("description")) "" else o.optString("description"),
                     o.getString("video_url"), if (o.isNull("thumbnail_url")) null else o.optString("thumbnail_url"),
                     o.optJSONObject("profiles")?.optString("full_name").orEmpty().ifBlank { "موج البرق" },
-                    o.optInt("likes"), o.optInt("comments_count"), o.optString("user_id")))
+                    o.optInt("likes"), o.optInt("comments_count"), o.optString("user_id"), o.optInt("width"), o.optInt("height")))
             }
-            videos.clear(); videos.addAll(list)
+            videos.clear(); videos.addAll(list.distinctBy { it.id }.distinctBy { it.url })
         } catch (e: Exception) { error = true } else error = true
         loading = false
         loadUserState(); loadFollows()
