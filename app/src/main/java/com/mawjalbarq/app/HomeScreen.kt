@@ -17,9 +17,23 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 
 @Composable
-fun HomeScreen(onOpen: () -> Unit) {
+fun HomeScreen(onOpen: () -> Unit, onNeedLogin: () -> Unit = {}) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
         Text("موج البرق", color = MaterialTheme.colorScheme.primary, fontSize = 26.sp, fontFamily = Cairo, modifier = Modifier.padding(vertical = 14.dp))
+        StoriesStrip(onNeedLogin)
+        val lastId = remember { Watch.last(ctx) }
+        val lastIdx = Feed.videos.indexOfFirst { it.id == lastId }
+        if (lastIdx >= 0) {
+            val v = Feed.videos[lastIdx]
+            Text("متابعة المشاهدة", color = Color.White, fontFamily = Cairo, fontSize = 16.sp, modifier = Modifier.padding(bottom = 6.dp))
+            Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF12141A))
+                .clickable { Feed.jumpTo = lastIdx; onOpen() }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(v.title, color = Color.White, modifier = Modifier.weight(1f), maxLines = 1)
+                Text("تابع ▶", color = MaterialTheme.colorScheme.primary)
+            }
+        }
+        Text("فيديوهات جديدة", color = Color.White, fontFamily = Cairo, fontSize = 16.sp, modifier = Modifier.padding(bottom = 6.dp))
         if (Feed.videos.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 if (Feed.loading) CircularProgressIndicator() else Text("لا توجد مقاطع بعد", color = Color.Gray)

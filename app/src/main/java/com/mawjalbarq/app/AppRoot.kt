@@ -28,15 +28,16 @@ private val tabs = listOf(
 fun AppRoot(prefs: ThemePrefs) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         var sel by remember { mutableIntStateOf(1) }
+        var suggestions by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { Feed.load() }
         UpdatePrompt()
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             when (sel) {
-                0 -> HomeScreen { sel = 1 }
+                0 -> HomeScreen(onOpen = { sel = 1 }, onNeedLogin = { sel = 4 })
                 1 -> ClipsScreen(onNeedLogin = { sel = 4 })
                 2 -> UploadScreen(onNeedLogin = { sel = 4 }, onDone = { sel = 1 })
                 3 -> PostsScreen(onNeedLogin = { sel = 4 })
-                else -> ProfileScreen(prefs, onOpenFeed = { sel = 1 })
+                else -> if (suggestions) SuggestionsScreen { suggestions = false } else ProfileScreen(prefs, onOpenFeed = { sel = 1 }, onSuggestions = { suggestions = true })
             }
             PillBar(sel, { sel = it }, Modifier.align(Alignment.BottomCenter))
         }

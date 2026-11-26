@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
 @Composable
-fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}) {
+fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp).padding(bottom = 100.dp)) {
         Text("حسابي", color = Color.White, fontSize = 24.sp, fontFamily = Cairo)
@@ -40,6 +40,8 @@ fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}) {
                 if (edit) EditProfileSheet(d) { ok -> edit = false; if (ok) scope.launch { me = App.userId?.let { loadProfile(it) } } }
             } ?: Text(App.name, color = MaterialTheme.colorScheme.primary, fontSize = 20.sp, fontFamily = Cairo)
         } else AuthForm()
+        Spacer(Modifier.height(16.dp))
+        OutlinedButton(onClick = onSuggestions) { Text("لوحة الاقتراحات") }
         Spacer(Modifier.height(28.dp))
         Text("لون التطبيق", color = Color.White, fontSize = 16.sp, fontFamily = Cairo)
         Spacer(Modifier.height(12.dp))

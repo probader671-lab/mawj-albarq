@@ -56,6 +56,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
     LaunchedEffect(Feed.jumpTo) { Feed.jumpTo?.let { pager.scrollToPage(it.coerceAtMost(videos.size - 1)); Feed.jumpTo = null } }
     val cur = pager.settledPage.coerceAtMost(videos.size - 1)
     val curId = videos[cur].id
+    LaunchedEffect(curId) { Watch.save(ctx, curId) }
     LaunchedEffect(curId) {
         player.setMediaItem(MediaItem.fromUri(Uri.parse(videos[cur].url))); player.prepare(); player.playWhenReady = true
         MediaCache.prefetch(ctx, videos.drop(cur + 1).take(2).map { it.url })
