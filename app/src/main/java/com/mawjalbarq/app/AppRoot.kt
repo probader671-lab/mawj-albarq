@@ -35,7 +35,7 @@ fun AppRoot(prefs: ThemePrefs) {
                 0 -> HomeScreen { sel = 1 }
                 1 -> ClipsScreen(onNeedLogin = { sel = 4 })
                 2 -> UploadScreen(onNeedLogin = { sel = 4 }, onDone = { sel = 1 })
-                3 -> Placeholder("المنشورات")
+                3 -> PostsScreen(onNeedLogin = { sel = 4 })
                 else -> ProfileScreen(prefs)
             }
             PillBar(sel, { sel = it }, Modifier.align(Alignment.BottomCenter))
