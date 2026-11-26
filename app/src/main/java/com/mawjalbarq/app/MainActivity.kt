@@ -9,7 +9,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        App.init(applicationContext)
         val prefs = ThemePrefs(applicationContext)
+        Theme.prefs = prefs
         setContent {
             MawjTheme(Accents[prefs.index]) {
                 var splash by remember { mutableStateOf(true) }

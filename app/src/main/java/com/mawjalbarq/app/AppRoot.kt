@@ -1,25 +1,23 @@
 package com.mawjalbarq.app
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 
 private data class Tab(val label: String, val icon: ImageVector)
 private val tabs = listOf(
@@ -30,11 +28,14 @@ private val tabs = listOf(
 fun AppRoot(prefs: ThemePrefs) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         var sel by remember { mutableIntStateOf(1) }
+        LaunchedEffect(Unit) { Feed.load() }
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             when (sel) {
-                1 -> ClipsScreen()
-                4 -> ProfileScreen(prefs)
-                else -> Placeholder(tabs[sel].label)
+                0 -> HomeScreen { sel = 1 }
+                1 -> ClipsScreen(onNeedLogin = { sel = 4 })
+                2 -> UploadScreen(onNeedLogin = { sel = 4 }, onDone = { sel = 1 })
+                3 -> Placeholder("المنشورات")
+                else -> ProfileScreen(prefs)
             }
             PillBar(sel, { sel = it }, Modifier.align(Alignment.BottomCenter))
         }
@@ -64,26 +65,8 @@ private fun PillBar(sel: Int, onSel: (Int) -> Unit, modifier: Modifier) {
 }
 
 @Composable
-private fun Placeholder(name: String) {
+fun Placeholder(name: String) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text("$name\nقريباً", color = Color.White, fontSize = 20.sp, fontFamily = Cairo)
-    }
-}
-
-@Composable
-private fun ProfileScreen(prefs: ThemePrefs) {
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp)) {
-        Text("حسابي", color = Color.White, fontSize = 24.sp, fontFamily = Cairo)
-        Spacer(Modifier.height(24.dp))
-        Text("لون التطبيق", color = Color.White, fontSize = 16.sp, fontFamily = Cairo)
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Accents.forEachIndexed { i, a ->
-                Box(Modifier.size(44.dp).clip(CircleShape).background(a.main)
-                    .border(if (i == prefs.index) 3.dp else 0.dp, Color.White, CircleShape).clickable { prefs.set(i) })
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        Text(Accents[prefs.index].name, color = Color(0xFF8A8F9C), fontSize = 13.sp)
     }
 }

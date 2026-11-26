@@ -1,5 +1,9 @@
 package com.mawjalbarq.app
 import android.content.Context
+import androidx.compose.ui.graphics.toArgb
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,7 +28,16 @@ class ThemePrefs(ctx: Context) {
     private val sp = ctx.getSharedPreferences("theme", Context.MODE_PRIVATE)
     var index by mutableStateOf(sp.getInt("accent", 0).coerceIn(0, Accents.lastIndex))
         private set
-    fun set(i: Int) { index = i; sp.edit().putInt("accent", i).apply() }
+    fun set(i: Int, sync: Boolean = true) {
+        index = i; sp.edit().putInt("accent", i).apply()
+        val u = App.userId
+        if (sync && u != null) CoroutineScope(Dispatchers.IO).launch {
+            val a = Accents[i]
+            api("PATCH", "/rest/v1/profiles?id=eq.$u", org.json.JSONObject()
+                .put("theme_accent_argb", a.main.toArgb().toLong() and 0xFFFFFFFFL)
+                .put("theme_secondary_argb", a.second.toArgb().toLong() and 0xFFFFFFFFL).toString())
+        }
+    }
 }
 
 @Composable
