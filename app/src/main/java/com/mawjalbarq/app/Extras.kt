@@ -20,6 +20,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -87,12 +89,23 @@ fun StoriesStrip(onNeedLogin: () -> Unit) {
     viewing?.let { start ->
         var i by remember { mutableIntStateOf(start) }
         val prog = remember(i) { Animatable(0f) }
-        LaunchedEffect(i) { prog.animateTo(1f, tween(5000, easing = LinearEasing)); if (i < stories.lastIndex) i++ else viewing = null }
+        var paused by remember { mutableStateOf(false) }
+        LaunchedEffect(i, paused) {
+            if (!paused) { prog.animateTo(1f, tween(((1f - prog.value) * 5000).toInt().coerceAtLeast(1), easing = LinearEasing)); if (i < stories.lastIndex) i++ else viewing = null }
+        }
         Dialog(onDismissRequest = { viewing = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-            Box(Modifier.fillMaxSize().background(Color.Black).clickable { if (i < stories.lastIndex) i++ else viewing = null }) {
+            Box(Modifier.fillMaxSize().background(Color.Black).pointerInput(i) {
+                detectTapGestures(onPress = { paused = true; tryAwaitRelease(); paused = false },
+                    onTap = { o -> if (o.x < size.width / 2) { if (i < stories.lastIndex) i++ else viewing = null } else { if (i > 0) i-- } })
+            }) {
                 val s = stories[i]
                 AsyncImage(s.image, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-                LinearProgressIndicator(progress = { prog.value }, modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp).align(Alignment.TopCenter))
+                Row(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp).align(Alignment.TopCenter), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    stories.indices.forEach { k ->
+                        LinearProgressIndicator(progress = { if (k < i) 1f else if (k == i) prog.value else 0f }, modifier = Modifier.weight(1f).height(3.dp).clip(CircleShape),
+                            color = Color.White, trackColor = Color(0x44FFFFFF))
+                    }
+                }
                 Row(Modifier.statusBarsPadding().padding(top = 30.dp, start = 12.dp, end = 12.dp).align(Alignment.TopStart), verticalAlignment = Alignment.CenterVertically) {
                     Avatar(s.avatar, s.author, 36); Spacer(Modifier.width(8.dp)); Text(s.author, color = Color.White, fontFamily = Cairo)
                 }
