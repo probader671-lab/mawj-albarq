@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -37,13 +38,13 @@ fun HomeScreen(onOpen: () -> Unit, onNeedLogin: () -> Unit = {}) {
         if (savedList.isNotEmpty()) {
             Text("المحفوظات", color = Color.White, fontFamily = Cairo, fontSize = 16.sp, modifier = Modifier.padding(bottom = 6.dp))
             androidx.compose.foundation.lazy.LazyRow(Modifier.padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                androidx.compose.foundation.lazy.items(savedList) { v -> VideoCard(v) { Feed.jumpTo = Feed.videos.indexOfFirst { it.id == v.id }; onOpen() } }
+                items(savedList) { v -> VideoCard(v) { Feed.jumpTo = Feed.videos.indexOfFirst { it.id == v.id }; onOpen() } }
             }
         }
         if (Feed.videos.size > 1) {
             Text("الأكثر إعجاباً", color = Color.White, fontFamily = Cairo, fontSize = 16.sp, modifier = Modifier.padding(bottom = 6.dp))
             androidx.compose.foundation.lazy.LazyRow(Modifier.padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                androidx.compose.foundation.lazy.items(Feed.videos.sortedByDescending { it.likes }.take(10)) { v -> VideoCard(v) { Feed.jumpTo = Feed.videos.indexOfFirst { it.id == v.id }; onOpen() } }
+                items(Feed.videos.sortedByDescending { it.likes }.take(10)) { v -> VideoCard(v) { Feed.jumpTo = Feed.videos.indexOfFirst { it.id == v.id }; onOpen() } }
             }
         }
         Text("فيديوهات جديدة", color = Color.White, fontFamily = Cairo, fontSize = 16.sp, modifier = Modifier.padding(bottom = 6.dp))
