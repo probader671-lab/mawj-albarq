@@ -62,7 +62,7 @@ fun AuthForm() {
         OutlinedTextField(pass, { pass = it }, Modifier.fillMaxWidth(), label = { Text("كلمة المرور") }, singleLine = true,
             visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
         err?.let { Text(it, color = Color(0xFFFF6B6B), fontSize = 13.sp) }
-        Button(enabled = !busy && email.isNotBlank() && pass.length >= 6, modifier = Modifier.fillMaxWidth(), onClick = {
+        Button(enabled = !busy && email.isNotBlank() && pass.length >= 8, modifier = Modifier.fillMaxWidth(), onClick = {
             busy = true; err = null
             scope.launch {
                 err = if (signup) signUp(name.trim(), email, pass) else signIn(email, pass)

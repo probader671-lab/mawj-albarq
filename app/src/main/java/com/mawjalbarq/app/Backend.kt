@@ -80,7 +80,7 @@ fun authError(code: Int, text: String): String {
         code == -1 -> "تعذر الاتصال بالإنترنت"
         "invalid login" in t -> "البريد أو كلمة المرور غير صحيحة"
         "already" in t -> "هذا البريد مسجل مسبقاً"
-        "password" in t -> "كلمة المرور ضعيفة (6 أحرف على الأقل)"
+        "password" in t -> "كلمة المرور ضعيفة (8 أحرف على الأقل)"
         "valid email" in t || "email" in t -> "البريد الإلكتروني غير صالح"
         "rate" in t -> "محاولات كثيرة، انتظر قليلاً"
         else -> "حدث خطأ، حاول مرة أخرى"
