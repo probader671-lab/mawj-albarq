@@ -2,6 +2,7 @@ package com.mawjalbarq.app
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
