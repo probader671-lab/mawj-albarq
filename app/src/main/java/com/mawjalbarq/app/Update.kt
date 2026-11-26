@@ -56,7 +56,14 @@ fun UpdatePrompt() {
     var busy by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf(0f) }
     var err by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { latest()?.let { if (it.first > BuildConfig.VERSION_CODE) info = it } }
+    val owner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(owner) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME && !busy) scope.launch { latest()?.let { if (it.first > BuildConfig.VERSION_CODE) info = it } }
+        }
+        owner.lifecycle.addObserver(obs)
+        onDispose { owner.lifecycle.removeObserver(obs) }
+    }
     info?.let { (_, url) ->
         AlertDialog(onDismissRequest = { if (!busy) info = null },
             title = { Text("تحديث جديد") },
@@ -71,7 +78,8 @@ fun UpdatePrompt() {
                 }
                 busy = true; err = false
                 scope.launch {
-                    val f = download(ctx, url) { progress = it }
+                    val fresh = latest()
+                    val f = download(ctx, fresh?.second ?: url) { progress = it }
                     busy = false
                     if (f == null) { err = true; return@launch }
                     val uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".fileprovider", f)

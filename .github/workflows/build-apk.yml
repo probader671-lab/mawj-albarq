@@ -24,7 +24,13 @@ jobs:
       - name: update.json
         run: |
           echo '{"versionCode":${{ github.run_number }},"url":"https://github.com/probader671-lab/mawj-albarq/releases/download/demo/mawj-albarq.apk"}' > update.json
+      - name: guard against publishing an older build over a newer one
+        id: guard
+        run: |
+          cur=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/tags/demo | grep -o 'versionCode=[0-9]*' | head -1 | cut -d= -f2)
+          if [ -n "$cur" ] && [ "$cur" -gt "${{ github.run_number }}" ]; then echo "skip=true" >> $GITHUB_OUTPUT; fi
       - uses: softprops/action-gh-release@v2
+        if: steps.guard.outputs.skip != 'true'
         with:
           tag_name: demo
           name: موج البرق - نسخة تجريبية
