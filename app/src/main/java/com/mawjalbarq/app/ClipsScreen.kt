@@ -61,6 +61,15 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
         player.setMediaItem(MediaItem.fromUri(Uri.parse(videos[cur].url))); player.prepare(); player.playWhenReady = true
         MediaCache.prefetch(ctx, videos.drop(cur + 1).take(2).map { it.url })
     }
+    LaunchedEffect(curId) {
+        while (true) {
+            kotlinx.coroutines.delay(1500)
+            val d = player.duration
+            if (d > 0) Watch.savePos(ctx, curId, (player.currentPosition.toFloat() / d).coerceIn(0f, 1f))
+        }
+    }
+    LaunchedEffect(cur) { Ui.deep = cur >= 3 }
+    DisposableEffect(Unit) { onDispose { Ui.deep = false } }
     var speed by remember { mutableFloatStateOf(1f) }
     LaunchedEffect(speed, curId) { player.setPlaybackSpeed(speed) }
     var fullFor by remember { mutableStateOf<Video?>(null) }

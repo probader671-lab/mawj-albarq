@@ -34,13 +34,16 @@ fun AppRoot(prefs: ThemePrefs) {
         UpdatePrompt()
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             when (sel) {
-                0 -> HomeScreen(onOpen = { sel = 1 }, onNeedLogin = { sel = 4 })
+                0 -> HomeScreen(onOpen = { sel = 1 }, onNeedLogin = { sel = 4 }, onSuggestions = { suggestions = true })
                 1 -> ClipsScreen(onNeedLogin = { sel = 4 })
                 2 -> UploadScreen(onNeedLogin = { sel = 4 }, onDone = { sel = 1 })
                 3 -> PostsScreen(onNeedLogin = { sel = 4 })
-                else -> if (suggestions) SuggestionsScreen { suggestions = false } else ProfileScreen(prefs, onOpenFeed = { sel = 1 }, onSuggestions = { suggestions = true })
+                else -> ProfileScreen(prefs, onOpenFeed = { sel = 1 }, onSuggestions = { suggestions = true })
             }
-            PillBar(sel, { sel = it }, Modifier.align(Alignment.BottomCenter))
+            androidx.compose.animation.AnimatedVisibility(visible = Ui.barVisible && !(sel == 1 && Ui.deep) && !suggestions,
+                enter = androidx.compose.animation.slideInVertically { it * 2 }, exit = androidx.compose.animation.slideOutVertically { it * 2 },
+                modifier = Modifier.align(Alignment.BottomCenter)) { PillBar(sel, { sel = it; Ui.barVisible = true }, Modifier) }
+            if (suggestions) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { SuggestionsScreen { suggestions = false } }
         }
     }
 }

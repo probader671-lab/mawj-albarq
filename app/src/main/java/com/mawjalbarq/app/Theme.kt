@@ -21,6 +21,10 @@ val Accents = listOf(
     Accent("برق ذهبي", Color(0xFFFFD21F), Color(0xFF2EA8FF)),
     Accent("بنفسجي", Color(0xFFA066FF), Color(0xFFFF5CA8)),
     Accent("أخضر", Color(0xFF2BE38B), Color(0xFF2EA8FF)),
+    Accent("برتقالي", Color(0xFFFF7A1A), Color(0xFF10B981)),
+    Accent("قرمزي", Color(0xFFFF3B5C), Color(0xFF10B981)),
+    Accent("سماوي", Color(0xFF06D4D4), Color(0xFFF59E0B)),
+    Accent("وردي", Color(0xFFEC4899), Color(0xFFF59E0B)),
     Accent("أحمر", Color(0xFFFF4D5E), Color(0xFFFFD21F)),
 )
 
@@ -44,7 +48,7 @@ class ThemePrefs(ctx: Context) {
 fun MawjTheme(accent: Accent, content: @Composable () -> Unit) {
     val scheme = darkColorScheme(
         primary = accent.main, secondary = accent.second, tertiary = accent.second,
-        background = Color(0xFF06070A), surface = Color(0xFF12141A), onBackground = Color.White, onSurface = Color.White,
+        background = Color(0xFF0E131B), surface = Color(0xFF141A24), surfaceVariant = Color(0xFF1D2634), outline = Color(0xFF313D50), onSurfaceVariant = Color(0xFFAAB4C4), primaryContainer = Color(0xFF18202C), onBackground = Color.White, onSurface = Color.White,
     )
     MaterialTheme(colorScheme = scheme, typography = Typography(
         bodyLarge = TextStyle(fontFamily = Tajawal), bodyMedium = TextStyle(fontFamily = Tajawal),

@@ -33,8 +33,12 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /* ---------- continue watching ---------- */
+object Ui { var barVisible by mutableStateOf(true); var deep by mutableStateOf(false) }
+
 object Watch {
     fun save(ctx: Context, id: String) = ctx.getSharedPreferences("watch", Context.MODE_PRIVATE).edit().putString("last", id).apply()
+    fun savePos(ctx: Context, id: String, frac: Float) = ctx.getSharedPreferences("watch", Context.MODE_PRIVATE).edit().putFloat("p_$id", frac).apply()
+    fun pos(ctx: Context, id: String): Float = ctx.getSharedPreferences("watch", Context.MODE_PRIVATE).getFloat("p_$id", 0f)
     fun last(ctx: Context): String? = ctx.getSharedPreferences("watch", Context.MODE_PRIVATE).getString("last", null)
 }
 
