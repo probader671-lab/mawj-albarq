@@ -148,20 +148,31 @@ object Feed {
     val saved = mutableStateMapOf<String, Boolean>()
     var jumpTo by mutableStateOf<Int?>(null)
 
+    private fun parse(t: String): List<Video> {
+        val a = JSONArray(t); val list = ArrayList<Video>()
+        for (i in 0 until a.length()) {
+            val o = a.getJSONObject(i)
+            list.add(Video(o.getString("id"), o.optString("title"), if (o.isNull("description")) "" else o.optString("description"),
+                o.getString("video_url"), if (o.isNull("thumbnail_url")) null else o.optString("thumbnail_url"),
+                o.optJSONObject("profiles")?.optString("full_name").orEmpty().ifBlank { "موج البرق" },
+                o.optInt("likes"), o.optInt("comments_count"), o.optString("user_id"), o.optInt("width"), o.optInt("height")))
+        }
+        return list.distinctBy { it.id }.distinctBy { it.url }
+    }
+
+    private var feedPrefs: android.content.SharedPreferences? = null
+    fun loadCached() {
+        try { feedPrefs?.getString("feed", null)?.let { if (videos.isEmpty()) videos.addAll(parse(it)) } } catch (_: Exception) {}
+    }
+
     suspend fun load() {
-        loading = true; error = false
+        loading = videos.isEmpty(); error = false
         val (c, t) = api("GET", "/rest/v1/videos?select=id,user_id,width,height,title,description,video_url,thumbnail_url,likes,comments_count,profiles!videos_user_id_fkey(full_name)&status=eq.ready&deleted=eq.false&order=created_at.desc&limit=40")
         if (c == 200) try {
-            val a = JSONArray(t); val list = ArrayList<Video>()
-            for (i in 0 until a.length()) {
-                val o = a.getJSONObject(i)
-                list.add(Video(o.getString("id"), o.optString("title"), if (o.isNull("description")) "" else o.optString("description"),
-                    o.getString("video_url"), if (o.isNull("thumbnail_url")) null else o.optString("thumbnail_url"),
-                    o.optJSONObject("profiles")?.optString("full_name").orEmpty().ifBlank { "موج البرق" },
-                    o.optInt("likes"), o.optInt("comments_count"), o.optString("user_id"), o.optInt("width"), o.optInt("height")))
-            }
-            videos.clear(); videos.addAll(list.distinctBy { it.id }.distinctBy { it.url })
-        } catch (e: Exception) { error = true } else error = true
+            val list = parse(t)
+            videos.clear(); videos.addAll(list)
+            feedPrefs?.edit()?.putString("feed", t)?.apply()
+        } catch (e: Exception) { if (videos.isEmpty()) error = true } else if (videos.isEmpty()) error = true
         loading = false
         loadUserState(); loadFollows()
     }
@@ -209,6 +220,8 @@ object Feed {
     fun init(ctx: Context) {
         if (gp != null) return
         gp = ctx.applicationContext.getSharedPreferences("guest_saved", Context.MODE_PRIVATE)
+        feedPrefs = ctx.applicationContext.getSharedPreferences("feed_cache", Context.MODE_PRIVATE)
+        loadCached()
         if (App.userId == null) gp!!.getStringSet("ids", emptySet())!!.forEach { saved[it] = true }
     }
 

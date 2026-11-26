@@ -147,7 +147,7 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
                                     posts = posts?.map { x -> if (x.id == p.id) x.copy(liked = !p.liked, likes = x.likes + if (p.liked) -1 else 1) else x }
                                 }
                             }.padding(vertical = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Filled.Favorite, "إعجاب", tint = if (p.liked) MaterialTheme.colorScheme.primary else muted, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Filled.Favorite, "إعجاب", tint = if (p.liked) Color(0xFFFF2D55) else muted, modifier = Modifier.size(20.dp))
                                 Text(" ${p.likes}", color = muted, fontSize = 13.sp)
                             }
                             Row(act.clip(RoundedCornerShape(12.dp)).clickable { openComments = p }.padding(vertical = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {

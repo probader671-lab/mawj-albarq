@@ -18,7 +18,7 @@ object MediaCache {
     @Synchronized
     private fun cache(ctx: Context): SimpleCache = cache ?: SimpleCache(
         File(ctx.applicationContext.cacheDir, "media3_mawj").apply { mkdirs() },
-        LeastRecentlyUsedCacheEvictor(150L * 1024 * 1024),
+        LeastRecentlyUsedCacheEvictor(500L * 1024 * 1024),
         StandaloneDatabaseProvider(ctx.applicationContext)
     ).also { cache = it }
 

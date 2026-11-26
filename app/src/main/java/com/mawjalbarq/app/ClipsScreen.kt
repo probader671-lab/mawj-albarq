@@ -15,6 +15,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -104,7 +106,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                 if (!App.loggedIn) onNeedLogin() else { burst++; if (Feed.liked[v.id] != true) scope.launch { Feed.toggleLike(v.id) } }
             })
         }) {
-            if (burstAnim.value > 0f && burstAnim.value < 1f) Icon(Icons.Filled.Favorite, null, tint = MaterialTheme.colorScheme.primary,
+            if (burstAnim.value > 0f && burstAnim.value < 1f) Icon(Icons.Filled.Favorite, null, tint = Color(0xFFFF2D55),
                 modifier = Modifier.align(Alignment.Center).size(150.dp).scale(0.6f + 0.7f * burstAnim.value).alpha(1f - burstAnim.value))
             if (page == pager.settledPage) {
                 AndroidView({ c -> PlayerView(c).apply { useController = false; resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; this.player = player } },
@@ -136,10 +138,14 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
             }
             if (!cinema) Column(Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = bpad + 10.dp), verticalArrangement = Arrangement.spacedBy(14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {
-                Action(Icons.Filled.Favorite, v.likes.toString(), if (liked) MaterialTheme.colorScheme.primary else Color.White) {
+                Action(Icons.Filled.Favorite, v.likes.toString(), if (liked) Color(0xFFFF2D55) else Color.White) {
                     if (!App.loggedIn) onNeedLogin() else scope.launch { Feed.toggleLike(v.id) }
                 }
                 Action(Icons.Filled.Comment, v.comments.toString(), Color.White) { commentsFor = v }
+                Action(Icons.Filled.Bookmark, "حفظ", if (saved) Color(0xFFFFD21F) else Color.White) {
+                    if (!saved) saveTick++
+                    scope.launch { Feed.toggleSave(v.id) }
+                }
                 Action(Icons.Filled.Share, "مشاركة", Color.White) {
                     val i = Intent(Intent.ACTION_SEND).setType("text/plain")
                         .putExtra(Intent.EXTRA_TEXT, "${v.title} - موج البرق\n${v.url}")
@@ -161,8 +167,15 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                 }
             }
             if (saveAnim.value > 0f && saveAnim.value < 1f) Box(Modifier.align(Alignment.Center), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(progress = { saveAnim.value }, modifier = Modifier.size(104.dp), color = MaterialTheme.colorScheme.secondary, trackColor = Color(0x33FFFFFF), strokeWidth = 6.dp)
-                Icon(Icons.Filled.Bookmark, null, tint = Color.White, modifier = Modifier.size(36.dp))
+                val f = saveAnim.value
+                val fill = (if (f < 0.7f) f / 0.7f else 1f)
+                Icon(Icons.Filled.Bookmark, null, tint = Color(0x55FFFFFF), modifier = Modifier.size(130.dp).alpha(1f - (if (f > 0.85f) (f - 0.85f) / 0.15f else 0f)))
+                Icon(Icons.Filled.Bookmark, null, tint = Color(0xFFFFD21F), modifier = Modifier.size(130.dp)
+                    .alpha(1f - (if (f > 0.85f) (f - 0.85f) / 0.15f else 0f))
+                    .drawWithContent {
+                        val wave = (kotlin.math.sin(f * 24f) * 4.dp.toPx())
+                        clipRect(top = size.height * (1f - fill) + wave) { this@drawWithContent.drawContent() }
+                    })
             }
             if (cinema && page == pager.settledPage && !hidden) {
                 var playing by remember { mutableStateOf(true) }
@@ -171,7 +184,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                     left = if (d > 0) { val r = ((d - player.currentPosition) / 1000).coerceAtLeast(0); "%d:%02d".format(r / 60, r % 60) } else "" } }
                 Column(Modifier.align(Alignment.BottomCenter).padding(start = 12.dp, end = 12.dp, bottom = bpad - 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                        CapBtn(Icons.Filled.Favorite, v.likes.toString(), if (liked) MaterialTheme.colorScheme.primary else Color.White) { if (!App.loggedIn) onNeedLogin() else scope.launch { Feed.toggleLike(v.id) } }
+                        CapBtn(Icons.Filled.Favorite, v.likes.toString(), if (liked) Color(0xFFFF2D55) else Color.White) { if (!App.loggedIn) onNeedLogin() else scope.launch { Feed.toggleLike(v.id) } }
                         CapBtn(Icons.Filled.Comment, v.comments.toString(), Color.White) { commentsFor = v }
                         CapBtn(Icons.Filled.Bookmark, "", if (saved) MaterialTheme.colorScheme.secondary else Color.White) { scope.launch { Feed.toggleSave(v.id) } }
                         CapBtn(Icons.Filled.Share, "", Color.White) {
