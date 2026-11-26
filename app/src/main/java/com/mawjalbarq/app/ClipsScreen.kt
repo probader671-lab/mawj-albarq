@@ -109,12 +109,13 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
             if (burstAnim.value > 0f && burstAnim.value < 1f) Icon(Icons.Filled.Favorite, null, tint = Color(0xFFFF2D55),
                 modifier = Modifier.align(Alignment.Center).size(150.dp).scale(0.6f + 0.7f * burstAnim.value).alpha(1f - burstAnim.value))
             if (page == pager.settledPage) {
+                val r = if (v.w > 0 && v.h > 0) v.w.toFloat() / v.h else 0f
                 AndroidView({ c -> PlayerView(c).apply { useController = false; resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; this.player = player } },
-                    Modifier.fillMaxSize(), update = { it.player = player })
+                    (if (r > 0f) Modifier.align(Alignment.TopCenter).fillMaxWidth().aspectRatio(r) else Modifier.fillMaxSize()), update = { it.player = player })
             }
             Column(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = bpad, end = 90.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.clickable { creatorId = v.userId }) { Avatar(null, v.author, 40) }
+                    Box(Modifier.clickable { creatorId = v.userId }) { Avatar(v.avatar, v.author, 40) }
                     Spacer(Modifier.width(8.dp))
                     Text(v.author, color = Color.White, fontSize = 15.sp, fontFamily = Cairo, maxLines = 1, modifier = Modifier.clickable { creatorId = v.userId }.weight(1f, false))
                     if (v.userId.isNotBlank() && v.userId != App.userId) {

@@ -2277,3 +2277,5 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS theme_preset TEXT NOT NULL 
 
 -- follows (added for mawj-albarq)
 create table if not exists public.follows (follower_id uuid not null references auth.users(id) on delete cascade, following_id uuid not null, created_at timestamptz default now(), primary key (follower_id, following_id));
+
+-- notifications + triggers (added for mawj-albarq): see notifications table, notify_like/notify_comment/notify_follow

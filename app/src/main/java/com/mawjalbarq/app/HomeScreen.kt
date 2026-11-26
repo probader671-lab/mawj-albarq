@@ -64,7 +64,7 @@ private fun WideCard(v: Video, ratio: Float, hero: Boolean, onOpen: () -> Unit, 
                 modifier = Modifier.align(Alignment.TopStart).padding(10.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.secondary).padding(horizontal = 8.dp, vertical = 4.dp))
         }
         Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-            Avatar(null, v.author, 42)
+            Avatar(v.avatar, v.author, 42)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(v.title, color = Color.White, fontFamily = Cairo, fontSize = 15.sp, maxLines = 1)
@@ -84,7 +84,7 @@ private fun WideCard(v: Video, ratio: Float, hero: Boolean, onOpen: () -> Unit, 
 }
 
 @Composable
-fun HomeScreen(onOpen: () -> Unit, onNeedLogin: () -> Unit = {}, onSuggestions: () -> Unit = {}) {
+fun HomeScreen(onOpen: () -> Unit, onNeedLogin: () -> Unit = {}, onSuggestions: () -> Unit = {}, onNotifs: () -> Unit = {}) {
     val ctx = LocalContext.current
     val list = rememberLazyListState()
     var searching by remember { mutableStateOf(false) }
@@ -104,6 +104,8 @@ fun HomeScreen(onOpen: () -> Unit, onNeedLogin: () -> Unit = {}, onSuggestions: 
             Image38()
             Spacer(Modifier.width(12.dp))
             Text("موج البرق", color = Color.White, fontFamily = Cairo, fontSize = 22.sp, modifier = Modifier.weight(1f))
+            BadgedBox(badge = { if (Notifs.unread > 0) Badge { Text(Notifs.unread.toString()) } }) { RoundBtn(Icons.Filled.Notifications, 48, Color.White, onNotifs) }
+            Spacer(Modifier.width(8.dp))
             RoundBtn(Icons.Filled.Lightbulb, 48, MaterialTheme.colorScheme.secondary, onSuggestions)
             Spacer(Modifier.width(8.dp))
             RoundBtn(if (searching) Icons.Filled.Close else Icons.Filled.Search, 48) { searching = !searching; if (!searching) q = "" }
@@ -177,7 +179,7 @@ fun HomeScreen(onOpen: () -> Unit, onNeedLogin: () -> Unit = {}, onSuggestions: 
                                 if (v.thumb != null) AsyncImage(v.thumb, null, Modifier.fillMaxSize().graphicsLayer { translationX = -p * 24.dp.toPx() }, contentScale = ContentScale.Crop)
                                 Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(120.dp).background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xDD000000)))))
                                 Row(Modifier.align(Alignment.BottomStart).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Avatar(null, v.author, 32)
+                                    Avatar(v.avatar, v.author, 32)
                                     Spacer(Modifier.width(8.dp))
                                     Text(v.title, color = Color.White, fontFamily = Cairo, fontSize = 14.sp, maxLines = 2, modifier = Modifier.weight(1f))
                                 }

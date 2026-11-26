@@ -29,20 +29,22 @@ fun AppRoot(prefs: ThemePrefs) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         var sel by remember { mutableIntStateOf(1) }
         var suggestions by remember { mutableStateOf(false) }
+        var notifs by remember { mutableStateOf(false) }
         val appCtx = androidx.compose.ui.platform.LocalContext.current
         LaunchedEffect(Unit) { Feed.init(appCtx); Feed.load() }
         UpdatePrompt()
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             when (sel) {
-                0 -> HomeScreen(onOpen = { sel = 1 }, onNeedLogin = { sel = 4 }, onSuggestions = { suggestions = true })
+                0 -> HomeScreen(onOpen = { sel = 1 }, onNeedLogin = { sel = 4 }, onSuggestions = { suggestions = true }, onNotifs = { notifs = true })
                 1 -> ClipsScreen(onNeedLogin = { sel = 4 })
                 2 -> UploadScreen(onNeedLogin = { sel = 4 }, onDone = { sel = 1 })
                 3 -> PostsScreen(onNeedLogin = { sel = 4 })
                 else -> ProfileScreen(prefs, onOpenFeed = { sel = 1 }, onSuggestions = { suggestions = true })
             }
-            androidx.compose.animation.AnimatedVisibility(visible = Ui.barVisible && !(sel == 1 && Ui.deep) && !suggestions,
+            androidx.compose.animation.AnimatedVisibility(visible = Ui.barVisible && !(sel == 1 && Ui.deep) && !suggestions && !notifs,
                 enter = androidx.compose.animation.slideInVertically { it * 2 }, exit = androidx.compose.animation.slideOutVertically { it * 2 },
                 modifier = Modifier.align(Alignment.BottomCenter)) { PillBar(sel, { sel = it; Ui.barVisible = true }, Modifier) }
+            if (notifs) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { NotificationsScreen({ notifs = false }) { vid -> notifs = false; Feed.videos.indexOfFirst { it.id == vid }.let { if (it >= 0) Feed.jumpTo = it }; sel = 1 } }
             if (suggestions) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { SuggestionsScreen { suggestions = false } }
         }
     }

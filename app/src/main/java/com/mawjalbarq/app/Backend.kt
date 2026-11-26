@@ -134,7 +134,7 @@ suspend fun uploadImageToCloud(ctx: Context, uri: android.net.Uri): String? = wi
 object Theme { var prefs: ThemePrefs? = null }
 
 data class Video(val id: String, val title: String, val desc: String, val url: String, val thumb: String?,
-                 val author: String, val likes: Int, val comments: Int, val userId: String = "", val w: Int = 0, val h: Int = 0) {
+                 val author: String, val likes: Int, val comments: Int, val userId: String = "", val w: Int = 0, val h: Int = 0, val avatar: String? = null) {
     val portrait get() = h == 0 || h >= w
 }
 data class Comment(val id: String, val text: String, val author: String)
@@ -155,7 +155,7 @@ object Feed {
             list.add(Video(o.getString("id"), o.optString("title"), if (o.isNull("description")) "" else o.optString("description"),
                 o.getString("video_url"), if (o.isNull("thumbnail_url")) null else o.optString("thumbnail_url"),
                 o.optJSONObject("profiles")?.optString("full_name").orEmpty().ifBlank { "موج البرق" },
-                o.optInt("likes"), o.optInt("comments_count"), o.optString("user_id"), o.optInt("width"), o.optInt("height")))
+                o.optInt("likes"), o.optInt("comments_count"), o.optString("user_id"), o.optInt("width"), o.optInt("height"), o.optJSONObject("profiles")?.let { pr -> if (pr.isNull("avatar_url")) null else pr.optString("avatar_url") }))
         }
         return list.distinctBy { it.id }.distinctBy { it.url }
     }
@@ -167,14 +167,14 @@ object Feed {
 
     suspend fun load() {
         loading = videos.isEmpty(); error = false
-        val (c, t) = api("GET", "/rest/v1/videos?select=id,user_id,width,height,title,description,video_url,thumbnail_url,likes,comments_count,profiles!videos_user_id_fkey(full_name)&status=eq.ready&deleted=eq.false&order=created_at.desc&limit=40")
+        val (c, t) = api("GET", "/rest/v1/videos?select=id,user_id,width,height,title,description,video_url,thumbnail_url,likes,comments_count,profiles!videos_user_id_fkey(full_name,avatar_url)&status=eq.ready&deleted=eq.false&order=created_at.desc&limit=40")
         if (c == 200) try {
             val list = parse(t)
             videos.clear(); videos.addAll(list)
             feedPrefs?.edit()?.putString("feed", t)?.apply()
         } catch (e: Exception) { if (videos.isEmpty()) error = true } else if (videos.isEmpty()) error = true
         loading = false
-        loadUserState(); loadFollows()
+        loadUserState(); loadFollows(); Notifs.refreshCount()
     }
 
     suspend fun loadUserState() {
