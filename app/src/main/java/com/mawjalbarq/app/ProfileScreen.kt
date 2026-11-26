@@ -30,7 +30,7 @@ fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions:
             var edit by remember { mutableStateOf(false) }
             LaunchedEffect(App.userId) { me = App.userId?.let { loadProfile(it) } }
             me?.let { d ->
-                ProfileHeader(d, onPlay = { vid -> Feed.videos.indexOfFirst { it.id == vid }.let { if (it >= 0) { Feed.jumpTo = it; onOpenFeed() } } }) {
+                ProfileHeader(d, isMe = true, onPlay = { vid -> Feed.videos.indexOfFirst { it.id == vid }.let { if (it >= 0) { Feed.jumpTo = it; onOpenFeed() } } }) {
                     Text(App.email, color = Color(0xFF8A8F9C), fontSize = 12.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { edit = true }) { Text("تعديل الملف") }

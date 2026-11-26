@@ -2,6 +2,7 @@ package com.mawjalbarq.app
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -24,7 +25,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class ProfileData(val id: String, val name: String, val bio: String, val avatar: String?, val videos: List<Video>)
+data class ProfileData(val id: String, val name: String, val bio: String, val avatar: String?, val videos: List<Video>, val followers: Int = 0, val following: Int = 0)
 
 suspend fun loadProfile(id: String): ProfileData? {
     val (c, t) = api("GET", "/rest/v1/profiles?id=eq.$id&select=id,full_name,bio,avatar_url")
@@ -35,8 +36,9 @@ suspend fun loadProfile(id: String): ProfileData? {
     if (c2 == 200) try { val a = JSONArray(t2); for (i in 0 until a.length()) { val v = a.getJSONObject(i)
         vids.add(Video(v.getString("id"), v.optString("title"), if (v.isNull("description")) "" else v.optString("description"), v.getString("video_url"),
             if (v.isNull("thumbnail_url")) null else v.optString("thumbnail_url"), o.optString("full_name"), v.optInt("likes"), v.optInt("comments_count"), id)) } } catch (_: Exception) {}
+    fun cnt(q: String): Int { return try { val (c3, t3) = api("GET", "/rest/v1/follows?$q"); if (c3 == 200) JSONArray(t3).length() else 0 } catch (_: Exception) { 0 } }
     return ProfileData(id, o.optString("full_name").ifBlank { "مستخدم" }, if (o.isNull("bio")) "" else o.optString("bio"),
-        if (o.isNull("avatar_url")) null else o.optString("avatar_url"), vids)
+        if (o.isNull("avatar_url")) null else o.optString("avatar_url"), vids, cnt("following_id=eq.$id&select=follower_id"), cnt("follower_id=eq.$id&select=following_id"))
 }
 
 @Composable
@@ -48,23 +50,50 @@ fun Avatar(url: String?, name: String, size: Int = 72) {
 }
 
 @Composable
-fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, extra: @Composable () -> Unit = {}) {
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Avatar(p.avatar, p.name, 84)
-        Spacer(Modifier.height(8.dp))
-        Text(p.name, color = Color.White, fontSize = 20.sp, fontFamily = Cairo)
-        if (p.bio.isNotBlank()) Text(p.bio, color = Color(0xFFB0B5C0), fontSize = 14.sp)
-        Spacer(Modifier.height(6.dp))
-        Text("${p.videos.size} مقطع  ·  ${p.videos.sumOf { it.likes }} إعجاب", color = MaterialTheme.colorScheme.secondary, fontSize = 13.sp)
-        extra()
-        Spacer(Modifier.height(12.dp))
-    }
-    if (p.videos.isEmpty()) Text("لا توجد مقاطع بعد", color = Color.Gray, modifier = Modifier.padding(8.dp))
-    else LazyVerticalGrid(GridCells.Fixed(3), Modifier.heightIn(max = 520.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        items(p.videos) { v ->
-            Box(Modifier.aspectRatio(0.62f).clip(RoundedCornerShape(10.dp)).background(Color(0xFF1E222B)).clickable { onPlay(v.id) }) {
-                if (v.thumb != null) AsyncImage(v.thumb, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                Text(v.title, color = Color.White, fontSize = 11.sp, maxLines = 1, modifier = Modifier.align(Alignment.BottomStart).padding(4.dp))
+fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = false, extra: @Composable () -> Unit = {}) {
+    val surf = MaterialTheme.colorScheme.surface
+    Column(Modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(24.dp))
+            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f), MaterialTheme.colorScheme.secondary.copy(alpha = 0.55f), surf))))
+        Row(Modifier.fillMaxWidth().offset(y = (-47).dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.Bottom) {
+            Box(Modifier.size(94.dp).clip(CircleShape).border(3.dp, MaterialTheme.colorScheme.background, CircleShape)) { Avatar(p.avatar, p.name, 94) }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f).padding(top = 52.dp)) {
+                Text(p.name, color = Color.White, fontSize = 22.sp, fontFamily = Cairo, maxLines = 1)
+                Text("@" + p.name.replace(" ", "_"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, maxLines = 1)
+            }
+        }
+        Column(Modifier.offset(y = (-38).dp).padding(horizontal = 16.dp)) {
+            if (p.bio.isNotBlank()) Text(p.bio, color = Color(0xFFD0D6E0), fontSize = 14.sp)
+            extra()
+        }
+        Row(Modifier.offset(y = (-24).dp).fillMaxWidth().padding(horizontal = 8.dp).clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.primaryContainer).padding(vertical = 12.dp)) {
+            listOf("المتابعون" to p.followers, "المتابَعون" to p.following, "الإعجابات" to p.videos.sumOf { it.likes }, "المقاطع" to p.videos.size).forEach { (l, n) ->
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(n.toString(), color = Color.White, fontSize = 18.sp, fontFamily = Cairo)
+                    Text(l, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                }
+            }
+        }
+        var tab by remember { mutableIntStateOf(0) }
+        val tabs = if (isMe) listOf("الكليبات", "المحفوظات") else listOf("الكليبات")
+        TabRow(selectedTabIndex = tab, containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.primary, modifier = Modifier.offset(y = (-12).dp)) {
+            tabs.forEachIndexed { i, t -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t, fontFamily = Cairo) }) }
+        }
+        val shown = if (tab == 0) p.videos else Feed.videos.filter { Feed.saved[it.id] == true }
+        if (shown.isEmpty()) Text(if (tab == 0) "لا توجد مقاطع بعد" else "لا توجد محفوظات", color = Color.Gray, modifier = Modifier.padding(16.dp))
+        else Column(Modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            shown.chunked(3).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    row.forEach { v ->
+                        Box(Modifier.weight(1f).aspectRatio(9f / 15f).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable { onPlay(v.id) }) {
+                            if (v.thumb != null) AsyncImage(v.thumb, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            Text(v.title, color = Color.White, fontSize = 11.sp, maxLines = 1, modifier = Modifier.align(Alignment.BottomStart).padding(6.dp))
+                        }
+                    }
+                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
             }
         }
     }

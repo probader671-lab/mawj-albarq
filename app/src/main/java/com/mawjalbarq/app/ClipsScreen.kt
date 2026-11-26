@@ -13,6 +13,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -95,9 +97,28 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                     Modifier.fillMaxSize(), update = { it.player = player })
             }
             Column(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 120.dp, end = 90.dp)) {
-                Text("@" + v.author, color = Color.White, fontSize = 16.sp, fontFamily = Cairo, modifier = Modifier.clickable { creatorId = v.userId })
-                Text(v.title, color = Color.White, fontSize = 14.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.clickable { creatorId = v.userId }) { Avatar(null, v.author, 40) }
+                    Spacer(Modifier.width(8.dp))
+                    Text(v.author, color = Color.White, fontSize = 15.sp, fontFamily = Cairo, maxLines = 1, modifier = Modifier.clickable { creatorId = v.userId }.weight(1f, false))
+                    if (v.userId.isNotBlank() && v.userId != App.userId) {
+                        val f = Feed.following[v.userId] == true
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (f) "تتابعه" else "متابعة", color = if (f) Color.White else Color.Black, fontSize = 12.sp, fontFamily = Cairo,
+                            modifier = Modifier.clip(RoundedCornerShape(50)).background(if (f) Color(0x44FFFFFF) else MaterialTheme.colorScheme.primary)
+                                .clickable { if (!App.loggedIn) onNeedLogin() else scope.launch { Feed.toggleFollow(v.userId) } }.padding(horizontal = 12.dp, vertical = 5.dp))
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(v.title, color = Color.White, fontSize = 14.sp, fontFamily = Cairo)
                 if (v.desc.isNotBlank()) Text(v.desc, color = Color(0xFFCCCCCC), fontSize = 12.sp, maxLines = 2)
+            }
+            if (page == pager.settledPage) {
+                var prog by remember { mutableFloatStateOf(0f) }
+                LaunchedEffect(curId) { while (true) { kotlinx.coroutines.delay(250); val d = player.duration; prog = if (d > 0) (player.currentPosition.toFloat() / d).coerceIn(0f, 1f) else 0f } }
+                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp).background(Color(0x33FFFFFF))) {
+                    Box(Modifier.fillMaxWidth(prog).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
+                }
             }
             Column(Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {

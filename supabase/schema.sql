@@ -2274,3 +2274,6 @@ NOTIFY pgrst, 'reload schema';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS theme_accent_argb BIGINT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS theme_secondary_argb BIGINT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS theme_preset TEXT NOT NULL DEFAULT 'wave_default';
+
+-- follows (added for mawj-albarq)
+create table if not exists public.follows (follower_id uuid not null references auth.users(id) on delete cascade, following_id uuid not null, created_at timestamptz default now(), primary key (follower_id, following_id));

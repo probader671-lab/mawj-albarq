@@ -160,7 +160,7 @@ object Feed {
             videos.clear(); videos.addAll(list)
         } catch (e: Exception) { error = true } else error = true
         loading = false
-        loadUserState()
+        loadUserState(); loadFollows()
     }
 
     suspend fun loadUserState() {
@@ -187,6 +187,19 @@ object Feed {
             liked[id] = true; bump(id, 1)
             api("POST", "/rest/v1/likes", JSONObject().put("user_id", u).put("video_id", id).toString())
         }
+    }
+
+    val following = mutableStateMapOf<String, Boolean>()
+    suspend fun loadFollows() {
+        val u = App.userId ?: return
+        val (c, t) = api("GET", "/rest/v1/follows?follower_id=eq.$u&select=following_id")
+        if (c == 200) try { following.clear(); val a = JSONArray(t); for (i in 0 until a.length()) following[a.getJSONObject(i).getString("following_id")] = true } catch (_: Exception) {}
+    }
+    suspend fun toggleFollow(id: String) {
+        val u = App.userId ?: return
+        if (id.isBlank() || id == u) return
+        if (following[id] == true) { following.remove(id); api("DELETE", "/rest/v1/follows?follower_id=eq.$u&following_id=eq.$id") }
+        else { following[id] = true; api("POST", "/rest/v1/follows", JSONObject().put("follower_id", u).put("following_id", id).toString()) }
     }
 
     private var gp: android.content.SharedPreferences? = null
