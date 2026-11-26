@@ -21,10 +21,15 @@ jobs:
           for i in 1 2 3; do gradle --no-daemon :app:assembleDebug && break || sleep 10; done
           test -f app/build/outputs/apk/debug/app-debug.apk
           cp app/build/outputs/apk/debug/app-debug.apk mawj-albarq.apk
+      - name: update.json
+        run: |
+          echo '{"versionCode":${{ github.run_number }},"url":"https://github.com/probader671-lab/mawj-albarq/releases/download/demo/mawj-albarq.apk"}' > update.json
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: demo
           name: موج البرق - نسخة تجريبية
           prerelease: true
           body: "versionCode=${{ github.run_number }}"
-          files: mawj-albarq.apk
+          files: |
+            mawj-albarq.apk
+            update.json
