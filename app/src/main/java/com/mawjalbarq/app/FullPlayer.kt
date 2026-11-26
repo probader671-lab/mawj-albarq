@@ -6,6 +6,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -29,36 +34,112 @@ import coil.compose.AsyncImage
 @Composable
 fun FullPlayer(start: Video, onClose: () -> Unit) {
     val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
     var cur by remember { mutableStateOf(start) }
-    var landscape by remember { mutableStateOf(false) }
+    var fs by remember { mutableStateOf(false) }
+    var showDesc by remember { mutableStateOf(false) }
+    var disliked by remember { mutableStateOf(false) }
+    var comments by remember { mutableStateOf<List<Comment>?>(null) }
+    var cText by remember { mutableStateOf("") }
+    var sending by remember { mutableStateOf(false) }
     val player = remember { ExoPlayer.Builder(ctx).setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(MediaCache.factory(ctx))).build() }
-    LaunchedEffect(cur.id) { player.setMediaItem(MediaItem.fromUri(Uri.parse(cur.url))); player.prepare(); player.playWhenReady = true }
-    LaunchedEffect(landscape) {
-        (ctx as? Activity)?.requestedOrientation = if (landscape) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    LaunchedEffect(cur.id) {
+        player.setMediaItem(MediaItem.fromUri(Uri.parse(cur.url))); player.prepare(); player.playWhenReady = true
+        showDesc = false; comments = null; comments = Feed.comments(cur.id) ?: emptyList()
+    }
+    LaunchedEffect(fs) {
+        (ctx as? Activity)?.requestedOrientation = if (fs) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
     DisposableEffect(Unit) { onDispose { player.release(); (ctx as? Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED } }
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(Modifier.fillMaxSize().background(Color.Black).statusBarsPadding()) {
-            Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(cur.title, color = Color.White, fontSize = 15.sp, maxLines = 1, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
-                TextButton(onClick = { landscape = !landscape }) { Text(if (landscape) "عمودي" else "أفقي") }
-                TextButton(onClick = onClose) { Text("إغلاق") }
+    val ratio = if (cur.w > 0 && cur.h > 0) (cur.w.toFloat() / cur.h).coerceIn(1f, 2.4f) else 16f / 9f
+    val white = Color.White; val grey = Color(0xFF9AA0AC); val chip = Color(0xFF272B33)
+    fun needLogin(): Boolean { if (!App.loggedIn) { android.widget.Toast.makeText(ctx, "سجّل الدخول أولاً", android.widget.Toast.LENGTH_SHORT).show(); return true }; return false }
+    @Composable fun pv(m: Modifier) = AndroidView({ c -> PlayerView(c).apply { useController = true; resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT; setShowNextButton(false); setShowPreviousButton(false); setFullscreenButtonClickListener { fs = !fs }; this.player = player } }, m)
+    Dialog(onDismissRequest = { if (fs) fs = false else onClose() }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        androidx.activity.compose.BackHandler { if (fs) fs = false else onClose() }
+        if (fs) {
+            Box(Modifier.fillMaxSize().background(Color.Black)) { pv(Modifier.fillMaxSize()) }
+        } else Column(Modifier.fillMaxSize().background(Color(0xFF0F1115)).statusBarsPadding()) {
+            Box(Modifier.fillMaxWidth().aspectRatio(ratio).background(Color.Black)) {
+                pv(Modifier.fillMaxSize())
+                IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopStart)) { Icon(Icons.Filled.KeyboardArrowDown, "إغلاق", tint = white) }
             }
-            AndroidView({ c -> PlayerView(c).apply { useController = true; this.player = player } }, Modifier.fillMaxWidth().weight(1f))
-            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.Center) {
-                TextButton(onClick = { player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0)) }) { Text("-10 ث") }
-                TextButton(onClick = { player.playWhenReady = !player.playWhenReady }) { Text("تشغيل / إيقاف") }
-                TextButton(onClick = { player.seekTo(player.currentPosition + 10_000) }) { Text("+10 ث") }
-            }
-            if (!landscape) {
-                Text("مقترحات", color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(12.dp))
-                LazyRow(Modifier.padding(bottom = 16.dp), contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(Feed.videos.filter { it.id != cur.id }) { v ->
-                        VideoCard(v) { cur = v }
+            LazyColumn(Modifier.fillMaxWidth().weight(1f).navigationBarsPadding(), contentPadding = PaddingValues(bottom = 24.dp)) {
+                item {
+                    Column(Modifier.padding(12.dp).clickable { showDesc = !showDesc }) {
+                        Text(cur.title, color = white, fontSize = 17.sp, fontFamily = Cairo, maxLines = if (showDesc) 10 else 2)
+                        Text(if (showDesc) cur.desc.ifBlank { "لا يوجد وصف" } else "${cur.likes} إعجاب  •  ${cur.comments} تعليق  •  ...المزيد", color = grey, fontSize = 12.sp, fontFamily = Cairo, modifier = Modifier.padding(top = 4.dp))
+                    }
+                }
+                item {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(40.dp).clip(CircleShape).background(chip)) { if (cur.avatar != null) AsyncImage(cur.avatar, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+                        Spacer(Modifier.width(10.dp))
+                        Text(cur.author, color = white, fontSize = 15.sp, fontFamily = Cairo, maxLines = 1, modifier = Modifier.weight(1f))
+                        if (cur.userId.isNotBlank() && cur.userId != App.userId) {
+                            val f = Feed.following[cur.userId] == true
+                            Text(if (f) "تتابعه" else "متابعة", color = if (f) white else Color.Black, fontSize = 13.sp, fontFamily = Cairo,
+                                modifier = Modifier.clip(RoundedCornerShape(50)).background(if (f) chip else white).clickable { if (!needLogin()) scope.launch { Feed.toggleFollow(cur.userId) } }.padding(horizontal = 16.dp, vertical = 8.dp))
+                        }
+                    }
+                }
+                item {
+                    val liked = Feed.liked[cur.id] == true; val saved = Feed.saved[cur.id] == true
+                    LazyRow(Modifier.padding(vertical = 12.dp), contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item { Pill(if (liked) Icons.Filled.Favorite else Icons.Filled.ThumbUp, "${cur.likes}", if (liked) Color(0xFFFF3B3B) else white, chip) { if (!needLogin()) scope.launch { Feed.toggleLike(cur.id) } } }
+                        item { Pill(Icons.Filled.ThumbDown, "", if (disliked) MaterialTheme.colorScheme.primary else white, chip) { disliked = !disliked } }
+                        item { Pill(Icons.Filled.Share, "مشاركة", white, chip) { ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, "${cur.title} - موج البرق\n${cur.url}"), "مشاركة")) } }
+                        item { Pill(Icons.Filled.Bookmark, if (saved) "تم الحفظ" else "حفظ", if (saved) Color(0xFFFFC107) else white, chip) { scope.launch { Feed.toggleSave(cur.id) } } }
+                        item { Pill(Icons.Filled.Fullscreen, "ملء الشاشة", white, chip) { fs = true } }
+                    }
+                }
+                item {
+                    Column(Modifier.padding(horizontal = 12.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0xFF1B1E25)).padding(12.dp)) {
+                        Text("التعليقات  ${comments?.size ?: cur.comments}", color = white, fontSize = 15.sp, fontFamily = Cairo)
+                        Spacer(Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(cText, { cText = it }, Modifier.weight(1f), placeholder = { Text("كتابة تعليق...") }, maxLines = 2, shape = RoundedCornerShape(50))
+                            IconButton(enabled = cText.isNotBlank() && !sending, onClick = {
+                                if (needLogin()) return@IconButton
+                                val t = cText.trim(); sending = true
+                                scope.launch { if (Feed.addComment(cur.id, t)) { cText = ""; comments = Feed.comments(cur.id) ?: comments }; sending = false }
+                            }) { Icon(Icons.Filled.Send, "إرسال", tint = MaterialTheme.colorScheme.primary) }
+                        }
+                        val l = comments
+                        if (l == null) CircularProgressIndicator(Modifier.padding(8.dp).size(22.dp))
+                        else l.take(20).forEach { c ->
+                            Column(Modifier.padding(top = 10.dp)) {
+                                Text(c.author, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontFamily = Cairo)
+                                Text(c.text, color = white, fontSize = 14.sp)
+                            }
+                        }
+                    }
+                }
+                items(Feed.videos.filter { it.id != cur.id && it.w >= it.h }.ifEmpty { Feed.videos.filter { it.id != cur.id } }) { v ->
+                    Column(Modifier.fillMaxWidth().padding(top = 16.dp).clickable { cur = v }) {
+                        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(chip)) {
+                            if (v.thumb != null) AsyncImage(v.thumb, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        }
+                        Row(Modifier.padding(12.dp, 10.dp), verticalAlignment = Alignment.Top) {
+                            Box(Modifier.size(36.dp).clip(CircleShape).background(chip)) { if (v.avatar != null) AsyncImage(v.avatar, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+                            Spacer(Modifier.width(10.dp))
+                            Column {
+                                Text(v.title, color = white, fontSize = 15.sp, fontFamily = Cairo, maxLines = 2)
+                                Text("${v.author}  •  ${v.likes} إعجاب", color = grey, fontSize = 12.sp, fontFamily = Cairo, maxLines = 1)
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun Pill(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, tint: Color, bg: Color, onClick: () -> Unit) {
+    Row(Modifier.clip(RoundedCornerShape(50)).background(bg).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
+        if (label.isNotEmpty()) { Spacer(Modifier.width(6.dp)); Text(label, color = Color.White, fontSize = 13.sp, fontFamily = Cairo) }
     }
 }
 
