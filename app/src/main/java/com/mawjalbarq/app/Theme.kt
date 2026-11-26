@@ -38,7 +38,7 @@ class ThemePrefs(ctx: Context) {
     var dark by mutableStateOf(sp.getBoolean("dark", true))
         private set
     init { Pal.dark = dark }
-    fun setDark(b: Boolean) { dark = b; Pal.dark = b; sp.edit().putBoolean("dark", b).apply() }
+    fun applyDark(b: Boolean) { dark = b; Pal.dark = b; sp.edit().putBoolean("dark", b).apply() }
     fun hasChoice() = sp.contains("accent2")
     // local only: the accent choice stays on this device and is never sent to the account
     fun set(i: Int) { index = i.coerceIn(0, Accents.lastIndex); sp.edit().putInt("accent2", index).apply() }

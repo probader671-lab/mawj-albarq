@@ -108,7 +108,7 @@ fun SettingsSheet(prefs: ThemePrefs, onClose: () -> Unit) {
             Spacer(Modifier.height(14.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(if (prefs.dark) "الوضع الداكن" else "الوضع الفاتح", color = Ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                DayNightToggle(dark = prefs.dark) { prefs.setDark(!prefs.dark) }
+                DayNightToggle(dark = prefs.dark) { prefs.applyDark(!prefs.dark) }
             }
             Spacer(Modifier.height(16.dp))
             Text("لون التطبيق", color = Ink, fontSize = 15.sp)
