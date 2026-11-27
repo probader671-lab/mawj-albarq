@@ -247,7 +247,8 @@ fun HomeScreen(
     onNeedLogin: () -> Unit = {},
     onSuggestions: () -> Unit = {},
     onNotifs: () -> Unit = {},
-    onAi: () -> Unit = {}
+    onAi: () -> Unit = {},
+    onGames: () -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
     val list = rememberLazyListState()
@@ -357,6 +358,7 @@ fun HomeScreen(
                 BadgedBox(badge = { if (Notifs.unread > 0) Badge { Text(Notifs.unread.toString()) } }) {
                     RoundBtn(Icons.Filled.Notifications, "الإشعارات", 34, WatchTextMain, onClick = onNotifs)
                 }
+                RoundBtn(Icons.Filled.SportsEsports, "الألعاب", 34, MaterialTheme.colorScheme.tertiary, onClick = onGames)
                 RoundBtn(Icons.Filled.SmartToy, "المساعد الذكي", 34, MaterialTheme.colorScheme.primary, onClick = onAi)
                 RoundBtn(Icons.Filled.Lightbulb, "الاقتراحات", 34, MaterialTheme.colorScheme.secondary, onClick = onSuggestions)
                 RoundBtn(

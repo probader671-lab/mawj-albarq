@@ -52,6 +52,7 @@ fun AppRoot(prefs: ThemePrefs) {
         var sel by remember { mutableIntStateOf(1) }
         var suggestions by remember { mutableStateOf(false) }
         var aiChat by remember { mutableStateOf(false) }
+        var games by remember { mutableStateOf(false) }
         var notifs by remember { mutableStateOf(false) }
         val appCtx = androidx.compose.ui.platform.LocalContext.current
         LaunchedEffect(App.userId) { Notifs.checkAdmin() }
@@ -67,18 +68,19 @@ fun AppRoot(prefs: ThemePrefs) {
             if (sel != lastSel) { if (!popping) { tabHistory.remove(lastSel); tabHistory.add(lastSel) }; lastSel = sel }
             popping = false
         }
-        androidx.activity.compose.BackHandler(enabled = notifs || suggestions || aiChat || tabHistory.isNotEmpty() || sel != 0) {
+        androidx.activity.compose.BackHandler(enabled = notifs || suggestions || aiChat || games || tabHistory.isNotEmpty() || sel != 0) {
             when {
                 notifs -> notifs = false
                 suggestions -> suggestions = false
                 aiChat -> aiChat = false
+                games -> games = false
                 tabHistory.isNotEmpty() -> { popping = true; sel = tabHistory.removeAt(tabHistory.size - 1) }
                 sel != 0 -> { popping = true; sel = 0 }
             }
         }
         BoxWithConstraints(Modifier.fillMaxSize().background(PageBg)) {
             val isWide = maxWidth >= 600.dp
-            val showNav = Ui.barVisible && !(sel == 1 && Ui.deep) && !suggestions && !notifs && !aiChat && Feed.activeVideo == null
+            val showNav = Ui.barVisible && !(sel == 1 && Ui.deep) && !suggestions && !notifs && !aiChat && !games && Feed.activeVideo == null
             val visited = remember { mutableStateListOf(sel) }
             if (sel !in visited) visited.add(sel)
             @Composable fun Keep(i: Int, content: @Composable () -> Unit) {
@@ -100,7 +102,7 @@ fun AppRoot(prefs: ThemePrefs) {
                     MawjNavRail(sel = sel, onSel = { sel = it; Ui.barVisible = true })
                 }
                 Box(Modifier.weight(1f).fillMaxHeight()) {
-                    Keep(0) { HomeScreen(onOpen = { sel = 1 }, onNeedLogin = { sel = 4 }, onSuggestions = { suggestions = true }, onNotifs = { notifs = true }, onAi = { aiChat = true }) }
+                    Keep(0) { HomeScreen(onOpen = { sel = 1 }, onNeedLogin = { sel = 4 }, onSuggestions = { suggestions = true }, onNotifs = { notifs = true }, onAi = { aiChat = true }, onGames = { games = true }) }
                     if (sel == 1) ClipsScreen(onNeedLogin = { sel = 4 }, onExit = { sel = 0 })
                     if (sel == 2) UploadScreen(onNeedLogin = { sel = 4 }, onDone = { sel = 1 })
                     Keep(3) { PostsScreen(onNeedLogin = { sel = 4 }) }
@@ -150,6 +152,7 @@ fun AppRoot(prefs: ThemePrefs) {
             }
             if (notifs) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { NotificationsScreen({ notifs = false }) { vid -> notifs = false; Feed.videos.firstOrNull { it.id == vid }?.let { Feed.open(it) { sel = 1 } } } }
             if (aiChat) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { AiChatScreen({ aiChat = false }, { sel = 4 }) }
+            if (games) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { GamesScreen { games = false } }
             if (suggestions) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { SuggestionsScreen { suggestions = false } }
             Feed.activeVideo?.let { v -> if (v.w > 0 && v.h > v.w) PortraitPlayer(v) { Feed.activeVideo = null } else FullPlayer(v) { Feed.activeVideo = null } }
         }
