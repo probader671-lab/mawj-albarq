@@ -57,7 +57,7 @@ fun PigeonSend(sending: Boolean, tint: Color, modifier: Modifier = Modifier) {
                     drawCircle(Color.Black.copy(alpha = a), 0.7f * u, Offset(cx + 7.8f * u, cy - 3.6f * u))
                     // wing (flaps up and down)
                     val h = (9f * flap) * u
-                    drawPath(Path().apply { moveTo(cx - 3 * u, cy - 1 * u); quadTo(cx - 1 * u, cy - 1 * u - h - 3 * u, cx + 5 * u, cy - 1 * u); quadTo(cx + 1 * u, cy + 1.5f * u, cx - 3 * u, cy - 1 * u); close() }, dark)
+                    drawPath(Path().apply { moveTo(cx - 3 * u, cy - 1 * u); quadraticBezierTo(cx - 1 * u, cy - 1 * u - h - 3 * u, cx + 5 * u, cy - 1 * u); quadraticBezierTo(cx + 1 * u, cy + 1.5f * u, cx - 3 * u, cy - 1 * u); close() }, dark)
                 }
             }
         }
