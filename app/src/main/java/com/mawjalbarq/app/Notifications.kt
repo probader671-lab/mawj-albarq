@@ -75,18 +75,7 @@ fun NotificationsScreen(onBack: () -> Unit, onOpenVideo: (String) -> Unit) {
             l == null -> ListSkeleton()
             l.isEmpty() -> Text("لا توجد إشعارات بعد", color = Color.Gray)
             else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 40.dp)) {
-                items(l, key = { it.id }
-                if (moreN) item(key = "more_notifs") {
-                    LaunchedEffect(l.size) {
-                        val r = Notifs.load(l.lastOrNull())
-                        if (r == null) { moreN = false } else {
-                            val seen = l.mapTo(HashSet()) { it.id }
-                            list = l + r.filter { seen.add(it.id) }
-                            moreN = r.size >= Notifs.PAGE
-                        }
-                    }
-                    Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp) }
-                }) { n ->
+                items(l, key = { it.id }) { n ->
                     val (icon, tint, msg) = when (n.type) {
                         "like" -> Triple(Icons.Filled.Favorite, Color(0xFFFF2D55), "أعجبه مقطعك")
                         "comment" -> Triple(Icons.Filled.Comment, MaterialTheme.colorScheme.secondary, "علّق على مقطعك")
@@ -104,6 +93,17 @@ fun NotificationsScreen(onBack: () -> Unit, onOpenVideo: (String) -> Unit) {
                         }
                         Icon(icon, null, tint = tint)
                     }
+                }
+                if (moreN) item(key = "more_notifs") {
+                    LaunchedEffect(l.size) {
+                        val r = Notifs.load(l.lastOrNull())
+                        if (r == null) { moreN = false } else {
+                            val seen = l.mapTo(HashSet()) { it.id }
+                            list = l + r.filter { seen.add(it.id) }
+                            moreN = r.size >= Notifs.PAGE
+                        }
+                    }
+                    Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp) }
                 }
             }
         }
