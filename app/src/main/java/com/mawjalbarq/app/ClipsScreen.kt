@@ -602,8 +602,8 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                         }
                     }
 
-                    // Exit button in the physical top-right corner (TopStart in RTL): leaves the clips player and shows the home feed
-                    if (!hidden) {
+                    // Exit button in the physical top-right corner (TopStart in RTL), only while the bottom bar is hidden (immersive): leaves the clips player and shows the home feed
+                    if (!hidden && !barShown) {
                         Box(
                             Modifier
                                 .align(Alignment.TopStart)
@@ -624,7 +624,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                         Box(
                             Modifier
                                 .align(Alignment.TopStart)
-                                .padding(start = 66.dp, top = 12.dp, end = 12.dp, bottom = 12.dp)
+                                .padding(start = if (barShown) 12.dp else 66.dp, top = 12.dp, end = 12.dp, bottom = 12.dp)
                                 .minimumInteractiveComponentSize()
                                 .size(38.dp)
                                 .clip(CircleShape)
