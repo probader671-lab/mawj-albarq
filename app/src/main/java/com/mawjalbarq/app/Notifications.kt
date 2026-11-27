@@ -1,5 +1,11 @@
 package com.mawjalbarq.app
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -70,16 +76,21 @@ fun NotificationsScreen(onBack: () -> Unit, onOpenVideo: (String) -> Unit) {
     LaunchedEffect(Unit) { val r = Notifs.load(); if (r == null) failed = true else { list = r; moreN = r.size >= Notifs.PAGE }; Notifs.markAllRead() }
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("الإشعارات", color = Ink, fontSize = 24.sp, fontFamily = Cairo, modifier = Modifier.weight(1f))
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "رجوع", tint = Ink) }
+            Text("الإشعارات", color = Ink, fontSize = 24.sp, fontWeight = FontWeight.Bold, fontFamily = Cairo, modifier = Modifier.weight(1f))
             if (Notifs.isAdmin) TextButton(onClick = { showQueue = true }) { Text("المراجعة") }
-            TextButton(onClick = onBack) { Text("رجوع") }
         }
         val l = list
         when {
             !App.loggedIn -> Text("سجّل الدخول لرؤية الإشعارات", color = Color.Gray)
             failed -> Text("تعذر تحميل الإشعارات", color = Color.Gray)
             l == null -> ListSkeleton()
-            l.isEmpty() -> Text("لا توجد إشعارات بعد", color = Color.Gray)
+            l.isEmpty() -> Column(Modifier.fillMaxWidth().padding(top = 80.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Filled.Notifications, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(48.dp))
+                Spacer(Modifier.height(10.dp))
+                Text("لا توجد إشعارات بعد", color = Ink, fontFamily = Cairo, fontSize = 16.sp)
+                Text("سنخبرك هنا بالإعجابات والتعليقات والمتابعين", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+            }
             else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 40.dp)) {
                 items(l, key = { it.id }) { n ->
                     val (icon, tint, msg) = when (n.type) {
@@ -91,17 +102,29 @@ fun NotificationsScreen(onBack: () -> Unit, onOpenVideo: (String) -> Unit) {
                         "moderation_blocked" -> Triple(Icons.Filled.Shield, Color(0xFFFF2D55), "تم منع مقطع تلقائياً")
                         else -> Triple(Icons.Filled.PersonAdd, MaterialTheme.colorScheme.primary, "بدأ بمتابعتك")
                     }
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-                        .background(if (n.read) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
+                    val card = if (n.read) MaterialTheme.colorScheme.surface else tint.copy(alpha = 0.10f)
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                        .background(card)
+                        .border(0.75.dp, if (n.read) MaterialTheme.colorScheme.outline.copy(alpha = 0.25f) else tint.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
                         .clickable { if (n.type.startsWith("moderation")) showQueue = true else n.videoId?.let(onOpenVideo) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Avatar(n.actorAvatar, n.actor, 44)
+                        Box(Modifier.size(52.dp)) {
+                            Avatar(n.actorAvatar, n.actor, 46)
+                            Box(Modifier.align(Alignment.BottomEnd).size(22.dp).clip(CircleShape).background(tint).border(2.dp, MaterialTheme.colorScheme.surface, CircleShape), contentAlignment = Alignment.Center) {
+                                Icon(icon, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                            }
+                        }
                         Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(if (n.type == "restricted") "إدارة موج البرق" else n.actor, color = Ink, fontFamily = Cairo, fontSize = 15.sp, maxLines = 1)
-                            Text(msg, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                buildAnnotatedString {
+                                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(if (n.type == "restricted") "إدارة موج البرق" else n.actor) }
+                                    append("  "); append(msg)
+                                },
+                                color = Ink, fontFamily = Cairo, fontSize = 14.sp, lineHeight = 20.sp, maxLines = 3
+                            )
                             Text(n.at, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                         }
-                        Icon(icon, null, tint = tint)
+                        if (!n.read) Box(Modifier.size(9.dp).clip(CircleShape).background(tint))
                     }
                 }
                 if (moreN) item(key = "more_notifs") {

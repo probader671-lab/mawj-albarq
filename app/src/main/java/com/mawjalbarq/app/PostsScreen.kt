@@ -1068,19 +1068,10 @@ private fun PostCommentsSheet(post: Post, onNeedLogin: () -> Unit, onClose: () -
                         onClick = { send() },
                         modifier = Modifier
                             .size(48.dp)
-                            .clip(CircleShape)
-                            .background(if (text.isNotBlank() && !sending) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                            .background(if (text.isNotBlank() && !sending) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                             .testTag("post_comment_send")
                     ) {
-                        if (sending) {
-                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.Black)
-                        } else {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Send,
-                                "إرسال",
-                                tint = if (text.isNotBlank()) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        PigeonSend(sending, if (text.isNotBlank()) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }

@@ -55,8 +55,9 @@ fun AppRoot(prefs: ThemePrefs) {
         var notifs by remember { mutableStateOf(false) }
         val appCtx = androidx.compose.ui.platform.LocalContext.current
         LaunchedEffect(App.userId) { Notifs.checkAdmin() }
-        LaunchedEffect(Unit) { if (App.loggedIn && registerDevice()) App.logout(); Feed.init(appCtx); if (Feed.videos.isEmpty() && !Feed.loading) Feed.load() }
+        LaunchedEffect(Unit) { if (App.loggedIn && registerDevice()) { BanInfo.msg = banMessage(); App.logout() }; Feed.init(appCtx); if (Feed.videos.isEmpty() && !Feed.loading) Feed.load() }
         UpdatePrompt()
+        BanInfo.msg?.let { m -> AlertDialog(onDismissRequest = { BanInfo.msg = null }, confirmButton = { TextButton(onClick = { BanInfo.msg = null }) { Text("حسناً", fontFamily = Cairo) } }, title = { Text("حسابك محظور", fontFamily = Cairo) }, text = { Text(m, fontFamily = Cairo) }) }
         ShareProgressHost()
         // Back stack for tabs: back returns to the previous tab; the app exits only when there is nowhere left to go.
         val tabHistory = remember { mutableStateListOf<Int>() }

@@ -113,6 +113,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
     var autoPlayCancelled by remember { mutableStateOf(false) }
     var autoPlaySec by remember { mutableIntStateOf(4) }
     var heartTick by remember { mutableIntStateOf(0) }
+    var heartRev by remember { mutableStateOf(false) }
     val heartAnim = remember { Animatable(0f) }
     LaunchedEffect(heartTick) {
         if (heartTick > 0) {
@@ -390,7 +391,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
                 // Water heart burst animation on like
                 if (heartAnim.value > 0f && heartAnim.value < 1f) {
                     WaterHeartBurst(
-                        progress = heartAnim.value,
+                        progress = if (heartRev) 1f - heartAnim.value else heartAnim.value,
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
@@ -536,8 +537,8 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
                                 .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000))))
                         )
 
-                        // Top controls row
-                        Row(
+                        // Top controls row (right-to-left: close/minimize on the right)
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) { Row(
                             Modifier
                                 .align(Alignment.TopCenter)
                                 .fillMaxWidth()
@@ -601,6 +602,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
                                 }
                             }
                         }
+                        } 
 
                         // Center transport row
                         if (!hasError && !(isEnded && !autoPlayCancelled && nextVideo != null)) {
@@ -748,10 +750,10 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
                                         Text(
                                             "${formatDurationMs(shownMs)} / ${formatDurationMs(durationMs)}",
                                             color = white,
-                                            fontSize = 12.sp,
-                                            modifier = Modifier.weight(1f)
+                                            fontSize = 12.sp
                                         )
                                     }
+                                    Spacer(Modifier.width(10.dp))
                                     Text(
                                         if (speed == 1f) "1x" else "${speed}x",
                                         color = white,
@@ -775,6 +777,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
                                             tint = white
                                         )
                                     }
+                                    Spacer(Modifier.weight(1f))
                                 }
                             }
                         }
@@ -924,7 +927,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
                                     ) {
                                         if (!needLogin()) {
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            if (!liked) heartTick++
+                                            heartRev = liked; heartTick++
                                             scope.launch { Feed.toggleLike(cur.id) }
                                         }
                                     }

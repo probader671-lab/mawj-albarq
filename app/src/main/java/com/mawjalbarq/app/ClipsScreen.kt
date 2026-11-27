@@ -205,6 +205,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
 
     val saveAnim = remember { Animatable(0f) }
     var saveTick by remember { mutableIntStateOf(0) }
+    var saveRev by remember { mutableStateOf(false) }
     LaunchedEffect(saveTick) {
         if (saveTick > 0) {
             saveAnim.snapTo(0f)
@@ -263,6 +264,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                 val liked = Feed.liked[v.id] == true
                 val saved = Feed.saved[v.id] == true
                 var burst by remember { mutableIntStateOf(0) }
+                var burstRev by remember { mutableStateOf(false) }
                 val burstAnim = remember { Animatable(0f) }
                 LaunchedEffect(burst) {
                     if (burst > 0) {
@@ -283,7 +285,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                                 },
                                 onDoubleTap = {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    burst++
+                                    burstRev = false; burst++
                                     if (!App.loggedIn) {
                                         Toast.makeText(ctx, "سجّل الدخول لحفظ الإعجاب", Toast.LENGTH_SHORT).show()
                                     } else if (Feed.liked[v.id] != true) {
@@ -356,7 +358,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                     // Custom water-filling glowing heart + dual wrapping light beams + glowing circles
                     if (burstAnim.value > 0f && burstAnim.value < 1f) {
                         WaterHeartBurst(
-                            progress = burstAnim.value,
+                            progress = if (burstRev) 1f - burstAnim.value else burstAnim.value,
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
@@ -369,13 +371,13 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                                 onNeedLogin()
                             } else {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                if (!liked) burst++
+                                burstRev = liked; burst++
                                 scope.launch { Feed.toggleLike(v.id) }
                             }
                         }
                         val doSave: () -> Unit = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            if (!saved) saveTick++
+                            saveRev = saved; saveTick++
                             scope.launch { Feed.toggleSave(v.id) }
                         }
                         val doShare: () -> Unit = {
@@ -734,7 +736,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                                     onToggleMute = { muted = !muted; player.volume = if (muted) 0f else 1f },
                                     onToggleSave = {
                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        if (!saved) saveTick++
+                                        saveRev = saved; saveTick++
                                         scope.launch { Feed.toggleSave(v.id) }
                                     },
                                     onReport = { reportFor = v }
@@ -774,7 +776,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                     // Custom yellow water-filling bookmark + two glowing expanding rings
                     if (saveAnim.value > 0f && saveAnim.value < 1f) {
                         WaterSaveBurst(
-                            progress = saveAnim.value,
+                            progress = if (saveRev) 1f - saveAnim.value else saveAnim.value,
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
@@ -1141,19 +1143,10 @@ private fun CommentsSheet(v: Video, onNeedLogin: () -> Unit, onClose: () -> Unit
                     onClick = { sendComment() },
                     modifier = Modifier
                         .size(48.dp)
-                        .clip(CircleShape)
-                        .background(if (text.isNotBlank() && !sending) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                        .background(if (text.isNotBlank() && !sending) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                         .testTag("clip_comment_send")
                 ) {
-                    if (sending) {
-                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.Black)
-                    } else {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Send,
-                            "إرسال",
-                            tint = if (text.isNotBlank()) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    PigeonSend(sending, if (text.isNotBlank()) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

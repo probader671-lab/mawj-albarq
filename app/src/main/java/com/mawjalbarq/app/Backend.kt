@@ -99,6 +99,26 @@ fun authError(code: Int, text: String): String {
     }
 }
 
+/** Why and for how long the signed-in account is banned (read before logging out). */
+suspend fun banMessage(): String {
+    val (c, t) = api("GET", "/rest/v1/profiles?id=eq.${App.userId}&select=ban_expires_at,ban_reason")
+    var exp: java.time.Instant? = null; var reason = ""
+    if (c == 200) try {
+        val o = JSONArray(t).optJSONObject(0)
+        if (o != null && !o.isNull("ban_expires_at")) exp = java.time.Instant.parse(o.optString("ban_expires_at").replace(" ", "T").let { if (it.endsWith("Z") || it.contains("+")) it else it + "Z" })
+        reason = o?.optString("ban_reason").orEmpty()
+    } catch (_: Exception) {}
+    val dur = if (exp == null) "الحظر دائم" else {
+        val mins = java.time.Duration.between(java.time.Instant.now(), exp).toMinutes().coerceAtLeast(1)
+        val left = when { mins >= 2880 -> "${(mins + 1439) / 1440} يوم"; mins >= 120 -> "${(mins + 59) / 60} ساعة"; else -> "$mins دقيقة" }
+        "مدة الحظر المتبقية: $left"
+    }
+    val why = if (reason.isBlank() || reason.startsWith("admin") || reason == "banned device") "" else "\nالسبب: $reason"
+    return "تم حظر حسابك.\n$dur$why"
+}
+
+object BanInfo { var msg by mutableStateOf<String?>(null) }
+
 const val DEVICE_BANNED_MSG = "هذا الجهاز محظور من استخدام التطبيق"
 
 /** Anonymous pre-check (signup). true = banned. */
@@ -120,7 +140,7 @@ suspend fun signIn(email: String, pass: String): String? {
     val (c, t) = api("POST", "/auth/v1/token?grant_type=password", JSONObject().put("email", email).put("password", pass).toString())
     if (c != 200) return authError(c, t)
     App.fromAuth(JSONObject(t))
-    if (registerDevice()) { App.logout(); return DEVICE_BANNED_MSG }
+    if (registerDevice()) { val m = banMessage(); App.logout(); return m }
     afterLogin(); return null
 }
 
@@ -133,7 +153,7 @@ suspend fun signUp(name: String, email: String, pass: String, avatarUrl: String)
     if (!j.has("access_token")) return "تحقق من بريدك لتأكيد الحساب"
     App.fromAuth(j); App.name = name.ifBlank { App.name }; App.avatar = avatarUrl; App.save()
     api("PATCH", "/rest/v1/profiles?id=eq.${App.userId}", JSONObject().put("full_name", App.name).put("avatar_url", avatarUrl).toString())
-    if (registerDevice()) { App.logout(); return DEVICE_BANNED_MSG }
+    if (registerDevice()) { val m = banMessage(); App.logout(); return m }
     afterLogin(); return null
 }
 
@@ -596,7 +616,7 @@ object AdminApi {
         val (c, t) = api("POST", "/rest/v1/rpc/$fn", body.toString())
         return c == 200 && try { JSONObject(t).optBoolean("success", false) } catch (_: Exception) { false }
     }
-    suspend fun banUser(id: String, reason: String) = rpc("admin_ban_user_devices", JSONObject().put("p_target", id).put("p_reason", reason).put("p_days", 0))
+    suspend fun banUser(id: String, reason: String, days: Int = 0) = rpc("admin_ban_user_devices", JSONObject().put("p_target", id).put("p_reason", reason).put("p_days", days))
     suspend fun removeVideo(id: String, reason: String) = rpc("admin_remove_video", JSONObject().put("p_video_id", id).put("p_reason", reason)).also {
         if (it) { Feed.videos.removeAll { v -> v.id == id } }
     }
