@@ -104,7 +104,6 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
             .setBufferDurationsMs(15_000, 35_000, 250, 500)
             .build()
         ExoPlayer.Builder(ctx)
-            .setTrackSelector(Media.highQualityTrackSelector(ctx))
             .setLoadControl(loadControl)
             .setMediaSourceFactory(DefaultMediaSourceFactory(MediaCache.factory(ctx)))
             .build()
