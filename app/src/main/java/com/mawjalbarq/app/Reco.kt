@@ -103,7 +103,9 @@ object Reco {
         val fresh = exp(-ageH.coerceAtLeast(0f) / 72f)
         val followed = if (Feed.following[v.userId] == true) 1.2f else 0f
         val explore = if (rnd.nextFloat() < exploreShare) 1.0f else rnd.nextFloat() * 0.3f
-        return aff * 1.0f + quality + fresh + followed + explore
+        // borderline music (the check was unsure, so the video was published): push it down the feed. Recitation is exempt.
+        val musicPenalty = if (v.isQuran) 0f else ((v.musicScore - 0.3f).coerceAtLeast(0f) * 2.5f)
+        return aff * 1.0f + quality + fresh + followed + explore - musicPenalty
     }
 
     /** Ranks a batch: tiers (unseen+matching, unseen other, watched), score within tier, then a diversity pass. */

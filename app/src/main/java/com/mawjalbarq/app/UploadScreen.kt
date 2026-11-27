@@ -284,6 +284,7 @@ object UploadJobs {
             .put("size_bytes", r.optLong("bytes")).put("duration", Math.round(r.optDouble("duration", 0.0)).toInt())
             .put("width", w).put("height", h).put("is_vertical", h > w).put("is_short", r.optDouble("duration", 0.0) <= 90.0)
             .put("status", if (mod.verdict == Verdict.REVIEW) "pending_review" else "ready")
+            .put("music_score", mod.musicMax.toDouble().coerceIn(0.0, 1.0))
             .put("is_quran", mod.quranLikely || (Reco.looksQuranic(title + " " + desc) && mod.musicMax < cfg.quranMaxMusic && mod.faces == 0))
         val (c, rt) = api("POST", "/rest/v1/videos", body.toString(), prefer = "return=representation")
         status = ""
