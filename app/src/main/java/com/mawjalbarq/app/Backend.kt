@@ -55,7 +55,7 @@ object App {
         if (u != null) {
             userId = u.optString("id"); email = u.optString("email")
             val md = u.optJSONObject("user_metadata")
-            name = md?.optString("full_name").orEmpty().ifBlank { email.substringBefore("@") }
+            name = md?.optString("full_name").orEmpty().ifBlank { "مستخدم" }
         }
         save()
     }

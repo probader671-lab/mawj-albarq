@@ -231,10 +231,13 @@ object UploadJobs {
     private val gate = kotlinx.coroutines.sync.Semaphore(1)   // one video at a time (weak phones)
     private fun toast(c: Context, m: String) { android.widget.Toast.makeText(c, m, android.widget.Toast.LENGTH_LONG).show() }
 
+    @Volatile var pending = 0
     fun start(ctx: Context, src: Uri, title: String, desc: String, meta: Meta, bigSrc: Boolean, onPublished: suspend () -> Unit) {
+        pending++
+        UploadService.start(ctx.applicationContext)
         scope.launch {
             gate.acquire()
-            try { run(ctx, src, title, desc, meta, bigSrc, onPublished) } catch (e: Exception) { status = ""; toast(ctx, "تعذر نشر الفيديو، حاول مرة ثانية") } finally { gate.release() }
+            try { run(ctx, src, title, desc, meta, bigSrc, onPublished) } catch (e: Exception) { status = ""; toast(ctx, "تعذر نشر الفيديو، حاول مرة ثانية") } finally { gate.release(); pending-- }
         }
     }
 
@@ -361,7 +364,7 @@ private suspend fun uploadCloudinary(f: File, onProgress: (Float) -> Unit = {}):
 fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
     if (!App.loggedIn) {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("سجّل الدخول لرفع مقطع", color = Color.White, fontSize = 18.sp, fontFamily = Cairo)
+            Text("سجّل الدخول لرفع مقطع", color = Ink, fontSize = 18.sp, fontFamily = Cairo)
             Spacer(Modifier.height(12.dp))
             Button(onClick = onNeedLogin) { Text("تسجيل الدخول") }
         }
@@ -393,7 +396,7 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
     }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp).padding(bottom = 110.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("استوديو الرفع", color = Color.White, fontSize = 24.sp, fontFamily = Cairo)
+        Text("استوديو الرفع", color = Ink, fontSize = 24.sp, fontFamily = Cairo)
         var frame by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
         var previewMeta by remember { mutableStateOf<Meta?>(null) }
         LaunchedEffect(uri) {
@@ -516,7 +519,7 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
             Column(Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surface).padding(28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                Text(status.ifBlank { "جارٍ المعالجة..." }, color = Color.White, fontSize = 15.sp)
+                Text(status.ifBlank { "جارٍ المعالجة..." }, color = Ink, fontSize = 15.sp)
                 if (progress >= 0f) LinearProgressIndicator(progress = { progress }, modifier = Modifier.width(200.dp)) else LinearProgressIndicator(Modifier.width(200.dp))
             }
         }

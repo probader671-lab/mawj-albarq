@@ -151,8 +151,22 @@ object Reco {
     }
 
     /** A watch session ended: [watchedMs] of a video with a known duration. */
+    private val viewScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
+    /** Real view count: a watch of 2s+ (or half of a short clip) is one view; every further full replay adds another. */
+    private fun countView(v: Video, watchedMs: Long) {
+        val durMs = if (v.duration > 0) v.duration * 1000L else 0L
+        val min = if (durMs in 1..3999) durMs / 2 else 2000L
+        if (watchedMs < min) return
+        val n = if (durMs > 0) 1 + ((watchedMs - 1) / durMs).toInt() else 1
+        viewScope.launch {
+            api("POST", "/rest/v1/rpc/count_view", org.json.JSONObject().put("p_video_id", v.id).put("p_count", n.coerceAtMost(20)).put("p_watched_ms", watchedMs.coerceAtMost(3_600_000L)).toString())
+        }
+    }
+
     fun onWatched(v: Video, watchedMs: Long) {
         if (App.userId == null || watchedMs < 300) return
+        countView(v, watchedMs)
         val s = sig.getOrPut(v.id) { Sig() }
         val cap = if (v.duration > 0) (v.duration * 1500L) else 3_600_000L
         val ms = watchedMs.coerceAtMost(cap).toInt()

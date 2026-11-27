@@ -116,7 +116,7 @@ private fun WatchFeedVideoCard(
                 .clickable(onClick = onOpen)
                 .testTag("video_card_${v.id}")
         ) {
-            if (!v.portrait) {
+            if (v.portrait == (ratio < 1f)) {
                 VideoThumb(v, Modifier.fillMaxSize(), ContentScale.Crop)
             } else {
                 VideoThumb(v, Modifier.fillMaxSize().alpha(0.32f), ContentScale.Crop)
@@ -235,7 +235,7 @@ private fun CardRow(
 ) {
     Row(Modifier.fillMaxWidth().padding(horizontal = if (cols == 1) 12.dp else 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         pair.forEach { v ->
-            WatchFeedVideoCard(v, 16f / 9f, false, { open(v) }, { onCreator(v) }, onNeedLogin, { onReport(v) }, Modifier.weight(1f))
+            WatchFeedVideoCard(v, if (cols == 1) 16f / 9f else 0.78f, false, { open(v) }, { onCreator(v) }, onNeedLogin, { onReport(v) }, Modifier.weight(1f))
         }
         repeat((cols - pair.size).coerceAtLeast(0)) { Spacer(Modifier.weight(1f)) }
     }
@@ -474,8 +474,8 @@ fun HomeScreen(
                 if (q.isBlank()) item { Box(Modifier.padding(horizontal = 14.dp)) { StoriesStrip(onNeedLogin) } }
                 when {
                     vids.isEmpty() && Feed.loading -> {
-                        item(key = "sk0") { HomeVideoSkeletonCard(16f / 9f) }
-                        item(key = "sk1") { HomeVideoSkeletonCard(16f / 9f) }
+                        item(key = "sk0") { HomeVideoSkeletonCard(0.78f) }
+                        item(key = "sk1") { HomeVideoSkeletonCard(0.78f) }
                     }
                     vids.isEmpty() -> item {
                         Column(
@@ -499,7 +499,7 @@ fun HomeScreen(
                         }
                     }
                     else -> {
-                        val hasHero = q.isBlank() && vids.isNotEmpty()
+                        val hasHero = false
                         if (hasHero) {
                             val heroVid = vids.first()
                             item(key = "hero_${heroVid.id}") {
@@ -533,7 +533,7 @@ fun HomeScreen(
 
                 if (Feed.loadingMore) {
                     item(key = "home_loading_more") {
-                        HomeVideoSkeletonCard(16f / 9f)
+                        HomeVideoSkeletonCard(0.78f)
                     }
                 }
             }

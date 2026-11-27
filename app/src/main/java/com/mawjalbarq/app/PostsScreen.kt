@@ -79,7 +79,7 @@ data class Post(
 
 private const val POSTS_PAGE = 30
 
-private val FeedSeparatorColor = Color(0xFF070A0F)
+private val FeedSeparatorColor: Color get() = if (Pal.isDark) Color(0xFF070A0F) else Color(0xFFDDE2EA)
 private val GalleryGreen = Color(0xFF45BD62)
 
 private fun formatRelativeTime(iso: String): String {
@@ -349,7 +349,7 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
                             .testTag("posts_composer_pill")
                             .padding(horizontal = 16.dp, vertical = 10.dp)
                     ) {
-                        Text("بم تفكر؟", color = Color(0xFFD6DCE6), fontSize = 15.sp, fontFamily = Tajawal)
+                        Text("بم تفكر؟", color = if (Pal.isDark) Color(0xFFD6DCE6) else Color(0xFF4B5563), fontSize = 15.sp, fontFamily = Tajawal)
                     }
                     Spacer(Modifier.width(6.dp))
                     IconButton(
@@ -515,7 +515,7 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
             sheetState = fullSheet(),
             onDismissRequest = { showSaved = false },
             containerColor = MaterialTheme.colorScheme.surface,
-            dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0x55FFFFFF)) }
+            dragHandle = { BottomSheetDefaults.DragHandle(color = if (Pal.isDark) Color(0x55FFFFFF) else Color(0x55000000)) }
         ) {
             Column(Modifier.fillMaxWidth().padding(20.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("المحفوظات", color = Ink, fontSize = 18.sp, fontFamily = Cairo)
@@ -554,7 +554,7 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
             sheetState = fullSheet(),
             onDismissRequest = { composing = false; autoPickPhoto = false },
             containerColor = MaterialTheme.colorScheme.surface,
-            dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0x55FFFFFF)) }
+            dragHandle = { BottomSheetDefaults.DragHandle(color = if (Pal.isDark) Color(0x55FFFFFF) else Color(0x55000000)) }
         ) {
             var text by remember { mutableStateOf("") }
             var img by remember { mutableStateOf<Uri?>(null) }
@@ -779,7 +779,7 @@ private fun PostFeedItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 180.dp, max = 440.dp)
-                    .background(Color(0xFF0A0E14))
+                    .background(if (Pal.isDark) Color(0xFF0A0E14) else Color(0xFFE5E9F0))
                     .clickable { onImageClick(p.mediaUrl) },
                 contentScale = ContentScale.Crop
             )
@@ -997,7 +997,7 @@ private fun PostCommentsSheet(post: Post, onNeedLogin: () -> Unit, onClose: () -
         sheetState = fullSheet(),
         onDismissRequest = onClose,
         containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0x55FFFFFF)) }
+        dragHandle = { BottomSheetDefaults.DragHandle(color = if (Pal.isDark) Color(0x55FFFFFF) else Color(0x55000000)) }
     ) {
         Column(
             Modifier
@@ -1050,8 +1050,8 @@ private fun PostCommentsSheet(post: Post, onNeedLogin: () -> Unit, onClose: () -
                                 Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(Color(0xFF1A2230))
-                                    .border(0.75.dp, Color(0x18FFFFFF), RoundedCornerShape(16.dp))
+                                    .background(if (Pal.isDark) Color(0xFF1A2230) else Color(0xFFF1F3F8))
+                                    .border(0.75.dp, if (Pal.isDark) Color(0x18FFFFFF) else Color(0x1F000000), RoundedCornerShape(16.dp))
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.Top
                             ) {

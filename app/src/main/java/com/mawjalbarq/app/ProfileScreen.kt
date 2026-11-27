@@ -45,7 +45,6 @@ fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions:
                 val target = d.videos.firstOrNull { it.id == vid } ?: Feed.videos.firstOrNull { it.id == vid }
                 if (target != null) Feed.open(target, onOpenFeed)
             }) {
-                Text(App.email, color = Color(0xFF8A8F9C), fontSize = 12.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { edit = true }) {
                         Icon(Icons.Filled.Edit, null, modifier = Modifier.size(16.dp))

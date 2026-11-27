@@ -44,13 +44,35 @@ import kotlin.math.PI
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
-/** Animated, subtle, transparent app-icon watermark that drifts around the frame (drawn per frame). */
-private class MovingLogoOverlay(private val w: Int, private val h: Int, private val logo: Bitmap) : BitmapOverlay() {
+/** Watermark badge (app icon + "موج البرق" on a dark pill) that drifts around the frame, clearly visible but not covering the whole picture. */
+private fun buildBadge(ctx: Context, logo: Bitmap, minSide: Int): Bitmap {
+    val bh = (minSide * 0.095f).roundToInt().coerceAtLeast(40)
+    val pad = (bh * 0.16f)
+    val ic = Bitmap.createScaledBitmap(logo, (bh - 2 * pad).roundToInt(), (bh - 2 * pad).roundToInt(), true)
+    val tp = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.WHITE; textSize = bh * 0.46f; isFakeBoldText = true
+        typeface = try { androidx.core.content.res.ResourcesCompat.getFont(ctx, R.font.tajawal) } catch (_: Exception) { null }
+        setShadowLayer(bh * 0.06f, 0f, 0f, 0xAA000000.toInt())
+    }
+    val label = "موج البرق"
+    val tw = tp.measureText(label)
+    val bw = (pad * 3 + ic.width + tw).roundToInt()
+    val bmp = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
+    val c = Canvas(bmp)
+    val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xB0000000.toInt() }
+    c.drawRoundRect(0f, 0f, bw.toFloat(), bh.toFloat(), bh / 2f, bh / 2f, bg)
+    val ip = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
+    val clipPath = android.graphics.Path().apply { addCircle(pad + ic.width / 2f, bh / 2f, ic.width / 2f, android.graphics.Path.Direction.CW) }
+    c.save(); c.clipPath(clipPath); c.drawBitmap(ic, pad, pad, ip); c.restore()
+    val fm = tp.fontMetrics
+    c.drawText(label, pad * 2 + ic.width, bh / 2f - (fm.ascent + fm.descent) / 2f, tp)
+    return bmp
+}
+
+private class MovingLogoOverlay(private val w: Int, private val h: Int, private val badge: Bitmap) : BitmapOverlay() {
     private val frames = arrayOf(Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888), Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888))
     private var flip = 0
     private val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
-    private val size = (minOf(w, h) * 0.16f).roundToInt().coerceAtLeast(48)
-    private val icon = Bitmap.createScaledBitmap(logo, size, size, true)
 
     override fun getBitmap(presentationTimeUs: Long): Bitmap {
         flip = 1 - flip   // alternate two bitmaps so the texture is refreshed every frame
@@ -58,13 +80,10 @@ private class MovingLogoOverlay(private val w: Int, private val h: Int, private 
         val t = presentationTimeUs / 1_000_000.0
         val c = Canvas(bmp)
         c.drawColor(0, PorterDuff.Mode.CLEAR)
-        val x = ((w - size) * (0.5 + 0.5 * sin(t * 0.7))).toFloat()
-        val y = ((h - size) * (0.5 + 0.5 * sin(t * 0.5 + 1.3))).toFloat()
-        paint.alpha = (70 + 20 * sin(t * 1.6)).roundToInt().coerceIn(40, 100)   // about 27-39% opacity, gently pulsing
-        c.save()
-        c.rotate((8 * sin(t * 1.1)).toFloat(), x + size / 2f, y + size / 2f)
-        c.drawBitmap(icon, x, y, paint)
-        c.restore()
+        val x = ((w - badge.width) * (0.5 + 0.5 * sin(t * 0.55))).toFloat()
+        val y = ((h - badge.height) * (0.5 + 0.5 * sin(t * 0.4 + 1.3))).toFloat()
+        paint.alpha = (205 + 25 * sin(t * 1.6)).roundToInt().coerceIn(150, 240)   // about 80-90% opacity, gently pulsing
+        c.drawBitmap(badge, x, y, paint)
         return bmp
     }
 }
@@ -144,7 +163,7 @@ object ShareVideo {
                 val logo = BitmapFactory.decodeResource(ctx.resources, R.drawable.logo_mark)
                 val effects = ArrayList<Effect>()
                 effects.add(Presentation.createForHeight(h))
-                effects.add(OverlayEffect(ImmutableList.of(MovingLogoOverlay(w, h, logo))))
+                effects.add(OverlayEffect(ImmutableList.of(MovingLogoOverlay(w, h, buildBadge(ctx, logo, minOf(w, h))))))
                 val item = EditedMediaItem.Builder(MediaItem.fromUri(android.net.Uri.fromFile(src))).setEffects(Effects(emptyList(), effects)).build()
                 val enc = DefaultEncoderFactory.Builder(ctx)
                     .setRequestedVideoEncoderSettings(VideoEncoderSettings.Builder().setBitrate(3_000_000).build()).build()

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.StayCurrentLandscape
 import androidx.compose.material.icons.filled.StayCurrentPortrait
@@ -135,7 +136,24 @@ fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = fals
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f).padding(top = 52.dp)) {
                 Text(p.name, color = Ink, fontSize = 22.sp, fontWeight = FontWeight.Bold, fontFamily = Cairo, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (p.publicId.isNotBlank()) Text("ID: " + p.publicId, color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, maxLines = 1)
+                if (p.publicId.isNotBlank()) {
+                    val cctx = androidx.compose.ui.platform.LocalContext.current
+                    Row(
+                        Modifier.padding(top = 3.dp).clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                            .clickable {
+                                val cm = cctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                cm.setPrimaryClip(android.content.ClipData.newPlainText("ID", p.publicId))
+                                android.widget.Toast.makeText(cctx, "تم نسخ الـ ID", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text("ID: " + p.publicId, color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                        Icon(Icons.Filled.ContentCopy, "نسخ", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(13.dp))
+                    }
+                }
             }
         }
         Column(Modifier.offset(y = (-38).dp).padding(horizontal = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
