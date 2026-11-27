@@ -117,11 +117,8 @@ fun AuthPortalScreen(prefs: ThemePrefs, onSuggestions: () -> Unit) {
         form.error = null
         scope.launch {
             if (form.isSignup) {
-                val url = uploadImageToCloud(ctx, pic!!)
-                form.error = if (url == null) "تعذر رفع الصورة، تحقق من الاتصال وحاول مرة أخرى"
-                else signUp(form.name.trim(), em, form.pass, url)
+                form.error = signUp(ctx, form.name.trim(), em, form.pass, pic!!)
             } else form.error = signIn(em, form.pass)
-            form.busy = false
         }
     }
 

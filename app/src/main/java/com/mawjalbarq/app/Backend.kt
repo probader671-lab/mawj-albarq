@@ -144,15 +144,19 @@ suspend fun signIn(email: String, pass: String): String? {
     afterLogin(); return null
 }
 
-suspend fun signUp(name: String, email: String, pass: String, avatarUrl: String): String? {
+/** The avatar is uploaded AFTER the account exists: uploads are signed per logged-in user, and nobody is logged in during signup. */
+suspend fun signUp(ctx: Context, name: String, email: String, pass: String, pic: android.net.Uri): String? {
     if (deviceBannedPre()) return DEVICE_BANNED_MSG
-    val data = JSONObject().put("full_name", name).put("avatar_url", avatarUrl)
+    val data = JSONObject().put("full_name", name)
     val (c, t) = api("POST", "/auth/v1/signup", JSONObject().put("email", email).put("password", pass).put("data", data).toString())
     if (c !in 200..299) return authError(c, t)
     val j = JSONObject(t)
     if (!j.has("access_token")) return "تحقق من بريدك لتأكيد الحساب"
-    App.fromAuth(j); App.name = name.ifBlank { App.name }; App.avatar = avatarUrl; App.save()
-    api("PATCH", "/rest/v1/profiles?id=eq.${App.userId}", JSONObject().put("full_name", App.name).put("avatar_url", avatarUrl).toString())
+    App.fromAuth(j); App.name = name.ifBlank { App.name }; App.save()
+    val avatarUrl = uploadImageToCloud(ctx, pic) ?: uploadImageToCloud(ctx, pic)
+    if (avatarUrl != null) App.avatar = avatarUrl
+    App.save()
+    api("PATCH", "/rest/v1/profiles?id=eq.${App.userId}", JSONObject().put("full_name", App.name).apply { if (avatarUrl != null) put("avatar_url", avatarUrl) }.toString())
     if (registerDevice()) { val m = banMessage(); App.logout(); return m }
     afterLogin(); return null
 }

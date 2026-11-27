@@ -2,3 +2,6 @@
 alter table public.videos add column if not exists music_score real not null default 0;
 alter table public.videos drop constraint if exists videos_music_score_chk;
 alter table public.videos add constraint videos_music_score_chk check (music_score between 0 and 1);
+
+-- The app sends music_score on insert; rls_hardening granted column-level INSERT only, so publishing failed with 42501.
+grant insert (music_score) on public.videos to authenticated;
