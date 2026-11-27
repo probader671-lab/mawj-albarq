@@ -11,8 +11,8 @@ object Media {
 
     /** Adaptive HLS (Cloudinary sp_auto: several bitrates, the player follows the connection). */
     fun playUrl(u: String, durationSec: Int = 0): String =
-        // Long videos play as progressive MP4: on-demand HLS can report a partial duration (e.g. 8s) and stall.
-        if (durationSec > 45) mp4Url(u)
+        // Videos over 15s play as progressive MP4: on-demand HLS can report a partial duration (e.g. 8s) and stall.
+        if (durationSec > 15) mp4Url(u)
         else if (isCld(u) && u.endsWith(".mp4") && !u.contains("/sp_auto/"))
             u.replace(VID, VID + "sp_auto/").removeSuffix(".mp4") + ".m3u8"
         else u
