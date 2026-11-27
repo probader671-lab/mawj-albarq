@@ -122,6 +122,7 @@ fun AuthPortalScreen(prefs: ThemePrefs, onSuggestions: () -> Unit) {
         }
     }
 
+    TwoFactorLoginDialog()
     Box(Modifier.fillMaxSize()) {
         when (design) {
             AuthDesign.ORBS_FLIP -> OrbsBackdrop(Modifier.fillMaxSize())

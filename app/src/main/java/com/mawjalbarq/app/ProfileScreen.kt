@@ -68,6 +68,9 @@ fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions:
                         Spacer(Modifier.width(6.dp))
                         Text("تعديل الملف")
                     }
+                    var tf by remember { mutableStateOf(false) }
+                    if (tf) TwoFactorSettingsDialog { tf = false }
+                    OutlinedButton(onClick = { tf = true }) { Text("التحقق بخطوتين") }
                     OutlinedButton(onClick = { App.logout() }) {
                         Icon(Icons.AutoMirrored.Filled.Logout, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
