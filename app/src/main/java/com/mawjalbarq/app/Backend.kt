@@ -36,7 +36,13 @@ object App {
     var avatar by mutableStateOf<String?>(null)
     var publicId by mutableStateOf("")
     val loggedIn get() = token != null && userId != null
+    /** SHA-256 of (app salt + ANDROID_ID). No raw identifier is stored or sent. */
+    var deviceHash = ""
     fun init(ctx: Context) {
+        try {
+            val aid = android.provider.Settings.Secure.getString(ctx.contentResolver, android.provider.Settings.Secure.ANDROID_ID) ?: ""
+            if (aid.isNotBlank()) deviceHash = java.security.MessageDigest.getInstance("SHA-256").digest(("mawj-v1:" + aid).toByteArray()).joinToString("") { "%02x".format(it) }
+        } catch (_: Exception) {}
         sp = ctx.getSharedPreferences("session", Context.MODE_PRIVATE)
         token = sp.getString("t", null); refresh = sp.getString("r", null); userId = sp.getString("u", null)
         email = sp.getString("e", "") ?: ""; name = sp.getString("n", "") ?: ""; avatar = sp.getString("av", null); publicId = sp.getString("pid", "") ?: ""
@@ -93,13 +99,33 @@ fun authError(code: Int, text: String): String {
     }
 }
 
+const val DEVICE_BANNED_MSG = "هذا الجهاز محظور من استخدام التطبيق"
+
+/** Anonymous pre-check (signup). true = banned. */
+suspend fun deviceBannedPre(): Boolean {
+    if (App.deviceHash.isBlank()) return false
+    val (c, t) = api("POST", "/rest/v1/rpc/is_device_banned", JSONObject().put("p_fingerprint", App.deviceHash).toString())
+    return c == 200 && t.trim() == "true"
+}
+
+/** After login / app start: record the device for this account. true = banned (caller must log out). */
+suspend fun registerDevice(): Boolean {
+    if (App.deviceHash.isBlank() || App.token == null) return false
+    val (c, t) = api("POST", "/rest/v1/rpc/register_device",
+        JSONObject().put("p_hash", App.deviceHash).put("p_model", android.os.Build.MODEL ?: "").put("p_os", "Android " + android.os.Build.VERSION.RELEASE).toString())
+    return c == 200 && t.trim() == "true"
+}
+
 suspend fun signIn(email: String, pass: String): String? {
     val (c, t) = api("POST", "/auth/v1/token?grant_type=password", JSONObject().put("email", email).put("password", pass).toString())
     if (c != 200) return authError(c, t)
-    App.fromAuth(JSONObject(t)); afterLogin(); return null
+    App.fromAuth(JSONObject(t))
+    if (registerDevice()) { App.logout(); return DEVICE_BANNED_MSG }
+    afterLogin(); return null
 }
 
 suspend fun signUp(name: String, email: String, pass: String, avatarUrl: String): String? {
+    if (deviceBannedPre()) return DEVICE_BANNED_MSG
     val data = JSONObject().put("full_name", name).put("avatar_url", avatarUrl)
     val (c, t) = api("POST", "/auth/v1/signup", JSONObject().put("email", email).put("password", pass).put("data", data).toString())
     if (c !in 200..299) return authError(c, t)
@@ -107,6 +133,7 @@ suspend fun signUp(name: String, email: String, pass: String, avatarUrl: String)
     if (!j.has("access_token")) return "تحقق من بريدك لتأكيد الحساب"
     App.fromAuth(j); App.name = name.ifBlank { App.name }; App.avatar = avatarUrl; App.save()
     api("PATCH", "/rest/v1/profiles?id=eq.${App.userId}", JSONObject().put("full_name", App.name).put("avatar_url", avatarUrl).toString())
+    if (registerDevice()) { App.logout(); return DEVICE_BANNED_MSG }
     afterLogin(); return null
 }
 

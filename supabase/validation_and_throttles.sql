@@ -71,3 +71,9 @@ begin
 end $fix$;
 
 commit;
+
+-- Banner choice is stored in profiles.banner_url: empty, "preset:<id>", or an image on our Cloudinary account.
+alter table public.profiles drop constraint if exists profiles_banner_chk;
+alter table public.profiles add constraint profiles_banner_chk check (
+  banner_url is null or banner_url = '' or banner_url ~ '^preset:[a-z_]{1,30}$' or banner_url ~ '^https://res\.cloudinary\.com/wuuhfgal/'
+) not valid;

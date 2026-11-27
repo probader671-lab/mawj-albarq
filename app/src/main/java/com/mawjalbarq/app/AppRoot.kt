@@ -54,7 +54,7 @@ fun AppRoot(prefs: ThemePrefs) {
         var aiChat by remember { mutableStateOf(false) }
         var notifs by remember { mutableStateOf(false) }
         val appCtx = androidx.compose.ui.platform.LocalContext.current
-        LaunchedEffect(Unit) { Feed.init(appCtx); if (Feed.videos.isEmpty() && !Feed.loading) Feed.load() }
+        LaunchedEffect(Unit) { if (App.loggedIn && registerDevice()) App.logout(); Feed.init(appCtx); if (Feed.videos.isEmpty() && !Feed.loading) Feed.load() }
         UpdatePrompt()
         ShareProgressHost()
         // Back stack for tabs: back returns to the previous tab; the app exits only when there is nowhere left to go.
