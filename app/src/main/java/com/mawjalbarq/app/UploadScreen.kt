@@ -277,7 +277,7 @@ object UploadJobs {
         status = "جارٍ النشر..."
         val pid = if (iaId != null) iaId else r.getString("public_id")
         val w = r.optInt("width"); val h = r.optInt("height")
-        val body = JSONObject().put("user_id", App.userId).put("title", title).put("description", desc)
+        val body = JSONObject().put("user_id", App.userId).put("title", title.trim().take(120)).put("description", desc.take(300))
             .put("video_url", if (iaId != null) "https://archive.org/download/$iaId/video.mp4" else r.getString("secure_url"))
             .put("thumbnail_url", if (iaId != null) (iaThumb ?: "https://archive.org/services/img/$iaId") else "https://res.cloudinary.com/${Cfg.CLOUD}/video/upload/so_0/$pid.jpg")
             .put("storage_type", if (iaId != null) "archive" else "cloudinary").put("media_public_id", pid).put("mime_type", "video/mp4")
@@ -293,7 +293,7 @@ object UploadJobs {
                 api("POST", "/rest/v1/moderation_queue", qBody(vid).toString())
                 toast(ctx, "المقطع قيد المراجعة وسيُنشر بعد موافقة الإدارة")
             } else { toast(ctx, "تم نشر الفيديو!"); onPublished() }
-        } else toast(ctx, "فشل النشر")
+        } else toast(ctx, if (rt.contains("daily video limit")) "وصلت للحد اليومي: ٥ فيديوهات في اليوم" else "فشل النشر")
     }
 }
 
