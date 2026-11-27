@@ -311,8 +311,10 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
             HorizontalDivider(thickness = 0.5.dp, color = hairline)
         }
 
-        val visiblePosts = remember(posts, searchQuery, dismissedIds.size) {
-            val q = searchQuery.trim()
+        var debouncedQuery by remember { mutableStateOf("") }
+        LaunchedEffect(searchQuery) { if (searchQuery.isBlank()) debouncedQuery = "" else { kotlinx.coroutines.delay(400); debouncedQuery = searchQuery } }
+        val visiblePosts = remember(posts, debouncedQuery, dismissedIds.size) {
+            val q = debouncedQuery.trim()
             posts?.filter { p ->
                 !dismissedIds.contains(p.id) &&
                     (q.isEmpty() || p.text.contains(q, ignoreCase = true) || p.author.contains(q, ignoreCase = true))

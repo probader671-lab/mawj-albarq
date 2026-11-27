@@ -266,8 +266,11 @@ fun HomeScreen(
     }
 
     // Only horizontal videos appear in Home; portrait clips belong exclusively to ClipsScreen
-    val all = Feed.wideVideos
-    val vids = if (q.isBlank()) all else all.filter { it.title.contains(q, true) || it.author.contains(q, true) }
+    val all = Feed.videos.toList()
+    // debounce: filter once typing pauses (400 ms) instead of on every keystroke
+    var dq by remember { mutableStateOf("") }
+    LaunchedEffect(q) { if (q.isBlank()) dq = "" else { kotlinx.coroutines.delay(400); dq = q } }
+    val vids = if (dq.isBlank()) all else all.filter { it.title.contains(dq, true) || it.author.contains(dq, true) }
 
     var promptVid by remember { mutableStateOf<Video?>(null) }
     LaunchedEffect(vids.size, App.userId) { if (promptVid == null) promptVid = Reco.promptCandidate(all) }
