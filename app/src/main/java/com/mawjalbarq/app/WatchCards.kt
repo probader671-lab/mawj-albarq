@@ -332,7 +332,7 @@ fun WatchSuggestionRowCard(
             }
             if (!v.portrait) {
                 Icon(
-                    if (portraitCards) Icons.Filled.StayCurrentPortrait else Icons.Filled.StayCurrentLandscape,
+                    Icons.Filled.StayCurrentLandscape,
                     contentDescription = null,
                     tint = Color.White.copy(alpha = 0.85f),
                     modifier = Modifier
