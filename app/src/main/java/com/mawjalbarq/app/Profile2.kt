@@ -124,7 +124,7 @@ fun CreatorSheet(id: String, onPlay: (String) -> Unit, onClose: () -> Unit) {
     ModalBottomSheet(sheetState = fullSheet(), onDismissRequest = onClose, containerColor = Color(0xFF141A24)) {
         Column(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding()) {
             val d = p
-            if (d == null) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally)) else ProfileHeader(d, onPlay) {
+            if (d == null) ProfileSkeleton() else ProfileHeader(d, onPlay) {
                 if (id != App.userId) {
                     val sc = rememberCoroutineScope(); val f = Feed.following[id] == true
                     Button(onClick = { if (App.loggedIn) sc.launch { Feed.toggleFollow(id) } }, enabled = App.loggedIn, shape = RoundedCornerShape(50)) { Text(if (f) "تتابعه" else "متابعة") }

@@ -87,6 +87,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
     var muted by remember { mutableStateOf(false) }
     var disliked by remember { mutableStateOf(false) }
     var comments by remember { mutableStateOf<List<Comment>?>(null) }
+    var noMoreComments by remember(cur.id) { mutableStateOf(false) }
     var cText by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
     var reportOpen by remember { mutableStateOf(false) }
@@ -132,7 +133,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
     val player = remember {
         ExoPlayer.Builder(ctx)
             .setMediaSourceFactory(DefaultMediaSourceFactory(MediaCache.factory(ctx)))
-            .build()
+            .build().also { Media.withMp4Fallback(it) }
     }
 
     DisposableEffect(player) {
@@ -177,7 +178,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
         showDesc = false
         controlsVisible = true
         Watch.save(ctx, cur.id)
-        player.setMediaItem(MediaItem.fromUri(Uri.parse(cur.url)))
+        player.setMediaItem(MediaItem.fromUri(Uri.parse(Media.playUrl(cur.url))))
         player.prepare()
         player.setPlaybackSpeed(speed)
         player.volume = if (muted) 0f else 1f
@@ -1025,9 +1026,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
 
                             val l = comments
                             if (l == null) {
-                                Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator(Modifier.size(24.dp), color = MaterialTheme.colorScheme.primary)
-                                }
+                                ListSkeleton(3, Modifier.padding(16.dp))
                             } else if (l.isEmpty()) {
                                 Column(
                                     Modifier.fillMaxWidth().padding(vertical = 22.dp),
@@ -1039,7 +1038,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
                                 }
                             } else {
                                 Column(Modifier.padding(top = 14.dp)) {
-                                    l.take(25).forEachIndexed { idx, c ->
+                                    l.forEachIndexed { idx, c ->
                                         Row(
                                             Modifier.fillMaxWidth().padding(vertical = 10.dp),
                                             verticalAlignment = Alignment.Top,
@@ -1072,9 +1071,21 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
                                                 Text(c.text, color = white.copy(alpha = 0.92f), fontSize = 13.5.sp, lineHeight = 20.sp)
                                             }
                                         }
-                                        if (idx < minOf(l.size, 25) - 1) {
+                                        if (idx < l.size - 1) {
                                             HorizontalDivider(thickness = 0.75.dp, color = Color(0x10FFFFFF))
                                         }
+                                    }
+                                    if (l.size >= Feed.COMMENTS_PAGE && l.size % Feed.COMMENTS_PAGE == 0 && !noMoreComments) {
+                                        TextButton(onClick = {
+                                            scope.launch {
+                                                val r = Feed.comments(cur.id, l.lastOrNull())
+                                                if (r == null) return@launch
+                                                val seen = l.mapTo(HashSet()) { it.id }
+                                                val add = r.filter { seen.add(it.id) }
+                                                comments = l + add
+                                                if (r.size < Feed.COMMENTS_PAGE) noMoreComments = true
+                                            }
+                                        }, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("عرض المزيد", fontFamily = Cairo, color = MaterialTheme.colorScheme.primary) }
                                     }
                                 }
                             }

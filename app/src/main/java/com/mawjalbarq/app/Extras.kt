@@ -288,7 +288,7 @@ fun SuggestionsScreen(onBack: () -> Unit) {
             }
         }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) { Text("نشر الاقتراح") }
         val l = list
-        if (l == null) CircularProgressIndicator()
+        if (l == null) ListSkeleton(5)
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 110.dp)) {
             items(l) { s -> Text(s.text, color = Color.White, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFF141A24)).padding(12.dp)) }
         }

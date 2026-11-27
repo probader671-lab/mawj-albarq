@@ -29,7 +29,7 @@ object MediaCache {
 
     suspend fun prefetch(ctx: Context, urls: List<String>) = withContext(Dispatchers.IO) {
         val f = factory(ctx)
-        for (u in urls.filter { it.startsWith("http") }.take(3)) {
+        for (u in urls.filter { it.startsWith("http") }.take(3).map { Media.playUrl(it) }) {
             var src: DataSource? = null
             try {
                 src = f.createDataSource()

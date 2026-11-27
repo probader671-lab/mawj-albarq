@@ -1037,7 +1037,7 @@ private fun PostCommentsSheet(post: Post, onNeedLogin: () -> Unit, onClose: () -
                         Spacer(Modifier.height(8.dp))
                         TextButton(onClick = { scope.launch { load() } }) { Text("إعادة المحاولة", fontFamily = Cairo) }
                     }
-                    l == null -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary)
+                    l == null -> ListSkeleton(5, Modifier.padding(16.dp))
                     l.isEmpty() -> Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Outlined.ModeComment, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(38.dp))
                         Spacer(Modifier.height(8.dp))

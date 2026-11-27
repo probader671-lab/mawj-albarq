@@ -101,7 +101,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
         ExoPlayer.Builder(ctx)
             .setMediaSourceFactory(DefaultMediaSourceFactory(MediaCache.factory(ctx)))
             .build()
-            .apply { repeatMode = Player.REPEAT_MODE_ONE; playWhenReady = true }
+            .apply { repeatMode = Player.REPEAT_MODE_ONE; playWhenReady = true; Media.withMp4Fallback(this) }
     }
     var isBuffering by remember { mutableStateOf(true) }
     var isPlaying by remember { mutableStateOf(true) }
@@ -162,7 +162,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
     LaunchedEffect(curId) { Watch.save(ctx, curId) }
     LaunchedEffect(curId) {
         isBuffering = true
-        player.setMediaItem(MediaItem.fromUri(Uri.parse(videos[cur].url)))
+        player.setMediaItem(MediaItem.fromUri(Uri.parse(Media.playUrl(videos[cur].url))))
         player.prepare()
         player.setPlaybackSpeed(speed)
         player.volume = if (muted) 0f else 1f
@@ -910,7 +910,7 @@ private fun CommentsSheet(v: Video, onNeedLogin: () -> Unit, onClose: () -> Unit
                     Spacer(Modifier.height(8.dp))
                     TextButton(onClick = { scope.launch { reload() } }) { Text("إعادة المحاولة", fontFamily = Cairo) }
                 }
-                l == null -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary)
+                l == null -> ListSkeleton(5, Modifier.padding(16.dp))
                 l.isEmpty() -> Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Filled.ChatBubbleOutline, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(40.dp))
                     Spacer(Modifier.height(8.dp))

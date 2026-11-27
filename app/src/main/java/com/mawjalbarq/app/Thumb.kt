@@ -26,11 +26,11 @@ import coil.request.videoFrameMillis
 @Composable
 fun VideoThumb(v: Video, modifier: Modifier = Modifier, scale: ContentScale = ContentScale.Crop) {
     val ctx = LocalContext.current
-    val loader = remember { ImageLoader.Builder(ctx).components { add(VideoFrameDecoder.Factory()) }.crossfade(true).build() }
+    val loader = remember { ThumbLoader.get(ctx) }
     val hasThumb = !v.thumb.isNullOrBlank()
     val model = remember(v.id, v.thumb) {
         ImageRequest.Builder(ctx)
-            .data(if (hasThumb) v.thumb else v.url)
+            .data(if (hasThumb) Media.thumb(v.thumb!!) else v.url)
             .apply { if (!hasThumb) videoFrameMillis(1000) }
             .build()
     }
@@ -39,6 +39,14 @@ fun VideoThumb(v: Video, modifier: Modifier = Modifier, scale: ContentScale = Co
         modifier = modifier, contentScale = scale,
         loading = { ThumbPlaceholder() }, error = { ThumbPlaceholder() }
     )
+}
+
+/** One shared loader so every thumbnail shares the same memory and disk cache. */
+object ThumbLoader {
+    @Volatile private var l: ImageLoader? = null
+    fun get(ctx: android.content.Context): ImageLoader = l ?: synchronized(this) {
+        l ?: ImageLoader.Builder(ctx.applicationContext).components { add(VideoFrameDecoder.Factory()) }.crossfade(true).build().also { l = it }
+    }
 }
 
 @Composable

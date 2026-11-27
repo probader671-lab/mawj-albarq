@@ -366,3 +366,40 @@ fun ClipStageSkeleton() {
         }
     }
 }
+
+/** Shimmering avatar + two text lines, repeated. Replaces spinners on list screens (comments, notifications, suggestions). */
+@Composable
+fun ListSkeleton(rows: Int = 6, modifier: Modifier = Modifier) {
+    val brush = rememberShimmerBrush()
+    Column(modifier.fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        repeat(rows) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                ShimmerBox(Modifier.size(40.dp), CircleShape, brush)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ShimmerBox(Modifier.fillMaxWidth(0.4f).height(12.dp), RoundedCornerShape(6.dp), brush)
+                    ShimmerBox(Modifier.fillMaxWidth(if (it % 2 == 0) 0.85f else 0.65f).height(12.dp), RoundedCornerShape(6.dp), brush)
+                }
+            }
+        }
+    }
+}
+
+/** Profile placeholder: banner, avatar, name and stat blocks. */
+@Composable
+fun ProfileSkeleton() {
+    val brush = rememberShimmerBrush()
+    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        ShimmerBox(Modifier.fillMaxWidth().height(104.dp), RoundedCornerShape(16.dp), brush)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ShimmerBox(Modifier.size(84.dp), CircleShape, brush)
+            Spacer(Modifier.width(14.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                ShimmerBox(Modifier.width(150.dp).height(18.dp), RoundedCornerShape(6.dp), brush)
+                ShimmerBox(Modifier.width(100.dp).height(12.dp), RoundedCornerShape(6.dp), brush)
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { repeat(4) { ShimmerBox(Modifier.weight(1f).height(54.dp), RoundedCornerShape(14.dp), brush) } }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { repeat(3) { ShimmerBox(Modifier.weight(1f).aspectRatio(0.75f), RoundedCornerShape(10.dp), brush) } }
+    }
+}

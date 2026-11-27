@@ -72,7 +72,7 @@ fun NotificationsScreen(onBack: () -> Unit, onOpenVideo: (String) -> Unit) {
         when {
             !App.loggedIn -> Text("سجّل الدخول لرؤية الإشعارات", color = Color.Gray)
             failed -> Text("تعذر تحميل الإشعارات", color = Color.Gray)
-            l == null -> CircularProgressIndicator()
+            l == null -> ListSkeleton()
             l.isEmpty() -> Text("لا توجد إشعارات بعد", color = Color.Gray)
             else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 40.dp)) {
                 items(l, key = { it.id }

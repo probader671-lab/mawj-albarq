@@ -35,6 +35,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.File
 import kotlin.coroutines.resume
@@ -75,13 +76,48 @@ private suspend fun compress(ctx: Context, uri: Uri, out: File, meta: Meta): Boo
     }
 }
 
-private suspend fun uploadCloudinary(f: File): JSONObject? = withContext(Dispatchers.IO) {
+private const val CHUNK = 6 * 1024 * 1024  // Cloudinary needs >= 5 MB per chunk except the last
+
+/** Chunked, resumable upload straight to Cloudinary (unsigned preset). Each chunk is retried with backoff,
+ *  so a dropped connection costs one chunk, not the whole file. [onProgress] gets 0f..1f. */
+private suspend fun uploadCloudinary(f: File, onProgress: (Float) -> Unit = {}): JSONObject? = withContext(Dispatchers.IO) {
+    val total = f.length()
+    if (total <= 0L) return@withContext null
+    val uploadId = java.util.UUID.randomUUID().toString()
+    val url = "https://api.cloudinary.com/v1_1/${Cfg.CLOUD}/video/upload"
+    var start = 0L
+    var last: JSONObject? = null
     try {
-        val body = MultipartBody.Builder().setType(MultipartBody.FORM)
-            .addFormDataPart("upload_preset", Cfg.PRESET)
-            .addFormDataPart("file", "clip.mp4", f.asRequestBody("video/mp4".toMediaType())).build()
-        val req = Request.Builder().url("https://api.cloudinary.com/v1_1/${Cfg.CLOUD}/video/upload").post(body).build()
-        http.newCall(req).execute().use { if (it.code == 200) JSONObject(it.body!!.string()) else null }
+        java.io.RandomAccessFile(f, "r").use { raf ->
+            while (start < total) {
+                val len = minOf(CHUNK.toLong(), total - start).toInt()
+                val buf = ByteArray(len)
+                raf.seek(start); raf.readFully(buf)
+                val end = start + len - 1
+                var ok = false
+                var attempt = 0
+                while (!ok && attempt < 6) {
+                    try {
+                        val body = MultipartBody.Builder().setType(MultipartBody.FORM)
+                            .addFormDataPart("upload_preset", Cfg.PRESET)
+                            .addFormDataPart("file", "clip.mp4", buf.toRequestBody("application/octet-stream".toMediaType())).build()
+                        val req = Request.Builder().url(url).post(body)
+                            .header("X-Unique-Upload-Id", uploadId)
+                            .header("Content-Range", "bytes $start-$end/$total").build()
+                        http.newCall(req).execute().use {
+                            val txt = it.body?.string().orEmpty()
+                            if (it.code == 200) { last = JSONObject(txt); ok = true }
+                            else if (it.code in 400..499 && it.code != 408 && it.code != 429) return@withContext null  // permanent error
+                        }
+                    } catch (e: java.io.IOException) { /* dropped connection: retry this chunk */ }
+                    if (!ok) { attempt++; kotlinx.coroutines.delay(minOf(1000L shl attempt, 15000L)) }
+                }
+                if (!ok) return@withContext null
+                start = end + 1
+                onProgress(start.toFloat() / total)
+            }
+        }
+        last?.takeIf { it.has("secure_url") }
     } catch (e: Exception) { null }
 }
 
@@ -102,6 +138,7 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
     var desc by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
+    var progress by remember { mutableStateOf(-1f) }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { if (it != null) uri = it }
     var camUri by remember { mutableStateOf<Uri?>(null) }
     val cam = rememberLauncherForActivityResult(ActivityResultContracts.CaptureVideo()) { ok -> if (ok) uri = camUri }
@@ -142,7 +179,7 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 Text(status.ifBlank { "جارٍ المعالجة..." }, color = Color.White, fontSize = 15.sp)
-                LinearProgressIndicator(Modifier.width(200.dp))
+                if (progress >= 0f) LinearProgressIndicator(progress = { progress }, modifier = Modifier.width(200.dp)) else LinearProgressIndicator(Modifier.width(200.dp))
             }
         }
         Button(enabled = uri != null && title.isNotBlank() && !busy, modifier = Modifier.fillMaxWidth(), onClick = {
@@ -154,7 +191,9 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
                     val out = File(ctx.cacheDir, "upload.mp4")
                     if (!compress(ctx, src, out, meta)) { status = "فشل ضغط الفيديو"; busy = false; return@launch }
                     status = "جارٍ الرفع..."
-                    val r = uploadCloudinary(out)
+                    progress = 0f
+                    val r = uploadCloudinary(out) { p -> progress = p; status = "جارٍ الرفع... " + (p * 100).toInt() + "%" }
+                    progress = -1f
                     out.delete()
                     if (r == null) { status = "فشل الرفع، تحقق من الاتصال"; busy = false; return@launch }
                     status = "جارٍ النشر..."
