@@ -272,7 +272,8 @@ object UploadJobs {
             r = uploadCloudinary(out) { p -> status = "جارٍ الرفع... " + (p * 100).toInt() + "%" }
         }
         val iaThumb = if (iaId != null) uploadThumb(out) else null
-        out.delete()
+        val keepForDeep = r != null && mod.verdict == Verdict.ALLOW
+        if (!keepForDeep) out.delete()
         if (r == null) { status = ""; toast(ctx, "فشل الرفع، تحقق من الاتصال"); return }
         status = "جارٍ النشر..."
         val pid = if (iaId != null) iaId else r.getString("public_id")
@@ -293,8 +294,20 @@ object UploadJobs {
                 val vid = try { JSONArray(rt).getJSONObject(0).getString("id") } catch (_: Exception) { null }
                 api("POST", "/rest/v1/moderation_queue", qBody(vid).toString())
                 toast(ctx, "المقطع قيد المراجعة وسيُنشر بعد موافقة الإدارة")
-            } else { toast(ctx, "تم نشر الفيديو!"); onPublished() }
+            } else {
+                toast(ctx, "تم نشر الفيديو!"); onPublished()
+                // Deeper pass after publishing: 24 frames and up to 4 min of audio. A violation restricts the video and notifies the uploader.
+                val vid = try { JSONArray(rt).getJSONObject(0).getString("id") } catch (_: Exception) { null }
+                if (vid != null) try {
+                    val deep = Moderation.check(ctx, out, cfg, deep = true)
+                    if (deep.verdict == Verdict.BLOCK) {
+                        val why = if (deep.reasons.contains("nsfw")) "محتوى غير لائق ظهر في فحص إضافي" else if (deep.reasons.contains("music")) "موسيقى ظهرت في فحص إضافي" else "مخالفة لقواعد المحتوى"
+                        AdminApi.restrictVideo(vid, why)
+                    }
+                } catch (_: Throwable) { }
+            }
         } else toast(ctx, if (rt.contains("daily video limit")) "وصلت للحد اليومي: ٥ فيديوهات في اليوم" else "فشل النشر")
+        out.delete()
     }
 }
 

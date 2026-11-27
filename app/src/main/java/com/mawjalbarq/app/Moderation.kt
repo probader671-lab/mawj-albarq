@@ -68,15 +68,15 @@ object Moderation {
     }
 
     /** Runs all on-device checks on a local video file. Never throws: a failed check counts as "uncertain" -> REVIEW. */
-    suspend fun check(ctx: Context, file: File, cfg: ModConfig): ModResult = withContext(Dispatchers.Default) {
+    suspend fun check(ctx: Context, file: File, cfg: ModConfig, deep: Boolean = false): ModResult = withContext(Dispatchers.Default) {
         val reasons = ArrayList<String>()
         var block = false; var review = false
         var musicShare = 0f; var musicMax = 0f; var voiceShare = 0f
         var audioOk = true
         try {
-            val a = decodeAudio16k(file)
+            val a = decodeAudio16k(file, if (deep) 300 else 120)
             if (a != null && a.size >= WIN) {
-                val (ms, mm, vs) = classifyAudio(ctx, a, cfg)
+                val (ms, mm, vs) = classifyAudio(ctx, a, cfg, if (deep) 240 else 60)
                 musicShare = ms; musicMax = mm; voiceShare = vs
             } else if (a == null) audioOk = false
         } catch (e: Throwable) { audioOk = false }
@@ -87,7 +87,7 @@ object Moderation {
         var nsfwMax = 0f; var hi = 0; var faces = 0
         val faceFrames = ArrayList<Bitmap>()
         try {
-            val frames = grabFrames(file)
+            val frames = grabFrames(file, if (deep) 24 else 0)
             if (frames.isEmpty()) { review = true; reasons += "frames_unreadable" }
             val nsfw = Interpreter(loadAsset(ctx, "models/nsfw_nudity.tflite"))
             val det = FaceDetection.getClient(FaceDetectorOptions.Builder().setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST).build())
@@ -102,9 +102,9 @@ object Moderation {
                 }
             } finally { runCatching { nsfw.close() }; runCatching { det.close() } }
         } catch (e: Throwable) { review = true; reasons += "visual_check_failed" }
-        if (nsfwMax >= cfg.nsfwBlock || hi >= 2) { block = true; reasons += "nsfw" }
+        if (nsfwMax >= cfg.nsfwBlock || hi >= (if (deep) 3 else 2)) { block = true; reasons += "nsfw" }
         else if (nsfwMax >= cfg.nsfwReview) { review = true; reasons += "nsfw_uncertain" }
-        if (faces > 0) {
+        if (faces > 0 && !deep) {
             when (genderCheck(faceFrames)) {
                 "male" -> reasons += "people_male"
                 "female" -> { block = true; reasons += "people_female" }
@@ -117,9 +117,9 @@ object Moderation {
         ModResult(verdict, reasons, musicShare, musicMax, nsfwMax, faces, voiceShare, quran)
     }
 
-    private fun classifyAudio(ctx: Context, a: FloatArray, cfg: ModConfig): Triple<Float, Float, Float> {
+    private fun classifyAudio(ctx: Context, a: FloatArray, cfg: ModConfig, maxWindows: Int = 60): Triple<Float, Float, Float> {
         val total = a.size / WIN
-        val n = minOf(total, 60)
+        val n = minOf(total, maxWindows)
         val interp = Interpreter(loadAsset(ctx, "models/yamnet.tflite"))
         try {
             var music = 0; var weak = 0; var maxP = 0f; var voice = 0
@@ -203,13 +203,13 @@ object Moderation {
                 .addOnFailureListener { if (cont.isActive) cont.resume(0) }
         }
 
-    private fun grabFrames(file: File): List<Bitmap> {
+    private fun grabFrames(file: File, force: Int = 0): List<Bitmap> {
         val r = MediaMetadataRetriever()
         val out = ArrayList<Bitmap>()
         try {
             r.setDataSource(file.absolutePath)
             val durMs = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
-            val n = if (durMs < 4000) 4 else 10
+            val n = if (force > 0) force else if (durMs < 4000) 4 else 10
             for (i in 0 until n) {
                 val t = (durMs * 1000L * (2 * i + 1)) / (2 * n)
                 val f = runCatching { r.getFrameAtTime(t, MediaMetadataRetriever.OPTION_CLOSEST) }.getOrNull() ?: continue
