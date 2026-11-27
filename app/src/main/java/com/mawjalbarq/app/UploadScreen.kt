@@ -232,12 +232,36 @@ object UploadJobs {
     private fun toast(c: Context, m: String) { android.widget.Toast.makeText(c, m, android.widget.Toast.LENGTH_LONG).show() }
 
     @Volatile var pending = 0
+    private class Job(val src: Uri, val title: String, val desc: String, val meta: Meta, val big: Boolean, val onPub: suspend () -> Unit)
+    private var lastJob: Job? = null
+    fun retry(ctx: Context) { val j = lastJob ?: return; start(ctx, j.src, j.title, j.desc, j.meta, j.big, j.onPub) }
+    /** Failure is shown as a persistent notification (a toast is invisible once the app is in the background), with a retry action. */
+    private fun fail(ctx: Context, m: String, canRetry: Boolean = true) {
+        toast(ctx, m)
+        try {
+            val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            if (android.os.Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel("upload_fail") == null)
+                nm.createNotificationChannel(android.app.NotificationChannel("upload_fail", "فشل الرفع", android.app.NotificationManager.IMPORTANCE_HIGH))
+            val open = android.app.PendingIntent.getActivity(ctx, 1, Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP), android.app.PendingIntent.FLAG_IMMUTABLE)
+            val b = androidx.core.app.NotificationCompat.Builder(ctx, "upload_fail").setSmallIcon(android.R.drawable.stat_notify_error)
+                .setContentTitle("فشل نشر الفيديو").setContentText(m).setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(m))
+                .setAutoCancel(true).setContentIntent(open)
+            if (canRetry && lastJob != null) {
+                val ri = android.app.PendingIntent.getService(ctx, 2, Intent(ctx, UploadService::class.java).setAction("RETRY"), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+                b.addAction(0, "إعادة المحاولة", ri)
+            }
+            nm.notify(4472, b.build())
+        } catch (_: Exception) { }
+    }
+
     fun start(ctx: Context, src: Uri, title: String, desc: String, meta: Meta, bigSrc: Boolean, onPublished: suspend () -> Unit) {
+        lastJob = Job(src, title, desc, meta, bigSrc, onPublished)
+        (ctx.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager).cancel(4472)
         pending++
         UploadService.start(ctx.applicationContext)
         scope.launch {
             gate.acquire()
-            try { run(ctx, src, title, desc, meta, bigSrc, onPublished) } catch (e: Exception) { status = ""; toast(ctx, "تعذر نشر الفيديو، حاول مرة ثانية") } finally { gate.release(); pending-- }
+            try { run(ctx, src, title, desc, meta, bigSrc, onPublished) } catch (e: Exception) { status = ""; fail(ctx, "تعذر نشر الفيديو، حاول مرة ثانية") } finally { gate.release(); pending-- }
         }
     }
 
@@ -245,7 +269,7 @@ object UploadJobs {
         var title = title0; var desc = desc0
         val out = File(ctx.cacheDir, "upload_" + System.currentTimeMillis() + ".mp4")
         status = "جارٍ ضغط الفيديو في الخلفية..."
-        if (!compress(ctx, src, out, meta)) { status = ""; toast(ctx, "فشل ضغط الفيديو"); return }
+        if (!compress(ctx, src, out, meta)) { status = ""; fail(ctx, "فشل ضغط الفيديو"); return }
         if (title.isBlank()) {
             status = "جارٍ كتابة العنوان تلقائيًا..."
             val (at, ad) = autoText(ctx, out)
@@ -261,7 +285,7 @@ object UploadJobs {
         if (mod.verdict == Verdict.BLOCK) {
             api("POST", "/rest/v1/moderation_queue", qBody(null).toString())
             out.delete(); status = ""
-            toast(ctx, "هذا المقطع يخالف قواعد المحتوى ولا يمكن نشره"); return
+            fail(ctx, "هذا المقطع يخالف قواعد المحتوى ولا يمكن نشره", false); return
         }
         val useArchive = bigSrc || out.length() > IA_MAX_CLOUDINARY
         var r: JSONObject? = null
@@ -277,7 +301,7 @@ object UploadJobs {
         val iaThumb = if (iaId != null) uploadThumb(out) else null
         val keepForDeep = r != null && mod.verdict == Verdict.ALLOW
         if (!keepForDeep) out.delete()
-        if (r == null) { status = ""; toast(ctx, "فشل الرفع، تحقق من الاتصال"); return }
+        if (r == null) { status = ""; fail(ctx, "فشل الرفع، تحقق من الاتصال"); return }
         status = "جارٍ النشر..."
         val pid = if (iaId != null) iaId else r.getString("public_id")
         val w = r.optInt("width"); val h = r.optInt("height")
@@ -309,7 +333,7 @@ object UploadJobs {
                     }
                 } catch (_: Throwable) { }
             }
-        } else toast(ctx, if (rt.contains("daily video limit")) "وصلت للحد اليومي: ٥ فيديوهات في اليوم" else "فشل النشر")
+        } else { val lim = rt.contains("daily video limit"); fail(ctx, if (lim) "وصلت للحد اليومي: ٥ فيديوهات في اليوم" else "فشل النشر", !lim) }
         out.delete()
     }
 }
