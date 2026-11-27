@@ -106,3 +106,7 @@ create policy "Videos are viewable by everyone" on public.videos for select usin
     AND ((temp_ban_until IS NULL) OR (temp_ban_until <= now())) AND status NOT IN ('pending_review','rejected'))
   OR (auth.uid() = user_id) OR is_admin());
 commit;
+
+-- Admins approve/reject by PATCHing status (they are the 'authenticated' role too); guard_video_status stops non-admins
+-- from moving pending_review/rejected videos or putting live ones into review states.
+grant update (status) on public.videos to authenticated;
