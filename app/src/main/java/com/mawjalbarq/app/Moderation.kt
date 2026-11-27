@@ -85,6 +85,7 @@ object Moderation {
         else if (musicMax >= cfg.musicReviewMax || musicShare >= cfg.musicReviewShare) { review = true; reasons += "music_uncertain" }
 
         var nsfwMax = 0f; var hi = 0; var faces = 0
+        val faceFrames = ArrayList<Bitmap>()
         try {
             val frames = grabFrames(file)
             if (frames.isEmpty()) { review = true; reasons += "frames_unreadable" }
@@ -97,12 +98,19 @@ object Moderation {
                     if (p >= cfg.nsfwBlockMulti) hi++
                     val big = detectFaces(det, fr, cfg.faceMinWidth)
                     if (big > faces) faces = big
+                    if (big > 0 && faceFrames.size < 3) faceFrames += fr
                 }
             } finally { runCatching { nsfw.close() }; runCatching { det.close() } }
         } catch (e: Throwable) { review = true; reasons += "visual_check_failed" }
         if (nsfwMax >= cfg.nsfwBlock || hi >= 2) { block = true; reasons += "nsfw" }
         else if (nsfwMax >= cfg.nsfwReview) { review = true; reasons += "nsfw_uncertain" }
-        if (faces > 0) { review = true; reasons += "people" }
+        if (faces > 0) {
+            when (genderCheck(faceFrames)) {
+                "male" -> reasons += "people_male"
+                "female" -> { block = true; reasons += "people_female" }
+                else -> { review = true; reasons += "people" }
+            }
+        }
 
         val verdict = if (block) Verdict.BLOCK else if (review) Verdict.REVIEW else Verdict.ALLOW
         val quran = musicMax < cfg.quranMaxMusic && voiceShare >= 0.5f && faces == 0
@@ -146,6 +154,41 @@ object Moderation {
         interp.run(buf, out)
         if (b !== src) b.recycle()
         return (out[0][1].toInt() and 0xFF) / 255f
+    }
+
+    /** Remote gender check via the face-gender Edge Function (Face++ key lives server-side).
+     *  Returns "male" / "female" only when every face in every frame agrees and quality is good; anything else (or any failure) = "unsure". */
+    private suspend fun genderCheck(frames: List<Bitmap>): String = withContext(Dispatchers.IO) {
+        try {
+            if (frames.isEmpty() || !App.loggedIn) return@withContext "unsure"
+            val arr = org.json.JSONArray()
+            for (f in frames) {
+                val bo = java.io.ByteArrayOutputStream()
+                val s = 320f / maxOf(f.width, f.height)
+                val b = if (s < 1f) Bitmap.createScaledBitmap(f, (f.width * s).toInt().coerceAtLeast(1), (f.height * s).toInt().coerceAtLeast(1), true) else f
+                b.compress(Bitmap.CompressFormat.JPEG, 80, bo)
+                arr.put(android.util.Base64.encodeToString(bo.toByteArray(), android.util.Base64.NO_WRAP))
+            }
+            val (code, text) = api("POST", "/functions/v1/face-gender", JSONObject().put("frames", arr).toString())
+            if (code != 200) return@withContext "unsure"
+            val j = JSONObject(text)
+            if (!j.optBoolean("available")) return@withContext "unsure"
+            val fr = j.getJSONArray("frames")
+            var male = 0; var female = 0; var bad = 0
+            for (i in 0 until fr.length()) {
+                val faces = fr.getJSONObject(i).optJSONArray("faces") ?: continue
+                for (k in 0 until faces.length()) {
+                    val f = faces.getJSONObject(k)
+                    val g = f.optString("gender", "")
+                    val q = f.optDouble("quality", 0.0); val bl = f.optDouble("blur", 100.0); val yaw = Math.abs(f.optDouble("yaw", 90.0))
+                    if (g.isEmpty() || q < 50 || bl > 50 || yaw > 35) { bad++; continue }
+                    if (g == "Male") male++ else if (g == "Female") female++
+                }
+            }
+            if (bad == 0 && male >= 2 && female == 0) "male"
+            else if (bad == 0 && female >= 2 && male == 0) "female"
+            else "unsure"
+        } catch (e: Throwable) { "unsure" }
     }
 
     private suspend fun detectFaces(det: com.google.mlkit.vision.face.FaceDetector, bmp: Bitmap, minW: Float): Int =
