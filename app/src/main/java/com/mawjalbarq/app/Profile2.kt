@@ -163,7 +163,7 @@ fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = fals
         var showFollowers by remember { mutableStateOf(false) }
         if (showFollowers) FollowersSheet(p.id) { showFollowers = false }
         Row(Modifier.offset(y = (-24).dp).fillMaxWidth().padding(horizontal = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            listOf(Triple("المتابعون", p.followers, true), Triple("المقاطع", p.videos.size.toLong(), false)).forEach { (l, n, tap) ->
+            listOf(Triple("المتابعون", p.followers.toLong(), true), Triple("المقاطع", p.videos.size.toLong(), false)).forEach { (l, n, tap) ->
                 Column(
                     Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f))
                         .then(if (tap) Modifier.clickable { showFollowers = true } else Modifier).padding(vertical = 12.dp),
@@ -188,6 +188,7 @@ fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = fals
 }
 
 /** List of the people who follow [userId], each with a follow button. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FollowersSheet(userId: String, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
