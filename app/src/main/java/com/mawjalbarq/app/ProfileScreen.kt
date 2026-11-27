@@ -29,7 +29,7 @@ fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions:
         AuthPortalScreen(prefs = prefs, onSuggestions = onSuggestions)
         return
     }
-    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp).padding(bottom = 100.dp)) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 6.dp).padding(top = 12.dp).padding(bottom = 100.dp)) {
         var settings by remember { mutableStateOf(false) }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("حسابي", color = Ink, fontSize = 24.sp, fontFamily = Cairo, modifier = Modifier.weight(1f))

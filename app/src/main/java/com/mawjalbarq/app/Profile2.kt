@@ -58,9 +58,9 @@ fun Avatar(url: String?, name: String, size: Int = 72) {
 fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = false, extra: @Composable () -> Unit = {}) {
     val surf = MaterialTheme.colorScheme.surface
     Column(Modifier.fillMaxWidth()) {
-        Box(Modifier.fillMaxWidth().height(104.dp).clip(RoundedCornerShape(16.dp))
+        Box(Modifier.fillMaxWidth().height(104.dp).clip(RoundedCornerShape(12.dp))
             .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f), MaterialTheme.colorScheme.secondary.copy(alpha = 0.55f), surf))))
-        Row(Modifier.fillMaxWidth().offset(y = (-47).dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.Bottom) {
+        Row(Modifier.fillMaxWidth().offset(y = (-47).dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.Bottom) {
             Box(Modifier.size(94.dp).clip(CircleShape).border(3.dp, MaterialTheme.colorScheme.background, CircleShape)) { Avatar(p.avatar, p.name, 94) }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f).padding(top = 52.dp)) {
@@ -68,11 +68,11 @@ fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = fals
                 if (p.publicId.isNotBlank()) Text("ID: " + p.publicId, color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, maxLines = 1)
             }
         }
-        Column(Modifier.offset(y = (-38).dp).padding(horizontal = 16.dp)) {
+        Column(Modifier.offset(y = (-38).dp).padding(horizontal = 10.dp)) {
             if (p.bio.isNotBlank()) Text(p.bio, color = Color(0xFFD0D6E0), fontSize = 14.sp)
             extra()
         }
-        Row(Modifier.offset(y = (-24).dp).fillMaxWidth().padding(horizontal = 8.dp).clip(RoundedCornerShape(18.dp))
+        Row(Modifier.offset(y = (-24).dp).fillMaxWidth().padding(horizontal = 2.dp).clip(RoundedCornerShape(18.dp))
             .background(MaterialTheme.colorScheme.primaryContainer).padding(vertical = 12.dp)) {
             listOf("المتابعون" to p.followers, "المتابَعون" to p.following, "الإعجابات" to p.videos.sumOf { it.likes }, "المقاطع" to p.videos.size).forEach { (l, n) ->
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -88,7 +88,7 @@ fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = fals
         }
         val shown = if (tab == 0) p.videos else Feed.videos.filter { Feed.saved[it.id] == true }
         if (shown.isEmpty()) Text(if (tab == 0) "لا توجد مقاطع بعد" else "لا توجد محفوظات", color = Color.Gray, modifier = Modifier.padding(16.dp))
-        else Column(Modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        else Column(Modifier.padding(horizontal = 2.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             shown.chunked(3).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     row.forEach { v ->
