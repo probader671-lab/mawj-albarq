@@ -29,12 +29,9 @@ object Media {
 
     /** Adaptive HLS (Cloudinary sp_auto: several bitrates, the player follows the connection). */
     fun playUrl(u: String, durationSec: Int = 0): String =
-        // Videos over 15s play as progressive MP4: on-demand HLS can report a partial duration (e.g. 8s) and stall.
-        if (dataSaver) smallMp4(u)
-        else if (durationSec > 15) mp4Url(u)
-        else if (isCld(u) && u.endsWith(".mp4") && !u.contains("/sp_auto/"))
-            u.replace(VID, VID + "sp_auto/").removeSuffix(".mp4") + ".m3u8"
-        else u
+        // Original file as uploaded (already compressed on the phone). Cloudinary HLS (sp_auto) costs 8 transformation
+        // credits per video second, so it is no longer used. Data saver still asks for a cached 480p copy.
+        if (dataSaver) smallMp4(u) else mp4Url(u)
 
     /** Cloudinary-made H.264 MP4 at 480p/720p (cached after the first request); non-Cloudinary URLs unchanged. */
     private fun smallMp4(u: String): String {

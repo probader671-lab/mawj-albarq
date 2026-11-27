@@ -92,7 +92,7 @@ fun ModerationQueueScreen(onBack: () -> Unit) {
                     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(width = 96.dp, height = 64.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF2A3548))) {
-                                if (q.thumb != null) AsyncImage(Media.thumb(q.thumb, 320), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                                if (q.thumb != null) AsyncImage(Media.thumb(q.thumb), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                             }
                             Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
