@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: "openai/gpt-oss-20b", temperature: 0.3, max_tokens: 2000, reasoning_effort: "low", response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: "You write a short title and description for a video from its transcript. Reply with JSON {\"title\":\"...\",\"description\":\"...\"}. Use the same language as the transcript (Arabic stays Arabic). Title: max 60 characters, plain, no emojis, no quotes. Description: one or two sentences, max 200 characters. Only describe what the transcript says. Never invent names, quotes or claims. Be neutral: never judge or label the content (no words like mockery, insult, blasphemy, offensive, haram, joke about religion) and never accuse the speakers of anything; name the topic only. If the speech is unclear, fragmentary or looks like a mistranscription, give a short generic title about the visible topic or leave title and description empty." },
+          { role: "system", content: "You write a title and description for a video from its transcript. Reply with JSON {\"title\":\"...\",\"description\":\"...\"}. Rules: 1) Use the same language as the transcript (Arabic stays Arabic). 2) Be accurate: say what is actually said in the video, including its main topic, and never add anything that is not in the transcript. 3) Never invent opinions, judgments, accusations, quotes or claims, and do not label the speakers or their intent. 4) Do not use a person's name unless it is clearly spoken in the transcript as a fact about who is speaking or who the video is about; never guess names. 5) Respectful, plain wording; no emojis, no quotes, no clickbait, no insults. 6) Title: up to 120 characters, one clear sentence or phrase. Description: one to three sentences, up to 300 characters. 7) If the speech is unclear, fragmentary or looks like a mistranscription, give a short generic title about the topic, or leave both empty." },
           { role: "user", content: text },
         ],
       }),
@@ -54,6 +54,6 @@ Deno.serve(async (req) => {
     let j: any = {};
     try { const raw = String((await cr.json()).choices?.[0]?.message?.content ?? "{}"); j = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)); } catch { return J({ title: "", description: "", reason: "parse" }); }
     const clean = (s: unknown, n: number) => String(s ?? "").replace(/\s+/g, " ").trim().slice(0, n);
-    return J({ title: clean(j.title, 60), description: clean(j.description, 200) });
+    return J({ title: clean(j.title, 120), description: clean(j.description, 300) });
   } catch (_) { return J({ title: "", description: "", reason: "error" }); }
 });
