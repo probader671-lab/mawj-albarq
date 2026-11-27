@@ -27,10 +27,10 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class ProfileData(val id: String, val name: String, val bio: String, val avatar: String?, val videos: List<Video>, val followers: Int = 0, val following: Int = 0, val publicId: String = "")
+data class ProfileData(val id: String, val name: String, val bio: String, val avatar: String?, val videos: List<Video>, val followers: Int = 0, val following: Int = 0, val publicId: String = "", val banner: String? = null)
 
 suspend fun loadProfile(id: String): ProfileData? {
-    val (c, t) = api("GET", "/rest/v1/profiles?id=eq.$id&select=id,full_name,bio,avatar_url,verified,followers_count,following_count,public_id")
+    val (c, t) = api("GET", "/rest/v1/profiles?id=eq.$id&select=id,full_name,bio,avatar_url,banner_url,verified,followers_count,following_count,public_id")
     if (c != 200) return null
     val o = try { JSONArray(t).optJSONObject(0) } catch (e: Exception) { null } ?: return null
     val (c2, t2) = api("GET", "/rest/v1/videos?user_id=eq.$id&status=eq.ready&deleted=eq.false&select=id,width,height,duration,views,created_at,title,description,video_url,thumbnail_url,likes,comments_count&order=created_at.desc,id.desc&limit=60")
@@ -43,7 +43,8 @@ suspend fun loadProfile(id: String): ProfileData? {
             v.optString("created_at"), o.optBoolean("verified", false), o.optLong("followers_count", 0L).coerceAtLeast(0L))) } } catch (_: Exception) {}
     suspend fun cnt(q: String): Int { return try { val (c3, t3) = api("GET", "/rest/v1/follows?$q"); if (c3 == 200) JSONArray(t3).length() else 0 } catch (_: Exception) { 0 } }
     return ProfileData(id, o.optString("full_name").ifBlank { "مستخدم" }, if (o.isNull("bio")) "" else o.optString("bio"),
-        if (o.isNull("avatar_url")) null else o.optString("avatar_url"), vids, o.optInt("followers_count", 0).coerceAtLeast(0), o.optInt("following_count", 0).coerceAtLeast(0), o.optString("public_id"))
+        if (o.isNull("avatar_url")) null else o.optString("avatar_url"), vids, o.optInt("followers_count", 0).coerceAtLeast(0), o.optInt("following_count", 0).coerceAtLeast(0), o.optString("public_id"),
+        if (o.isNull("banner_url") || o.optString("banner_url").isBlank()) null else o.optString("banner_url"))
 }
 
 @Composable
@@ -55,11 +56,13 @@ fun Avatar(url: String?, name: String, size: Int = 72) {
 }
 
 @Composable
-fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = false, extra: @Composable () -> Unit = {}) {
+fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = false, big: Boolean = false, extra: @Composable () -> Unit = {}) {
     val surf = MaterialTheme.colorScheme.surface
     Column(Modifier.fillMaxWidth()) {
-        Box(Modifier.fillMaxWidth().height(104.dp).clip(RoundedCornerShape(12.dp))
-            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f), MaterialTheme.colorScheme.secondary.copy(alpha = 0.55f), surf))))
+        Box(Modifier.fillMaxWidth().height(if (big) 150.dp else 104.dp).clip(RoundedCornerShape(12.dp))
+            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f), MaterialTheme.colorScheme.secondary.copy(alpha = 0.55f), surf)))) {
+            if (p.banner != null) AsyncImage(p.banner, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        }
         Row(Modifier.fillMaxWidth().offset(y = (-47).dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.Bottom) {
             Box(Modifier.size(94.dp).clip(CircleShape).border(3.dp, MaterialTheme.colorScheme.background, CircleShape)) { Avatar(p.avatar, p.name, 94) }
             Spacer(Modifier.width(14.dp))
@@ -88,6 +91,19 @@ fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = fals
         }
         val shown = if (tab == 0) p.videos else Feed.videos.filter { Feed.saved[it.id] == true }
         if (shown.isEmpty()) Text(if (tab == 0) "لا توجد مقاطع بعد" else "لا توجد محفوظات", color = Color.Gray, modifier = Modifier.padding(16.dp))
+        else if (big) Column(Modifier.padding(horizontal = 2.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            shown.forEach { v ->
+                Column(Modifier.fillMaxWidth().clickable { onPlay(v.id) }) {
+                    Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)).background(Color.Black)) {
+                        if (v.thumb != null) AsyncImage(v.thumb, v.title, Modifier.fillMaxSize(), contentScale = if (v.portrait) ContentScale.Fit else ContentScale.Crop)
+                        if (v.duration > 0) Text(formatDuration(v.duration), color = Color.White, fontSize = 12.sp,
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xB3000000)).padding(horizontal = 6.dp, vertical = 2.dp))
+                    }
+                    Text(v.title.ifBlank { "فيديو" }, color = Ink, fontSize = 15.sp, maxLines = 2, modifier = Modifier.padding(top = 6.dp, start = 4.dp, end = 4.dp))
+                    Text("${v.views} مشاهدة", color = Color(0xFF8A8F9C), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                }
+            }
+        }
         else Column(Modifier.padding(horizontal = 2.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             shown.chunked(3).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -122,9 +138,9 @@ fun CreatorSheet(id: String, onPlay: (String) -> Unit, onClose: () -> Unit) {
     var p by remember { mutableStateOf<ProfileData?>(null) }
     LaunchedEffect(id) { p = loadProfile(id) }
     ModalBottomSheet(sheetState = fullSheet(), onDismissRequest = onClose, containerColor = Color(0xFF141A24)) {
-        Column(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding()) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 8.dp).navigationBarsPadding()) {
             val d = p
-            if (d == null) ProfileSkeleton() else ProfileHeader(d, onPlay) {
+            if (d == null) ProfileSkeleton() else ProfileHeader(d, onPlay, big = true) {
                 if (id != App.userId) {
                     val sc = rememberCoroutineScope(); val f = Feed.following[id] == true
                     Button(onClick = { if (App.loggedIn) sc.launch { Feed.toggleFollow(id) } }, enabled = App.loggedIn, shape = RoundedCornerShape(50)) { Text(if (f) "تتابعه" else "متابعة") }

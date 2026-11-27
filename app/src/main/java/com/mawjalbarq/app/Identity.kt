@@ -114,6 +114,14 @@ fun SettingsSheet(prefs: ThemePrefs, onClose: () -> Unit) {
             Text("لون التطبيق", color = Ink, fontSize = 15.sp)
             Spacer(Modifier.height(8.dp))
             AccentPicker(prefs, compact = false)
+            Spacer(Modifier.height(16.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("توفير البيانات", color = Ink, fontSize = 15.sp)
+                    Text("فيديو أخف (480p) للهواتف الضعيفة والنت البطيء", color = Color(0xFF8A8F9C), fontSize = 12.sp)
+                }
+                androidx.compose.material3.Switch(checked = Media.dataSaver, onCheckedChange = { Media.setSaver(it) })
+            }
         }
     }
 }

@@ -61,11 +61,16 @@ private suspend fun compress(ctx: Context, uri: Uri, out: File, meta: Meta): Boo
         try {
             val effects = ArrayList<androidx.media3.common.Effect>()
             val portrait = meta.h > meta.w
-            if (portrait && meta.h > 1280) effects.add(Presentation.createForHeight(1280))
-            else if (!portrait && meta.h > 720) effects.add(Presentation.createForHeight(720))
+            // Smaller output for weak phones / slow networks: data-saver switch or a long video (> 10 min) = 480p, else 720p
+            val small = Media.dataSaver || meta.durMs > 10 * 60_000L
+            val long = if (small) 854 else 1280      // portrait height cap
+            val short = if (small) 480 else 720      // landscape height cap
+            val bitrate = if (small) 1_100_000 else 2_500_000
+            if (portrait && meta.h > long) effects.add(Presentation.createForHeight(long))
+            else if (!portrait && meta.h > short) effects.add(Presentation.createForHeight(short))
             val item = EditedMediaItem.Builder(MediaItem.fromUri(uri)).setEffects(Effects(emptyList(), effects)).build()
             val enc = DefaultEncoderFactory.Builder(ctx)
-                .setRequestedVideoEncoderSettings(VideoEncoderSettings.Builder().setBitrate(2_500_000).build()).build()
+                .setRequestedVideoEncoderSettings(VideoEncoderSettings.Builder().setBitrate(bitrate).build()).build()
             val t = Transformer.Builder(ctx).setVideoMimeType(MimeTypes.VIDEO_H264).setEncoderFactory(enc)
                 .addListener(object : Transformer.Listener {
                     override fun onCompleted(composition: Composition, exportResult: ExportResult) { if (cont.isActive) cont.resume(true) }
@@ -76,6 +81,66 @@ private suspend fun compress(ctx: Context, uri: Uri, out: File, meta: Meta): Boo
             cont.invokeOnCancellation { Handler(Looper.getMainLooper()).post { t.cancel() } }
         } catch (e: Exception) { if (cont.isActive) cont.resume(false) }
     }
+}
+
+private const val IA_MAX_CLOUDINARY = 95L * 1024 * 1024   // Cloudinary free plan caps a video file at about 100 MB
+private const val IA_MIN_MS = 20 * 60_000L
+private const val IA_MIN_BYTES = 500L * 1024 * 1024
+
+private fun srcSize(ctx: Context, uri: Uri): Long = try {
+    ctx.contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: 0L
+} catch (_: Exception) { 0L }
+
+/** Public upload to archive.org (S3-like API). Keys come from the ia-keys Edge Function (signed-in users only). Returns the item id, or null. */
+private suspend fun uploadArchive(f: File, title: String, onProgress: (Float) -> Unit): String? = withContext(Dispatchers.IO) {
+    try {
+        val (kc, kt) = api("POST", "/functions/v1/ia-keys", "{}")
+        if (kc != 200) return@withContext null
+        val kj = JSONObject(kt); val ak = kj.getString("access"); val sk = kj.getString("secret")
+        val id = "mawj-" + java.util.UUID.randomUUID().toString().replace("-", "").take(16)
+        val total = f.length()
+        val body = object : okhttp3.RequestBody() {
+            override fun contentType() = "video/mp4".toMediaType()
+            override fun contentLength() = total
+            override fun writeTo(sink: okio.BufferedSink) {
+                f.inputStream().use { ins ->
+                    val buf = ByteArray(64 * 1024); var sent = 0L; var lastP = -1
+                    while (true) { val n = ins.read(buf); if (n < 0) break; sink.write(buf, 0, n); sent += n
+                        val p = (sent * 100 / total).toInt(); if (p != lastP) { lastP = p; onProgress(sent.toFloat() / total) } }
+                }
+            }
+        }
+        val safeTitle = title.filter { it.code in 32..126 }.ifBlank { "Mawj Al-Barq video" }.take(120)
+        val client = http.newBuilder().writeTimeout(10, java.util.concurrent.TimeUnit.MINUTES).readTimeout(10, java.util.concurrent.TimeUnit.MINUTES).build()
+        repeat(3) {
+            val req = Request.Builder().url("https://s3.us.archive.org/$id/video.mp4").put(body)
+                .header("authorization", "LOW $ak:$sk")
+                .header("x-amz-auto-make-bucket", "1")
+                .header("x-archive-meta-mediatype", "movies")
+                .header("x-archive-meta-collection", "opensource_movies")
+                .header("x-archive-meta-title", safeTitle)
+                .header("x-archive-meta-creator", "Mawj Al-Barq")
+                .header("x-archive-interactive-priority", "1").build()
+            try { client.newCall(req).execute().use { if (it.code in 200..299) return@withContext id } } catch (_: java.io.IOException) {}
+            kotlinx.coroutines.delay(3000)
+        }
+        null
+    } catch (e: Exception) { null }
+}
+
+/** Small JPEG frame to Cloudinary (image) so archive.org videos have a thumbnail right away. */
+private suspend fun uploadThumb(f: File): String? = withContext(Dispatchers.IO) {
+    try {
+        val r = MediaMetadataRetriever(); r.setDataSource(f.absolutePath)
+        val bmp = r.getFrameAtTime(1_000_000) ?: r.getFrameAtTime(0); r.release()
+        if (bmp == null) return@withContext null
+        val bo = java.io.ByteArrayOutputStream(); bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, bo)
+        val body = MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("upload_preset", Cfg.PRESET)
+            .addFormDataPart("file", "t.jpg", bo.toByteArray().toRequestBody("image/jpeg".toMediaType())).build()
+        http.newCall(Request.Builder().url("https://api.cloudinary.com/v1_1/${Cfg.CLOUD}/image/upload").post(body).build()).execute().use {
+            if (it.code == 200) JSONObject(it.body?.string().orEmpty()).optString("secure_url").ifBlank { null } else null
+        }
+    } catch (_: Exception) { null }
 }
 
 private const val CHUNK = 6 * 1024 * 1024  // Cloudinary needs >= 5 MB per chunk except the last
@@ -141,6 +206,8 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
     var status by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf(-1f) }
+    var askArchive by remember { mutableStateOf(false) }
+    var archiveOk by remember { mutableStateOf(false) }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { if (it != null) uri = it }
     var camUri by remember { mutableStateOf<Uri?>(null) }
     val cam = rememberLauncherForActivityResult(ActivityResultContracts.CaptureVideo()) { ok -> if (ok) uri = camUri }
@@ -184,12 +251,21 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
                 if (progress >= 0f) LinearProgressIndicator(progress = { progress }, modifier = Modifier.width(200.dp)) else LinearProgressIndicator(Modifier.width(200.dp))
             }
         }
-        Button(enabled = uri != null && title.isNotBlank() && !busy, modifier = Modifier.fillMaxWidth(), onClick = {
+        if (askArchive) AlertDialog(onDismissRequest = { askArchive = false },
+            title = { Text("فيديو كبير") },
+            text = { Text("الفيديوهات الأطول من 20 دقيقة أو الأكبر من 500 ميجا بتتنشر علنًا على موقع archive.org، ومش سهل تخليها خاصة أو تمسحها بعد كده. متأكد إنك عايز تكمل؟") },
+            confirmButton = { TextButton(onClick = { askArchive = false; archiveOk = true }) { Text("متابعة") } },
+            dismissButton = { TextButton(onClick = { askArchive = false }) { Text("إلغاء") } })
+        var startTick by remember { mutableStateOf(0) }
+        LaunchedEffect(archiveOk) { if (archiveOk) { startTick++ } }
+        val go: () -> Unit = {
             val src = uri!!; busy = true
             scope.launch {
                 try {
                     status = "جارٍ ضغط الفيديو..."
                     val meta = withContext(Dispatchers.IO) { readMeta(ctx, src) }
+                    val bigSrc = meta.durMs > IA_MIN_MS || withContext(Dispatchers.IO) { srcSize(ctx, src) } > IA_MIN_BYTES
+                    if (bigSrc && !archiveOk) { busy = false; status = ""; askArchive = true; return@launch }
                     val out = File(ctx.cacheDir, "upload.mp4")
                     if (!compress(ctx, src, out, meta)) { status = "فشل ضغط الفيديو"; busy = false; return@launch }
                     status = "جارٍ فحص المحتوى..."
@@ -203,19 +279,31 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
                         out.delete()
                         status = "هذا المقطع يخالف قواعد المحتوى ولا يمكن نشره"; busy = false; return@launch
                     }
+                    val useArchive = bigSrc || out.length() > IA_MAX_CLOUDINARY
                     status = "جارٍ الرفع..."
                     progress = 0f
-                    val r = uploadCloudinary(out) { p -> progress = p; status = "جارٍ الرفع... " + (p * 100).toInt() + "%" }
+                    var r: JSONObject? = null
+                    var iaId: String? = null
+                    if (useArchive) {
+                        if (!archiveOk) { out.delete(); busy = false; status = ""; askArchive = true; return@launch }
+                        val om = withContext(Dispatchers.IO) { readMeta(ctx, Uri.fromFile(out)) }
+                        iaId = uploadArchive(out, title.trim()) { p -> progress = p; status = "جارٍ الرفع... " + (p * 100).toInt() + "%" }
+                        if (iaId != null) r = JSONObject().put("width", om.w).put("height", om.h).put("duration", om.durMs / 1000.0).put("bytes", out.length())
+                    } else {
+                        r = uploadCloudinary(out) { p -> progress = p; status = "جارٍ الرفع... " + (p * 100).toInt() + "%" }
+                    }
                     progress = -1f
+                    val iaThumb = if (iaId != null) uploadThumb(out) else null
                     out.delete()
+                    archiveOk = false
                     if (r == null) { status = "فشل الرفع، تحقق من الاتصال"; busy = false; return@launch }
                     status = "جارٍ النشر..."
-                    val pid = r.getString("public_id")
+                    val pid = if (iaId != null) iaId else r.getString("public_id")
                     val w = r.optInt("width"); val h = r.optInt("height")
                     val body = JSONObject().put("user_id", App.userId).put("title", title.trim()).put("description", desc.trim())
-                        .put("video_url", r.getString("secure_url"))
-                        .put("thumbnail_url", "https://res.cloudinary.com/${Cfg.CLOUD}/video/upload/so_0/$pid.jpg")
-                        .put("storage_type", "cloudinary").put("media_public_id", pid).put("mime_type", "video/mp4")
+                        .put("video_url", if (iaId != null) "https://archive.org/download/$iaId/video.mp4" else r.getString("secure_url"))
+                        .put("thumbnail_url", if (iaId != null) (iaThumb ?: "https://archive.org/services/img/$iaId") else "https://res.cloudinary.com/${Cfg.CLOUD}/video/upload/so_0/$pid.jpg")
+                        .put("storage_type", if (iaId != null) "archive" else "cloudinary").put("media_public_id", pid).put("mime_type", "video/mp4")
                         .put("size_bytes", r.optLong("bytes")).put("duration", Math.round(r.optDouble("duration", 0.0)).toInt())
                         .put("width", w).put("height", h).put("is_vertical", h > w).put("is_short", r.optDouble("duration", 0.0) <= 90.0)
                         .put("status", if (mod.verdict == Verdict.REVIEW) "pending_review" else "ready")
@@ -234,6 +322,8 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
                 } catch (e: Exception) { status = "حدث خطأ غير متوقع" }
                 busy = false
             }
-        }) { Text("نشر") }
+        }
+        LaunchedEffect(startTick) { if (startTick > 0 && uri != null && !busy) go() }
+        Button(enabled = uri != null && title.isNotBlank() && !busy, modifier = Modifier.fillMaxWidth(), onClick = { archiveOk = false; go() }) { Text("نشر") }
     }
 }
