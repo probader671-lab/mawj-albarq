@@ -64,7 +64,7 @@ object Media {
                 val uri = p.currentMediaItem?.localConfiguration?.uri?.toString() ?: return
                 val mp4 = mp4Url(uri)
                 if (mp4 != uri) {
-                    p.setMediaItem(MediaItem.fromUri(mp4)); p.prepare(); p.playWhenReady = true
+                    p.setMediaItem(MediaItem.Builder().setMediaId(p.currentMediaItem?.mediaId ?: "").setUri(mp4).build()); p.prepare(); p.playWhenReady = true
                 }
             }
         })

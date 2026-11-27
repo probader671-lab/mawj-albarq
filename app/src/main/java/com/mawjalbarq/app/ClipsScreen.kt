@@ -111,11 +111,14 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
     }
     var isBuffering by remember { mutableStateOf(true) }
     var isPlaying by remember { mutableStateOf(true) }
+    // id of the video whose first frame has been drawn; until it matches the page, a black cover hides the previous video's last frame
+    var renderedFor by remember { mutableStateOf<String?>(null) }
 
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) { isPlaying = playing }
             override fun onPlaybackStateChanged(state: Int) { isBuffering = state == Player.STATE_BUFFERING }
+            override fun onRenderedFirstFrame() { renderedFor = player.currentMediaItem?.mediaId }
         }
         player.addListener(listener)
         onDispose {
@@ -170,7 +173,8 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
     LaunchedEffect(curId) { Watch.save(ctx, curId); tracker.switchTo(videos.getOrNull(cur)) }
     LaunchedEffect(curId) {
         isBuffering = true
-        player.setMediaItem(MediaItem.fromUri(Uri.parse(Media.playUrl(videos[cur].url, videos[cur].duration))))
+        renderedFor = null
+        player.setMediaItem(MediaItem.Builder().setMediaId(curId).setUri(Uri.parse(Media.playUrl(videos[cur].url, videos[cur].duration))).build())
         player.prepare()
         QuranBg.sync(ctx, player, videos[cur].isQuran)
         player.setPlaybackSpeed(speed)
@@ -309,6 +313,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                                 pv.player = null
                             }
                         )
+                        if (renderedFor != v.id) Box(Modifier.fillMaxSize().background(Color.Black))
                         if (isBuffering) {
                             CircularProgressIndicator(
                                 color = MaterialTheme.colorScheme.primary,
