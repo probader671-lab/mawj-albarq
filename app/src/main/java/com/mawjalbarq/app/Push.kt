@@ -58,7 +58,7 @@ class PushWorker(ctx: Context, p: WorkerParameters) : CoroutineWorker(ctx, p) {
         }
         ensureChannel(ctx)
         val canPost = Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-        var newest = last
+        var newest: String = last
         for (i in 0 until a.length()) {
             val o = a.getJSONObject(i)
             val ts = o.optString("created_at"); if (ts > newest) newest = ts
