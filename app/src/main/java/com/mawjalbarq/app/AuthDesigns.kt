@@ -270,26 +270,20 @@ private fun DesignSwitcherBar(active: AuthDesign, onSelect: (AuthDesign) -> Unit
 
 @Composable
 private fun OrbsBackdrop(modifier: Modifier) {
-    val tr = rememberInfiniteTransition(label = "orbs")
-    val t by tr.animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(14000, easing = LinearEasing), RepeatMode.Restart), label = "orbT")
-    val pt by tr.animateFloat(0f, 1f, infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Restart), label = "pt")
-
+    // Static and cheap (no infinite animation, no per-frame gradient allocation): the old moving orbs + 20 floating bubbles made weak phones lag.
     Canvas(modifier.background(Color(0xFF0F0F0F))) {
         val w = size.width
         val h = size.height
-        val o1 = Offset(w * 0.16f + cos(t) * 40f, h * 0.16f + sin(t) * 45f)
-        val o2 = Offset(w * 0.84f + sin(t * 0.8f) * 45f, h * 0.82f + cos(t * 0.8f) * 40f)
-        val o3 = Offset(w * 0.50f + cos(t * 1.2f) * 35f, h * 0.48f + sin(t * 1.2f) * 35f)
-
-        drawCircle(Brush.radialGradient(listOf(Color(0x99FF6B6B), Color.Transparent), center = o1, radius = w * 0.62f), radius = w * 0.62f, center = o1)
-        drawCircle(Brush.radialGradient(listOf(Color(0x994FACFE), Color.Transparent), center = o2, radius = w * 0.68f), radius = w * 0.68f, center = o2)
-        drawCircle(Brush.radialGradient(listOf(Color(0x66764BA2), Color.Transparent), center = o3, radius = w * 0.48f), radius = w * 0.48f, center = o3)
-
-        for (i in 0 until 20) {
+        val o1 = Offset(w * 0.16f, h * 0.16f)
+        val o2 = Offset(w * 0.84f, h * 0.82f)
+        val o3 = Offset(w * 0.50f, h * 0.48f)
+        drawCircle(Brush.radialGradient(listOf(Color(0x66FF6B6B), Color.Transparent), center = o1, radius = w * 0.62f), radius = w * 0.62f, center = o1)
+        drawCircle(Brush.radialGradient(listOf(Color(0x664FACFE), Color.Transparent), center = o2, radius = w * 0.68f), radius = w * 0.68f, center = o2)
+        drawCircle(Brush.radialGradient(listOf(Color(0x44764BA2), Color.Transparent), center = o3, radius = w * 0.48f), radius = w * 0.48f, center = o3)
+        for (i in 0 until 8) {
             val fx = ((i * 73 % 100) / 100f) * w
-            val fy = (((1f - pt) + (i * 0.13f)) % 1f) * h
-            val alpha = sin((((fy / h).coerceIn(0f, 1f)) * PI).toFloat()) * 0.45f
-            drawCircle(Color.White.copy(alpha = alpha), radius = (2f + (i % 3) * 1.3f).dp.toPx(), center = Offset(fx, fy))
+            val fy = ((i * 0.13f + 0.1f) % 1f) * h
+            drawCircle(Color.White.copy(alpha = 0.18f), radius = (2f + (i % 3) * 1.3f).dp.toPx(), center = Offset(fx, fy))
         }
     }
 }
