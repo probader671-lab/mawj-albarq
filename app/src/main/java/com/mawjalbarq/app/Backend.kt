@@ -150,10 +150,25 @@ suspend fun afterLogin() {
     } catch (_: Exception) {}
 }
 
+/** Signed-upload ticket from the cloudinary-sign edge function (logged-in users only, daily per-user limits). */
+class CloudSig(val apiKey: String, val timestamp: String, val signature: String, val folder: String, val preset: String)
+suspend fun cloudSign(kind: String): CloudSig? = withContext(Dispatchers.IO) {
+    try {
+        val (c, t) = api("POST", "/functions/v1/cloudinary-sign", JSONObject().put("kind", kind).toString())
+        if (c != 200) return@withContext null
+        val o = JSONObject(t)
+        CloudSig(o.getString("api_key"), o.getString("timestamp").toString(), o.getString("signature"), o.getString("folder"), o.getString("upload_preset"))
+    } catch (e: Exception) { null }
+}
+fun MultipartBody.Builder.addSig(s: CloudSig): MultipartBody.Builder = this
+    .addFormDataPart("api_key", s.apiKey).addFormDataPart("timestamp", s.timestamp)
+    .addFormDataPart("signature", s.signature).addFormDataPart("folder", s.folder).addFormDataPart("upload_preset", s.preset)
+
 suspend fun uploadImageToCloud(ctx: Context, uri: android.net.Uri): String? = withContext(Dispatchers.IO) {
     try {
         val bytes = ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@withContext null
-        val body = MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("upload_preset", Cfg.PRESET)
+        val sig = cloudSign("image") ?: return@withContext null
+        val body = MultipartBody.Builder().setType(MultipartBody.FORM).addSig(sig)
             .addFormDataPart("file", "a.jpg", bytes.toRequestBody("image/jpeg".toMediaType())).build()
         http.newCall(Request.Builder().url("https://api.cloudinary.com/v1_1/${Cfg.CLOUD}/image/upload").post(body).build()).execute().use {
             if (it.code == 200) JSONObject(it.body!!.string()).getString("secure_url") else null

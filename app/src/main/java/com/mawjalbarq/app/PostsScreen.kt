@@ -156,8 +156,8 @@ private suspend fun loadPosts(after: Post? = null): List<Post>? {
 private suspend fun uploadImage(ctx: Context, uri: Uri): String? = withContext(Dispatchers.IO) {
     try {
         val bytes = ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@withContext null
-        val body = MultipartBody.Builder().setType(MultipartBody.FORM)
-            .addFormDataPart("upload_preset", Cfg.PRESET)
+        val sig = cloudSign("image") ?: return@withContext null
+        val body = MultipartBody.Builder().setType(MultipartBody.FORM).addSig(sig)
             .addFormDataPart("file", "p.jpg", bytes.toRequestBody("image/jpeg".toMediaType()))
             .build()
         http.newCall(Request.Builder().url("https://api.cloudinary.com/v1_1/${Cfg.CLOUD}/image/upload").post(body).build())

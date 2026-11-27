@@ -138,7 +138,8 @@ private suspend fun uploadThumb(f: File): String? = withContext(Dispatchers.IO) 
         val bmp = r.getFrameAtTime(1_000_000) ?: r.getFrameAtTime(0); r.release()
         if (bmp == null) return@withContext null
         val bo = java.io.ByteArrayOutputStream(); bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, bo)
-        val body = MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("upload_preset", Cfg.PRESET)
+        val sig = cloudSign("image") ?: return@withContext null
+        val body = MultipartBody.Builder().setType(MultipartBody.FORM).addSig(sig)
             .addFormDataPart("file", "t.jpg", bo.toByteArray().toRequestBody("image/jpeg".toMediaType())).build()
         http.newCall(Request.Builder().url("https://api.cloudinary.com/v1_1/${Cfg.CLOUD}/image/upload").post(body).build()).execute().use {
             if (it.code == 200) JSONObject(it.body?.string().orEmpty()).optString("secure_url").ifBlank { null } else null
@@ -284,6 +285,7 @@ private suspend fun uploadCloudinary(f: File, onProgress: (Float) -> Unit = {}):
     val total = f.length()
     if (total <= 0L) return@withContext null
     val uploadId = java.util.UUID.randomUUID().toString()
+    val sig = cloudSign("video") ?: return@withContext null   // one signature covers all chunks of this upload
     val url = "https://api.cloudinary.com/v1_1/${Cfg.CLOUD}/video/upload"
     var start = 0L
     var last: JSONObject? = null
@@ -299,7 +301,7 @@ private suspend fun uploadCloudinary(f: File, onProgress: (Float) -> Unit = {}):
                 while (!ok && attempt < 6) {
                     try {
                         val body = MultipartBody.Builder().setType(MultipartBody.FORM)
-                            .addFormDataPart("upload_preset", Cfg.PRESET)
+                            .addSig(sig)
                             .addFormDataPart("file", "clip.mp4", buf.toRequestBody("application/octet-stream".toMediaType())).build()
                         val req = Request.Builder().url(url).post(body)
                             .header("X-Unique-Upload-Id", uploadId)
