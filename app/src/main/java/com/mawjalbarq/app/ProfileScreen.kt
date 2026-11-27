@@ -37,9 +37,9 @@ fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions:
         }
         if (settings) SettingsSheet(prefs) { settings = false }
         Spacer(Modifier.height(16.dp))
-        var me by remember { mutableStateOf<ProfileData?>(null) }
+        var me by remember { mutableStateOf<ProfileData?>(App.userId?.let { ProfileCache.load(it) }) }
         var edit by remember { mutableStateOf(false) }
-        LaunchedEffect(App.userId) { me = App.userId?.let { loadProfile(it) } }
+        LaunchedEffect(App.userId) { me = App.userId?.let { loadProfile(it) } ?: me }
         me?.let { d ->
             ProfileHeader(d, isMe = true, onPlay = { vid ->
                 val target = d.videos.firstOrNull { it.id == vid } ?: Feed.videos.firstOrNull { it.id == vid }

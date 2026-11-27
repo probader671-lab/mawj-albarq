@@ -164,15 +164,24 @@ private fun WatchFeedVideoCard(
 }
 
 /** Two compact cards per row so more videos fit on the home page. */
+/** Home layout: false = two cards per row, true = YouTube-style, one big card per row. Toggled by tapping the app icon in the header. */
+object HomePrefs {
+    private var sp: android.content.SharedPreferences? = null
+    var big by androidx.compose.runtime.mutableStateOf(false)
+        private set
+    fun init(ctx: android.content.Context) { sp = ctx.applicationContext.getSharedPreferences("home", android.content.Context.MODE_PRIVATE); big = sp?.getBoolean("big", false) ?: false }
+    fun toggle() { big = !big; sp?.edit()?.putBoolean("big", big)?.apply() }
+}
+
 @Composable
 private fun CardRow(
     pair: List<Video>, open: (Video) -> Unit, onCreator: (Video) -> Unit, onNeedLogin: () -> Unit, onReport: (Video) -> Unit
 ) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = if (HomePrefs.big) 4.dp else 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         pair.forEach { v ->
             WatchFeedVideoCard(v, 16f / 9f, false, { open(v) }, { onCreator(v) }, onNeedLogin, { onReport(v) }, Modifier.weight(1f))
         }
-        if (pair.size == 1) Spacer(Modifier.weight(1f))
+        if (pair.size == 1 && !HomePrefs.big) Spacer(Modifier.weight(1f))
     }
 }
 
@@ -181,7 +190,8 @@ fun HomeScreen(
     onOpen: () -> Unit,
     onNeedLogin: () -> Unit = {},
     onSuggestions: () -> Unit = {},
-    onNotifs: () -> Unit = {}
+    onNotifs: () -> Unit = {},
+    onAi: () -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
     val list = rememberLazyListState()
@@ -234,7 +244,11 @@ fun HomeScreen(
                     .padding(horizontal = 12.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Image38()
+                val tctx = androidx.compose.ui.platform.LocalContext.current
+                Box(Modifier.clip(CircleShape).clickable {
+                    HomePrefs.toggle()
+                    android.widget.Toast.makeText(tctx, if (HomePrefs.big) "عرض كبير (صف واحد)" else "عرض الشبكة", android.widget.Toast.LENGTH_SHORT).show()
+                }) { Image38() }
                 Spacer(Modifier.width(10.dp))
                 Text(
                     "موج البرق",
@@ -266,6 +280,7 @@ fun HomeScreen(
                     RoundBtn(Icons.Filled.Notifications, "الإشعارات", 34, WatchTextMain, onClick = onNotifs)
                 }
                 Spacer(Modifier.width(6.dp))
+                RoundBtn(Icons.Filled.AutoAwesome, "المساعد الذكي", 34, MaterialTheme.colorScheme.primary, onClick = onAi)
                 RoundBtn(Icons.Filled.Lightbulb, "الاقتراحات", 34, MaterialTheme.colorScheme.secondary, onClick = onSuggestions)
                 Spacer(Modifier.width(6.dp))
                 RoundBtn(
@@ -412,7 +427,7 @@ fun HomeScreen(
                     }
                     else -> {
                         val featuredCount = if (q.isBlank()) minOf(4, vids.size) else vids.size
-                        itemsIndexed(vids.take(featuredCount).chunked(2), key = { _, pr -> "top_${pr.first().id}" }) { _, pr ->
+                        itemsIndexed(vids.take(featuredCount).chunked(if (HomePrefs.big) 1 else 2), key = { _, pr -> "top_${pr.first().id}" }) { _, pr ->
                             CardRow(pr, { open(it) }, { if (it.userId.isNotBlank()) creatorId = it.userId }, onNeedLogin, { reportFor = it })
                         }
                     }
@@ -421,7 +436,7 @@ fun HomeScreen(
                 if (q.isBlank() && vids.size > 4) {
                     val afterThree = vids.drop(4)
                     promptVid?.let { pv -> item(key = "reco_prompt") { InterestCard(pv) { yes -> Reco.answerPrompt(pv, yes); promptVid = null } } }
-                    itemsIndexed(afterThree.chunked(2), key = { _, pr -> "feed_${pr.first().id}" }) { _, pr ->
+                    itemsIndexed(afterThree.chunked(if (HomePrefs.big) 1 else 2), key = { _, pr -> "feed_${pr.first().id}" }) { _, pr ->
                         CardRow(pr, { open(it) }, { if (it.userId.isNotBlank()) creatorId = it.userId }, onNeedLogin, { reportFor = it })
                     }
                 }

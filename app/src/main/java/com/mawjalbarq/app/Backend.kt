@@ -42,7 +42,7 @@ object App {
         email = sp.getString("e", "") ?: ""; name = sp.getString("n", "") ?: ""; avatar = sp.getString("av", null); publicId = sp.getString("pid", "") ?: ""
     }
     fun save() { sp.edit().putString("t", token).putString("r", refresh).putString("u", userId).putString("e", email).putString("n", name).putString("av", avatar).putString("pid", publicId).apply() }
-    fun logout() { token = null; refresh = null; userId = null; email = ""; name = ""; avatar = null; publicId = ""; save(); Feed.liked.clear(); Feed.saved.clear() }
+    fun logout() { token = null; refresh = null; userId = null; email = ""; name = ""; avatar = null; publicId = ""; save(); Feed.liked.clear(); Feed.saved.clear(); ProfileCache.clear() }
     fun fromAuth(j: JSONObject) {
         token = j.optString("access_token"); refresh = j.optString("refresh_token")
         val u = j.optJSONObject("user")

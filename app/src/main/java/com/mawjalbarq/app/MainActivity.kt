@@ -9,7 +9,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        App.init(applicationContext); Media.init(applicationContext)
+        App.init(applicationContext); Media.init(applicationContext); ProfileCache.init(applicationContext); HomePrefs.init(applicationContext)
         Feed.init(applicationContext)
         val prefs = ThemePrefs(applicationContext)
         Theme.prefs = prefs

@@ -35,6 +35,7 @@ fun AppRoot(prefs: ThemePrefs) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         var sel by remember { mutableIntStateOf(1) }
         var suggestions by remember { mutableStateOf(false) }
+        var aiChat by remember { mutableStateOf(false) }
         var notifs by remember { mutableStateOf(false) }
         val appCtx = androidx.compose.ui.platform.LocalContext.current
         LaunchedEffect(Unit) { Feed.init(appCtx); if (Feed.videos.isEmpty() && !Feed.loading) Feed.load() }
@@ -49,7 +50,7 @@ fun AppRoot(prefs: ThemePrefs) {
                     if (sel == i) layout(p.width, p.height) { p.place(0, 0) } else layout(0, 0) {}
                 }) { content() }
             }
-            Keep(0) { HomeScreen(onOpen = { sel = 1 }, onNeedLogin = { sel = 4 }, onSuggestions = { suggestions = true }, onNotifs = { notifs = true }) }
+            Keep(0) { HomeScreen(onOpen = { sel = 1 }, onNeedLogin = { sel = 4 }, onSuggestions = { suggestions = true }, onNotifs = { notifs = true }, onAi = { aiChat = true }) }
             if (sel == 1) ClipsScreen(onNeedLogin = { sel = 4 })
             if (sel == 2) UploadScreen(onNeedLogin = { sel = 4 }, onDone = { sel = 1 })
             Keep(3) { PostsScreen(onNeedLogin = { sel = 4 }) }
@@ -58,6 +59,7 @@ fun AppRoot(prefs: ThemePrefs) {
                 enter = androidx.compose.animation.slideInVertically { it * 2 }, exit = androidx.compose.animation.slideOutVertically { it * 2 },
                 modifier = Modifier.align(Alignment.BottomCenter)) { PillBar(sel, { sel = it; Ui.barVisible = true }, Modifier) }
             if (notifs) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { NotificationsScreen({ notifs = false }) { vid -> notifs = false; Feed.videos.firstOrNull { it.id == vid }?.let { Feed.open(it) { sel = 1 } } } }
+            if (aiChat) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { AiChatScreen({ aiChat = false }, { sel = 4 }) }
             if (suggestions) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { SuggestionsScreen { suggestions = false } }
             Feed.activeVideo?.let { v -> FullPlayer(v) { Feed.activeVideo = null } }
         }

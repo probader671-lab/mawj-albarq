@@ -31,11 +31,32 @@ import org.json.JSONObject
 
 data class ProfileData(val id: String, val name: String, val bio: String, val avatar: String?, val videos: List<Video>, val followers: Int = 0, val following: Int = 0, val publicId: String = "", val banner: String? = null)
 
+/** Disk copy of the last loaded profile, so the account page paints at once and refreshes in the background. */
+object ProfileCache {
+    private var dir: java.io.File? = null
+    fun init(ctx: android.content.Context) { dir = ctx.applicationContext.filesDir }
+    private fun f(id: String) = dir?.let { java.io.File(it, "profile_" + id.filter { c -> c.isLetterOrDigit() || c == '-' } + ".json") }
+    fun save(id: String, prof: String, vids: String) { try { f(id)?.writeText(JSONObject().put("p", prof).put("v", vids).toString()) } catch (_: Exception) {} }
+    fun load(id: String): ProfileData? = try {
+        val file = f(id); if (file == null || !file.exists()) null else {
+            val j = JSONObject(file.readText()); parseProfile(id, j.getString("p"), j.optString("v"))
+        }
+    } catch (_: Exception) { null }
+    fun clear() { try { dir?.listFiles { x -> x.name.startsWith("profile_") }?.forEach { it.delete() } } catch (_: Exception) {} }
+}
+
 suspend fun loadProfile(id: String): ProfileData? {
     val (c, t) = api("GET", "/rest/v1/profiles?id=eq.$id&select=id,full_name,bio,avatar_url,banner_url,verified,followers_count,following_count,public_id")
     if (c != 200) return null
-    val o = try { JSONArray(t).optJSONObject(0) } catch (e: Exception) { null } ?: return null
     val (c2, t2) = api("GET", "/rest/v1/videos?user_id=eq.$id&status=eq.ready&deleted=eq.false&select=id,width,height,duration,views,created_at,title,description,video_url,thumbnail_url,likes,comments_count&order=created_at.desc,id.desc&limit=60")
+    val r = parseProfile(id, t, if (c2 == 200) t2 else "") ?: return null
+    if (c2 == 200) ProfileCache.save(id, t, t2)
+    return r
+}
+
+fun parseProfile(id: String, t: String, t2: String): ProfileData? {
+    val o = try { JSONArray(t).optJSONObject(0) } catch (e: Exception) { null } ?: return null
+    val c2 = if (t2.isBlank()) 0 else 200
     val vids = ArrayList<Video>()
     if (c2 == 200) try { val a = JSONArray(t2); for (i in 0 until a.length()) { val v = a.getJSONObject(i)
         vids.add(Video(v.getString("id"), v.optString("title"), if (v.isNull("description")) "" else v.optString("description"), v.getString("video_url"),
@@ -43,7 +64,6 @@ suspend fun loadProfile(id: String): ProfileData? {
             v.optInt("width"), v.optInt("height"), if (o.isNull("avatar_url")) null else o.optString("avatar_url"),
             v.optDouble("duration", 0.0).toInt().coerceAtLeast(0), v.optLong("views", 0L).coerceAtLeast(0L),
             v.optString("created_at"), o.optBoolean("verified", false), o.optLong("followers_count", 0L).coerceAtLeast(0L))) } } catch (_: Exception) {}
-    suspend fun cnt(q: String): Int { return try { val (c3, t3) = api("GET", "/rest/v1/follows?$q"); if (c3 == 200) JSONArray(t3).length() else 0 } catch (_: Exception) { 0 } }
     return ProfileData(id, o.optString("full_name").ifBlank { "مستخدم" }, if (o.isNull("bio")) "" else o.optString("bio"),
         if (o.isNull("avatar_url")) null else o.optString("avatar_url"), vids, o.optInt("followers_count", 0).coerceAtLeast(0), o.optInt("following_count", 0).coerceAtLeast(0), o.optString("public_id"),
         if (o.isNull("banner_url") || o.optString("banner_url").isBlank()) null else o.optString("banner_url"))
