@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,13 +41,19 @@ fun AppRoot(prefs: ThemePrefs) {
         UpdatePrompt()
         ShareProgressHost()
         Box(Modifier.fillMaxSize().background(PageBg)) {
-            when (sel) {
-                0 -> HomeScreen(onOpen = { sel = 1 }, onNeedLogin = { sel = 4 }, onSuggestions = { suggestions = true }, onNotifs = { notifs = true })
-                1 -> ClipsScreen(onNeedLogin = { sel = 4 })
-                2 -> UploadScreen(onNeedLogin = { sel = 4 }, onDone = { sel = 1 })
-                3 -> PostsScreen(onNeedLogin = { sel = 4 })
-                else -> ProfileScreen(prefs, onOpenFeed = { sel = 1 }, onSuggestions = { suggestions = true })
+            val visited = remember { mutableStateListOf(sel) }
+            if (sel !in visited) visited.add(sel)
+            @Composable fun Keep(i: Int, content: @Composable () -> Unit) {
+                if (i in visited) Box(Modifier.fillMaxSize().layout { m, c ->
+                    val p = m.measure(c)
+                    if (sel == i) layout(p.width, p.height) { p.place(0, 0) } else layout(0, 0) {}
+                }) { content() }
             }
+            Keep(0) { HomeScreen(onOpen = { sel = 1 }, onNeedLogin = { sel = 4 }, onSuggestions = { suggestions = true }, onNotifs = { notifs = true }) }
+            if (sel == 1) ClipsScreen(onNeedLogin = { sel = 4 })
+            if (sel == 2) UploadScreen(onNeedLogin = { sel = 4 }, onDone = { sel = 1 })
+            Keep(3) { PostsScreen(onNeedLogin = { sel = 4 }) }
+            Keep(4) { ProfileScreen(prefs, onOpenFeed = { sel = 1 }, onSuggestions = { suggestions = true }) }
             androidx.compose.animation.AnimatedVisibility(visible = Ui.barVisible && !(sel == 1 && Ui.deep) && !suggestions && !notifs && Feed.activeVideo == null,
                 enter = androidx.compose.animation.slideInVertically { it * 2 }, exit = androidx.compose.animation.slideOutVertically { it * 2 },
                 modifier = Modifier.align(Alignment.BottomCenter)) { PillBar(sel, { sel = it; Ui.barVisible = true }, Modifier) }

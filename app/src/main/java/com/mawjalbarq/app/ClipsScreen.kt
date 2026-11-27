@@ -157,7 +157,6 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
         uiStyle = next
         hidden = false
         ClipStylePrefs.save(ctx, next)
-        Toast.makeText(ctx, next.label, Toast.LENGTH_SHORT).show()
     }
 
     val tracker = remember { Reco.Tracker() }
