@@ -174,7 +174,7 @@ object Moderation {
             val j = JSONObject(text)
             if (!j.optBoolean("available")) return@withContext "unsure"
             val fr = j.getJSONArray("frames")
-            var male = 0; var female = 0; var bad = 0; var covered = 0
+            var male = 0; var female = 0; var bad = 0; var covered = 0; var seen = 0
             for (i in 0 until fr.length()) {
                 val faces = fr.getJSONObject(i).optJSONArray("faces") ?: continue
                 for (k in 0 until faces.length()) {
@@ -183,12 +183,14 @@ object Moderation {
                     // Female whose mouth/lower face is fully covered = treated as niqab (publish). Threshold is a prior, not validated.
                     if (g == "Female" && f.optDouble("mouth_occ", 0.0) >= 80.0) { covered++; continue }
                     val q = f.optDouble("quality", 0.0); val bl = f.optDouble("blur", 100.0); val yaw = Math.abs(f.optDouble("yaw", 90.0))
-                    if (g.isEmpty() || q < 50 || bl > 50 || yaw > 35) { bad++; continue }
+                    seen++
+                    if (g.isEmpty() || q < 30 || bl > 70 || yaw > 55) { bad++; continue }
                     if (g == "Male") male++ else if (g == "Female") female++
                 }
             }
-            if (bad == 0 && covered > 0 && female == 0 && male + covered >= 2) "male"
-            else if (bad == 0 && male >= 2 && female == 0) "male"
+            // Loosened (build 16): one clear male/covered face with no female evidence is enough; a few blurry or side-on faces no longer force review.
+            if (seen == 0 && covered == 0) "male"   // Face++ found no real face (the on-device detector fired on something small): nothing to judge
+            else if (female == 0 && male + covered >= 1 && bad <= male + covered) "male"
             else if (bad == 0 && female >= 2 && male == 0) "female"
             else "unsure"
         } catch (e: Throwable) { "unsure" }

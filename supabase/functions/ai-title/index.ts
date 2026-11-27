@@ -12,24 +12,28 @@ Deno.serve(async (req) => {
   const auth = req.headers.get("authorization") ?? "";
   const u = await fetch(`${Deno.env.get("SUPABASE_URL")}/auth/v1/user`, { headers: { Authorization: auth, apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "" } });
   if (!u.ok) return J({ error: "unauthorized" }, 401);
-  let body: { audio?: string };
+  let body: { audio?: string; text?: string };
   try { body = await req.json(); } catch { return J({ error: "bad_json" }, 400); }
   const a = body.audio;
-  if (typeof a !== "string" || a.length < 1000 || a.length > 6_000_000) return J({ title: "", description: "" });
+  const given = typeof body.text === "string" ? body.text.trim().slice(0, 3000) : "";
+  if (!given && (typeof a !== "string" || a.length < 1000 || a.length > 6_000_000)) return J({ title: "", description: "", reason: "no_audio" });
   try {
-    const bin = Uint8Array.from(atob(a), (c) => c.charCodeAt(0));
+    let text = given;
+    if (!text) {
+    const bin = Uint8Array.from(atob(a as string), (c) => c.charCodeAt(0));
     const fd = new FormData();
     fd.set("file", new Blob([bin], { type: "audio/mp4" }), "a.m4a");
     fd.set("model", "whisper-large-v3-turbo");
     fd.set("response_format", "json");
     const tr = await fetch(`${GROQ}/audio/transcriptions`, { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: fd });
     if (!tr.ok) return J({ title: "", description: "", reason: "stt_" + tr.status });
-    const text: string = ((await tr.json()).text ?? "").trim().slice(0, 3000);
-    if (text.length < 12) return J({ title: "", description: "" });
+    text = ((await tr.json()).text ?? "").trim().slice(0, 3000);
+    }
+    if (text.length < 4) return J({ title: "", description: "", reason: "short_" + text.length });
     const cr = await fetch(`${GROQ}/chat/completions`, {
       method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "openai/gpt-oss-20b", temperature: 0.3, max_tokens: 400, response_format: { type: "json_object" },
+        model: "openai/gpt-oss-20b", temperature: 0.3, max_tokens: 2000, reasoning_effort: "low", response_format: { type: "json_object" },
         messages: [
           { role: "system", content: "You write a short title and description for a video from its transcript. Reply with JSON {\"title\":\"...\",\"description\":\"...\"}. Use the same language as the transcript (Arabic stays Arabic). Title: max 60 characters, plain, no emojis, no quotes. Description: one or two sentences, max 200 characters. Only describe what the transcript says. Never invent names, quotes or claims." },
           { role: "user", content: text },
@@ -37,7 +41,8 @@ Deno.serve(async (req) => {
       }),
     });
     if (!cr.ok) return J({ title: "", description: "", reason: "llm_" + cr.status });
-    const j = JSON.parse((await cr.json()).choices?.[0]?.message?.content ?? "{}");
+    let j: any = {};
+    try { const raw = String((await cr.json()).choices?.[0]?.message?.content ?? "{}"); j = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)); } catch { return J({ title: "", description: "", reason: "parse" }); }
     const clean = (s: unknown, n: number) => String(s ?? "").replace(/\s+/g, " ").trim().slice(0, n);
     return J({ title: clean(j.title, 60), description: clean(j.description, 200) });
   } catch (_) { return J({ title: "", description: "", reason: "error" }); }

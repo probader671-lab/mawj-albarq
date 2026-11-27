@@ -163,11 +163,35 @@ private suspend fun extractAudio(ctx: Context, video: File, out: File): Boolean 
     }
 }
 
+/** Copies up to 45 s of the first audio track into an .m4a without re-encoding. False if there is no AAC track or anything fails. */
+private fun muxAudio(video: File, out: File): Boolean {
+    val ex = android.media.MediaExtractor()
+    return try {
+        ex.setDataSource(video.absolutePath)
+        var idx = -1
+        for (i in 0 until ex.trackCount) if (ex.getTrackFormat(i).getString(android.media.MediaFormat.KEY_MIME)?.startsWith("audio/") == true) { idx = i; break }
+        if (idx < 0) return false
+        ex.selectTrack(idx)
+        out.delete()
+        val mux = android.media.MediaMuxer(out.absolutePath, android.media.MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        val ti = mux.addTrack(ex.getTrackFormat(idx)); mux.start()
+        val buf = java.nio.ByteBuffer.allocate(1 shl 18); val info = android.media.MediaCodec.BufferInfo()
+        while (true) {
+            val n = ex.readSampleData(buf, 0); if (n < 0 || ex.sampleTime > 45_000_000L) break
+            info.set(0, n, ex.sampleTime, if (ex.sampleFlags and android.media.MediaExtractor.SAMPLE_FLAG_SYNC != 0) android.media.MediaCodec.BUFFER_FLAG_KEY_FRAME else 0)
+            mux.writeSampleData(ti, buf, info); ex.advance()
+        }
+        mux.stop(); mux.release(); true
+    } catch (_: Throwable) { false } finally { runCatching { ex.release() } }
+}
+
 /** Title + description from the speech in the video via the ai-title Edge Function (Groq). Empty strings when there is no usable speech or anything fails. */
 private suspend fun autoText(ctx: Context, video: File): Pair<String, String> {
     val a = File(ctx.cacheDir, "tt_" + System.currentTimeMillis() + ".m4a")
     return try {
-        if (!extractAudio(ctx, video, a) || a.length() < 2000L || a.length() > 4_000_000L) return "" to ""
+        var ok = extractAudio(ctx, video, a) && a.length() >= 2000L
+        if (!ok) ok = withContext(Dispatchers.IO) { muxAudio(video, a) } && a.length() >= 2000L   // fallback: copy the AAC track without re-encoding
+        if (!ok || a.length() > 4_000_000L) return "" to ""
         withContext(Dispatchers.IO) {
             val b64 = android.util.Base64.encodeToString(a.readBytes(), android.util.Base64.NO_WRAP)
             val (c, t) = api("POST", "/functions/v1/ai-title", JSONObject().put("audio", b64).toString())
