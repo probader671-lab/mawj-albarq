@@ -56,6 +56,12 @@ object Reco {
         return sb.toString()
     }
 
+    /** Title/description mention recitation words (used together with the audio check, never alone, and never shown to the uploader). */
+    fun looksQuranic(text: String): Boolean {
+        val t = normalize(text)
+        return CATS.first().second.any { t.contains(normalize(it)) }
+    }
+
     fun categoryOf(v: Video): String {
         if (v.isQuran) return "قرآن"
         val t = normalize(v.title + " " + v.desc)
