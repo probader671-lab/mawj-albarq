@@ -280,7 +280,7 @@ fun HomeScreen(
                     RoundBtn(Icons.Filled.Notifications, "الإشعارات", 34, WatchTextMain, onClick = onNotifs)
                 }
                 Spacer(Modifier.width(6.dp))
-                RoundBtn(Icons.Filled.AutoAwesome, "المساعد الذكي", 34, MaterialTheme.colorScheme.primary, onClick = onAi)
+                RoundBtn(Icons.Filled.SmartToy, "المساعد الذكي", 34, MaterialTheme.colorScheme.primary, onClick = onAi)
                 RoundBtn(Icons.Filled.Lightbulb, "الاقتراحات", 34, MaterialTheme.colorScheme.secondary, onClick = onSuggestions)
                 Spacer(Modifier.width(6.dp))
                 RoundBtn(

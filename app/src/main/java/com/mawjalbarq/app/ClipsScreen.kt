@@ -73,7 +73,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun ClipsScreen(onNeedLogin: () -> Unit) {
+fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
     DarkLock()
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -602,12 +602,29 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
                         }
                     }
 
-                    // Small app icon button on the right (TopStart in RTL) to cycle layout styles
+                    // Exit button in the physical top-right corner (TopStart in RTL): leaves the clips player and shows the home feed
                     if (!hidden) {
                         Box(
                             Modifier
                                 .align(Alignment.TopStart)
                                 .padding(12.dp)
+                                .minimumInteractiveComponentSize()
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(Color(0x990D131E))
+                                .border(1.dp, Color(0x55FFFFFF), CircleShape)
+                                .clickable { onExit() }
+                                .testTag("clip_exit_button"),
+                            contentAlignment = Alignment.Center
+                        ) { Icon(Icons.Filled.Close, "خروج", tint = Color.White, modifier = Modifier.size(20.dp)) }
+                    }
+
+                    // Small app icon button (next to the exit button) to cycle layout styles
+                    if (!hidden) {
+                        Box(
+                            Modifier
+                                .align(Alignment.TopStart)
+                                .padding(start = 66.dp, top = 12.dp, end = 12.dp, bottom = 12.dp)
                                 .minimumInteractiveComponentSize()
                                 .size(38.dp)
                                 .clip(CircleShape)

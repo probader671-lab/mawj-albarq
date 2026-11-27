@@ -41,6 +41,23 @@ fun AppRoot(prefs: ThemePrefs) {
         LaunchedEffect(Unit) { Feed.init(appCtx); if (Feed.videos.isEmpty() && !Feed.loading) Feed.load() }
         UpdatePrompt()
         ShareProgressHost()
+        // Back stack for tabs: back returns to the previous tab; the app exits only when there is nowhere left to go.
+        val tabHistory = remember { mutableStateListOf<Int>() }
+        var lastSel by remember { mutableIntStateOf(sel) }
+        var popping by remember { mutableStateOf(false) }
+        LaunchedEffect(sel) {
+            if (sel != lastSel) { if (!popping) { tabHistory.remove(lastSel); tabHistory.add(lastSel) }; lastSel = sel }
+            popping = false
+        }
+        androidx.activity.compose.BackHandler(enabled = notifs || suggestions || aiChat || tabHistory.isNotEmpty() || sel != 0) {
+            when {
+                notifs -> notifs = false
+                suggestions -> suggestions = false
+                aiChat -> aiChat = false
+                tabHistory.isNotEmpty() -> { popping = true; sel = tabHistory.removeAt(tabHistory.size - 1) }
+                sel != 0 -> { popping = true; sel = 0 }
+            }
+        }
         Box(Modifier.fillMaxSize().background(PageBg)) {
             val visited = remember { mutableStateListOf(sel) }
             if (sel !in visited) visited.add(sel)
@@ -51,7 +68,7 @@ fun AppRoot(prefs: ThemePrefs) {
                 }) { content() }
             }
             Keep(0) { HomeScreen(onOpen = { sel = 1 }, onNeedLogin = { sel = 4 }, onSuggestions = { suggestions = true }, onNotifs = { notifs = true }, onAi = { aiChat = true }) }
-            if (sel == 1) ClipsScreen(onNeedLogin = { sel = 4 })
+            if (sel == 1) ClipsScreen(onNeedLogin = { sel = 4 }, onExit = { sel = 0 })
             if (sel == 2) UploadScreen(onNeedLogin = { sel = 4 }, onDone = { sel = 1 })
             Keep(3) { PostsScreen(onNeedLogin = { sel = 4 }) }
             Keep(4) { ProfileScreen(prefs, onOpenFeed = { sel = 1 }, onSuggestions = { suggestions = true }) }
