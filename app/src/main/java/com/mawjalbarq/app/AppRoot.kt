@@ -54,6 +54,7 @@ fun AppRoot(prefs: ThemePrefs) {
         var aiChat by remember { mutableStateOf(false) }
         var notifs by remember { mutableStateOf(false) }
         val appCtx = androidx.compose.ui.platform.LocalContext.current
+        LaunchedEffect(App.userId) { Notifs.checkAdmin() }
         LaunchedEffect(Unit) { if (App.loggedIn && registerDevice()) App.logout(); Feed.init(appCtx); if (Feed.videos.isEmpty() && !Feed.loading) Feed.load() }
         UpdatePrompt()
         ShareProgressHost()
