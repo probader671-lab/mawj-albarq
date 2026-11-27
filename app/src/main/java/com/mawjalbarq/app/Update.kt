@@ -17,8 +17,8 @@ import okhttp3.Request
 import org.json.JSONObject
 import java.io.File
 
-private const val REL = "https://api.github.com/repos/probader671-lab/mawj-albarq/releases/tags/demo"
-private const val APK = "https://github.com/probader671-lab/mawj-albarq/releases/download/demo/mawj-albarq.apk"
+private const val REL = "https://api.github.com/repos/probader671-lab/mawj-albarq/releases/tags/test-bader"
+private const val APK = "https://github.com/probader671-lab/mawj-albarq/releases/download/test-bader/mawj-albarq-test.apk"
 
 private suspend fun latest(): Pair<Int, String>? = withContext(Dispatchers.IO) {
     try {
