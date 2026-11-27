@@ -140,8 +140,6 @@ suspend fun signIn(email: String, pass: String): String? {
     val (c, t) = api("POST", "/auth/v1/token?grant_type=password", JSONObject().put("email", email).put("password", pass).toString())
     if (c != 200) return authError(c, t)
     val j = JSONObject(t)
-    val fid = verifiedTotpFactor(j.optJSONObject("user"))
-    if (fid != null) { Mfa.factorId = fid; Mfa.pending = j; return null }   // 2-step on: the code dialog finishes the login
     App.fromAuth(j)
     if (registerDevice()) { val m = banMessage(); App.logout(); return m }
     afterLogin(); return null
