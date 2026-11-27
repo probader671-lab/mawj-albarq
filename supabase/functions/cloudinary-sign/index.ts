@@ -22,7 +22,15 @@ Deno.serve(async (req) => {
   let b: { kind?: string } = {};
   try { b = await req.json(); } catch { /* default */ }
   const kind = b.kind === "image" ? "image" : "video";
-  const [max, win] = LIMITS[kind];
+  let [max, win] = LIMITS[kind];
+  if (kind === "video") {
+    // non-admins: 5 published videos a day are allowed by the database; 8 signatures leaves room for failed uploads and retries
+    max = 8;
+    try {
+      const p = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/profiles?id=eq.${(await u.json()).id}&select=is_admin`, { headers: { Authorization: auth, apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "" } });
+      if (p.ok && (await p.json())?.[0]?.is_admin === true) max = 30;
+    } catch (_) { /* keep non-admin limit */ }
+  }
   try {
     const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/rl_hit`, { method: "POST", headers: { Authorization: auth, apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "", "Content-Type": "application/json" }, body: JSON.stringify({ p_fn: "sign_" + kind, p_max: max, p_window_sec: win }) });
     if (r.ok && (await r.json()) !== true) return J({ error: "rate_limited" }, 429);
