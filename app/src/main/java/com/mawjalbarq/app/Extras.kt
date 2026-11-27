@@ -262,7 +262,7 @@ fun StoriesStrip(onNeedLogin: () -> Unit, tallCards: Boolean = false) {
 }
 
 /* ---------- suggestions board ---------- */
-data class Suggestion(val id: String, val text: String)
+data class Suggestion(val id: String, val text: String, val status: String = "open")
 
 @Composable
 fun SuggestionsScreen(onBack: () -> Unit) {
@@ -270,10 +270,10 @@ fun SuggestionsScreen(onBack: () -> Unit) {
     var list by remember { mutableStateOf<List<Suggestion>?>(null) }
     var text by remember { mutableStateOf("") }
     suspend fun load() {
-        val (c, t) = api("GET", "/rest/v1/suggestions?select=id,content&order=created_at.desc&limit=50")
-        if (c == 200) try { val a = JSONArray(t); list = (0 until a.length()).map { Suggestion(a.getJSONObject(it).getString("id"), a.getJSONObject(it).optString("content")) } } catch (_: Exception) {}
+        val (c, t) = api("GET", "/rest/v1/suggestions?select=id,content,status&order=created_at.desc&limit=50")
+        if (c == 200) try { val a = JSONArray(t); list = (0 until a.length()).map { Suggestion(a.getJSONObject(it).getString("id"), a.getJSONObject(it).optString("content"), a.getJSONObject(it).optString("status", "open")) } } catch (_: Exception) {}
     }
-    LaunchedEffect(Unit) { load() }
+    LaunchedEffect(Unit) { Notifs.checkAdmin(); load() }
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("لوحة الاقتراحات", color = Color.White, fontSize = 22.sp, fontFamily = Cairo, modifier = Modifier.weight(1f))
@@ -290,7 +290,26 @@ fun SuggestionsScreen(onBack: () -> Unit) {
         val l = list
         if (l == null) ListSkeleton(5)
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 110.dp)) {
-            items(l) { s -> Text(s.text, color = Color.White, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFF141A24)).padding(12.dp)) }
+            items(l, key = { it.id }) { s ->
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFF141A24)).padding(12.dp)) {
+                    Text(s.text, color = Color.White)
+                    val (label, col) = when (s.status) {
+                        "resolved" -> "تم" to Color(0xFF2ECC71)
+                        "reviewed" -> "جاري العمل" to Color(0xFFF1C40F)
+                        else -> "لم تُستلم" to Color(0xFF9AA4B2)
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, color = col, fontSize = 12.sp, fontFamily = Cairo, modifier = Modifier.weight(1f))
+                        if (Notifs.isAdmin) {
+                            TextButton(onClick = { scope.launch { if (AdminApi.setSuggestion(s.id, "reviewed")) load() } }) { Text("جاري العمل", fontSize = 11.sp, fontFamily = Cairo) }
+                            TextButton(onClick = { scope.launch { if (AdminApi.setSuggestion(s.id, "resolved")) load() } }) { Text("تم", fontSize = 11.sp, fontFamily = Cairo) }
+                            TextButton(onClick = { scope.launch { if (AdminApi.setSuggestion(s.id, "open")) load() } }) { Text("لم تُستلم", fontSize = 11.sp, fontFamily = Cairo) }
+                            TextButton(onClick = { scope.launch { val (c, _) = api("DELETE", "/rest/v1/suggestions?id=eq.${s.id}"); if (c in 200..299) load() } }) { Text("حذف", fontSize = 11.sp, fontFamily = Cairo, color = MaterialTheme.colorScheme.error) }
+                        }
+                    }
+                }
+            }
         }
     }
 }

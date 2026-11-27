@@ -1054,6 +1054,7 @@ private fun CommentsSheet(v: Video, onNeedLogin: () -> Unit, onClose: () -> Unit
                     .padding(horizontal = 10.dp, vertical = 2.dp)
             )
             Spacer(Modifier.weight(1f))
+            AdminVideoBar(v) { onClose() }
             IconButton(onClick = onClose, modifier = Modifier.minimumInteractiveComponentSize()) {
                 Icon(Icons.Filled.Close, "إغلاق", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -1098,6 +1099,7 @@ private fun CommentsSheet(v: Video, onNeedLogin: () -> Unit, onClose: () -> Unit
                                 }
                                 Spacer(Modifier.height(4.dp))
                                 Text(c.text, color = Color.White, fontSize = 14.sp, lineHeight = 20.sp)
+                                AdminCommentBar(c) { list = list?.filter { it.id != c.id } }
                             }
                         }
                     }

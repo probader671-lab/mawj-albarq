@@ -999,6 +999,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
                                 )
                             }
 
+                            AdminVideoBar(liveCur) { onClose() }
                             Spacer(Modifier.height(14.dp))
 
                             Row(
@@ -1103,6 +1104,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
                                                 }
                                                 Spacer(Modifier.height(4.dp))
                                                 Text(c.text, color = white.copy(alpha = 0.92f), fontSize = 13.5.sp, lineHeight = 20.sp)
+                                                AdminCommentBar(c) { comments = comments?.filter { it.id != c.id } }
                                             }
                                         }
                                         if (idx < l.size - 1) {

@@ -571,3 +571,18 @@ object Feed {
         return false
     }
 }
+
+
+/* ---------- admin actions (server re-checks is_admin on every call) ---------- */
+object AdminApi {
+    private suspend fun rpc(fn: String, body: JSONObject): Boolean {
+        val (c, t) = api("POST", "/rest/v1/rpc/$fn", body.toString())
+        return c == 200 && try { JSONObject(t).optBoolean("success", false) } catch (_: Exception) { false }
+    }
+    suspend fun banUser(id: String, reason: String) = rpc("admin_ban_user_devices", JSONObject().put("p_target", id).put("p_reason", reason).put("p_days", 0))
+    suspend fun removeVideo(id: String, reason: String) = rpc("admin_remove_video", JSONObject().put("p_video_id", id).put("p_reason", reason)).also {
+        if (it) { Feed.videos.removeAll { v -> v.id == id } }
+    }
+    suspend fun deleteComment(id: String) = rpc("admin_delete_comment", JSONObject().put("p_comment_id", id))
+    suspend fun setSuggestion(id: String, status: String) = rpc("admin_set_suggestion", JSONObject().put("p_id", id).put("p_status", status))
+}
