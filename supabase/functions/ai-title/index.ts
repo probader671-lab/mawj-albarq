@@ -6,9 +6,9 @@ const J = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, 
 const GROQ = "https://api.groq.com/openai/v1";
 
 // Per-user rate limit (DB function rl_hit). Fails open if the check itself errors.
-async function allowed(auth: string): Promise<boolean> {
+async function allowed(auth: string, kind: string): Promise<boolean> {
   try {
-    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/rl_hit`, { method: "POST", headers: { Authorization: auth, apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "", "Content-Type": "application/json" }, body: JSON.stringify({ p_fn: "title", p_max: 20, p_window_sec: 3600 }) });
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/rl_hit`, { method: "POST", headers: { Authorization: auth, apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "", "Content-Type": "application/json" }, body: JSON.stringify({ p_fn: kind, p_max: kind === "stt" ? 240 : 20, p_window_sec: 3600 }) });
     if (!r.ok) return true;
     return (await r.json()) === true;
   } catch (_) { return true; }
@@ -21,11 +21,11 @@ Deno.serve(async (req) => {
   const auth = req.headers.get("authorization") ?? "";
   const u = await fetch(`${Deno.env.get("SUPABASE_URL")}/auth/v1/user`, { headers: { Authorization: auth, apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "" } });
   if (!u.ok) return J({ error: "unauthorized" }, 401);
-  if (!(await allowed(auth))) return J({ error: "rate_limited" }, 429);
-  let body: { audio?: string; text?: string };
+  let body: { audio?: string; text?: string; transcribe_only?: boolean };
   try { body = await req.json(); } catch { return J({ error: "bad_json" }, 400); }
+  if (!(await allowed(auth, body.transcribe_only ? "stt" : "title"))) return J({ error: "rate_limited" }, 429);
   const a = body.audio;
-  const given = typeof body.text === "string" ? body.text.trim().slice(0, 3000) : "";
+  const given = typeof body.text === "string" ? body.text.trim().slice(0, 12000) : "";
   if (!given && (typeof a !== "string" || a.length < 1000 || a.length > 6_000_000)) return J({ title: "", description: "", reason: "no_audio" });
   try {
     let text = given;
@@ -38,6 +38,7 @@ Deno.serve(async (req) => {
     const tr = await fetch(`${GROQ}/audio/transcriptions`, { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: fd });
     if (!tr.ok) return J({ title: "", description: "", reason: "stt_" + tr.status });
     text = ((await tr.json()).text ?? "").trim().slice(0, 3000);
+    if (body.transcribe_only) return J({ text });
     }
     if (text.length < 4) return J({ title: "", description: "", reason: "short_" + text.length });
     const cr = await fetch(`${GROQ}/chat/completions`, {

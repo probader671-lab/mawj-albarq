@@ -98,7 +98,7 @@ object Moderation {
                     if (p >= cfg.nsfwBlockMulti) hi++
                     val big = detectFaces(det, fr, cfg.faceMinWidth)
                     if (big > faces) faces = big
-                    if (big > 0 && faceFrames.size < 3) faceFrames += fr
+                    if (big > 0 && faceFrames.size < 6) faceFrames += fr
                 }
             } finally { runCatching { nsfw.close() }; runCatching { det.close() } }
         } catch (e: Throwable) { review = true; reasons += "visual_check_failed" }
@@ -209,7 +209,7 @@ object Moderation {
         try {
             r.setDataSource(file.absolutePath)
             val durMs = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
-            val n = if (durMs < 4000) 4 else 8
+            val n = if (durMs < 4000) 4 else 10
             for (i in 0 until n) {
                 val t = (durMs * 1000L * (2 * i + 1)) / (2 * n)
                 val f = runCatching { r.getFrameAtTime(t, MediaMetadataRetriever.OPTION_CLOSEST) }.getOrNull() ?: continue

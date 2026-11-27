@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.sp
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class Notif(val id: String, val type: String, val actor: String, val actorAvatar: String?, val videoId: String?, val at: String, val read: Boolean, val ts: String = "")
+data class Notif(val id: String, val type: String, val actor: String, val actorAvatar: String?, val videoId: String?, val at: String, val read: Boolean, val ts: String = "", val reason: String = "")
 
 object Notifs {
     var unread by mutableIntStateOf(0)
@@ -34,7 +34,7 @@ object Notifs {
     suspend fun load(after: Notif? = null): List<Notif>? {
         val u = App.userId ?: return emptyList()
         val cur = if (after != null && after.ts.isNotBlank()) { val t = java.net.URLEncoder.encode(after.ts, "UTF-8"); "&or=(created_at.lt.$t,and(created_at.eq.$t,id.lt.${after.id}))" } else ""
-        val (c, t) = api("GET", "/rest/v1/notifications?user_id=eq.$u&select=id,type,actor_id,video_id,created_at,is_read$cur&order=created_at.desc,id.desc&limit=$PAGE")
+        val (c, t) = api("GET", "/rest/v1/notifications?user_id=eq.$u&select=id,type,actor_id,video_id,created_at,is_read,reason$cur&order=created_at.desc,id.desc&limit=$PAGE")
         if (c != 200) return null
         return try {
             val a = JSONArray(t)
@@ -48,7 +48,7 @@ object Notifs {
             (0 until a.length()).map {
                 val o = a.getJSONObject(it); val aid = o.optString("actor_id")
                 Notif(o.getString("id"), o.getString("type"), names[aid]?.first ?: "مستخدم", names[aid]?.second,
-                    if (o.isNull("video_id")) null else o.optString("video_id"), o.optString("created_at").take(10), o.optBoolean("is_read"), o.optString("created_at"))
+                    if (o.isNull("video_id")) null else o.optString("video_id"), o.optString("created_at").take(10), o.optBoolean("is_read"), o.optString("created_at"), if (o.isNull("reason")) "" else o.optString("reason"))
             }
         } catch (e: Exception) { null }
     }
@@ -87,6 +87,7 @@ fun NotificationsScreen(onBack: () -> Unit, onOpenVideo: (String) -> Unit) {
                         "comment" -> Triple(Icons.Filled.Comment, MaterialTheme.colorScheme.secondary, "علّق على مقطعك")
                         "new_video" -> Triple(Icons.Filled.VideoLibrary, MaterialTheme.colorScheme.primary, "نزّل فيديو جديد")
                         "moderation" -> Triple(Icons.Filled.Shield, Color(0xFFFFB300), "مقطع بانتظار مراجعتك")
+                        "restricted" -> Triple(Icons.Filled.Shield, Color(0xFFFF2D55), "تم تقييد منشورك" + if (n.reason.isNotBlank()) ": " + n.reason else "")
                         "moderation_blocked" -> Triple(Icons.Filled.Shield, Color(0xFFFF2D55), "تم منع مقطع تلقائياً")
                         else -> Triple(Icons.Filled.PersonAdd, MaterialTheme.colorScheme.primary, "بدأ بمتابعتك")
                     }
@@ -96,7 +97,7 @@ fun NotificationsScreen(onBack: () -> Unit, onOpenVideo: (String) -> Unit) {
                         Avatar(n.actorAvatar, n.actor, 44)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(n.actor, color = Ink, fontFamily = Cairo, fontSize = 15.sp, maxLines = 1)
+                            Text(if (n.type == "restricted") "إدارة موج البرق" else n.actor, color = Ink, fontFamily = Cairo, fontSize = 15.sp, maxLines = 1)
                             Text(msg, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                             Text(n.at, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                         }

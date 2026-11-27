@@ -1,5 +1,5 @@
 // Proxy to Face++ Detect. Holds FACEPP_KEY / FACEPP_SECRET as function secrets.
-// Input: { frames: [base64 jpeg, ...] } (max 3). Requires a logged-in user JWT.
+// Input: { frames: [base64 jpeg, ...] } (max 6). Requires a logged-in user JWT.
 // Output: { available: bool, frames: [{faces:[{gender,quality,blur,yaw}]}] }
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type, apikey", "Content-Type": "application/json" };
 const J = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: CORS });
@@ -7,7 +7,7 @@ const J = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, 
 // Per-user rate limit (DB function rl_hit). Fails open if the check itself errors.
 async function allowed(auth: string): Promise<boolean> {
   try {
-    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/rl_hit`, { method: "POST", headers: { Authorization: auth, apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "", "Content-Type": "application/json" }, body: JSON.stringify({ p_fn: "face", p_max: 30, p_window_sec: 3600 }) });
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/rl_hit`, { method: "POST", headers: { Authorization: auth, apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "", "Content-Type": "application/json" }, body: JSON.stringify({ p_fn: "face", p_max: 60, p_window_sec: 3600 }) });
     if (!r.ok) return true;
     return (await r.json()) === true;
   } catch (_) { return true; }
@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
   if (!(await allowed(auth))) return J({ error: "rate_limited" }, 429);
   let body: { frames?: string[] };
   try { body = await req.json(); } catch { return J({ error: "bad_json" }, 400); }
-  const frames = (body.frames ?? []).slice(0, 3).filter((f) => typeof f === "string" && f.length < 1_500_000);
+  const frames = (body.frames ?? []).slice(0, 6).filter((f) => typeof f === "string" && f.length < 1_500_000);
   if (!frames.length) return J({ error: "no_frames" }, 400);
   // Face++ free keys allow 1 concurrent call: run frames one after another and retry on a concurrency/QPS refusal.
   const out: any[] = [];

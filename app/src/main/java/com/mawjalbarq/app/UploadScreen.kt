@@ -150,11 +150,11 @@ private suspend fun uploadThumb(f: File): String? = withContext(Dispatchers.IO) 
 
 
 /** First ~45 s of speech as a small AAC file, or null. */
-private suspend fun extractAudio(ctx: Context, video: File, out: File): Boolean = suspendCancellableCoroutine { cont ->
+private suspend fun extractAudio(ctx: Context, video: File, out: File, startMs: Long = 0, endMs: Long = 45_000): Boolean = suspendCancellableCoroutine { cont ->
     Handler(Looper.getMainLooper()).post {
         try {
             val mi = MediaItem.Builder().setUri(Uri.fromFile(video))
-                .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder().setStartPositionMs(0).setEndPositionMs(45_000).build()).build()
+                .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder().setStartPositionMs(startMs).setEndPositionMs(endMs).build()).build()
             val item = EditedMediaItem.Builder(mi).setRemoveVideo(true).build()
             val t = Transformer.Builder(ctx).setAudioMimeType(MimeTypes.AUDIO_AAC)
                 .addListener(object : Transformer.Listener {
@@ -189,19 +189,39 @@ private fun muxAudio(video: File, out: File): Boolean {
     } catch (_: Throwable) { false } finally { runCatching { ex.release() } }
 }
 
-/** Title + description from the speech in the video via the ai-title Edge Function (Groq). Empty strings when there is no usable speech or anything fails. */
+/** Title + description from the speech in the video via the ai-title Edge Function (Groq).
+ *  Listens to the whole video in 45 s pieces (max 14 pieces = 10 min). Longer videos are sampled: 14 pieces spread evenly.
+ *  Empty strings when there is no usable speech or anything fails. */
 private suspend fun autoText(ctx: Context, video: File): Pair<String, String> {
-    val a = File(ctx.cacheDir, "tt_" + System.currentTimeMillis() + ".m4a")
     return try {
-        var ok = extractAudio(ctx, video, a) && a.length() >= 2000L
-        if (!ok) ok = withContext(Dispatchers.IO) { muxAudio(video, a) } && a.length() >= 2000L   // fallback: copy the AAC track without re-encoding
-        if (!ok || a.length() > 4_000_000L) return "" to ""
+        val durMs = withContext(Dispatchers.IO) { readMeta(ctx, Uri.fromFile(video)).durMs }.coerceAtLeast(1000L)
+        val seg = 45_000L; val maxSeg = 14
+        val n = minOf(maxSeg.toLong(), (durMs + seg - 1) / seg).toInt().coerceAtLeast(1)
+        val sb = StringBuilder()
+        for (i in 0 until n) {
+            val start = if (durMs <= seg * maxSeg) i * seg else (i.toLong() * (durMs - seg) / (maxSeg - 1).coerceAtLeast(1))
+            val end = minOf(start + seg, durMs)
+            if (end - start < 1500L) continue
+            val a = File(ctx.cacheDir, "tt_" + System.currentTimeMillis() + "_$i.m4a")
+            try {
+                var ok = extractAudio(ctx, video, a, start, end) && a.length() >= 2000L
+                if (!ok && start == 0L) ok = withContext(Dispatchers.IO) { muxAudio(video, a) } && a.length() >= 2000L
+                if (!ok || a.length() > 4_000_000L) continue
+                val t = withContext(Dispatchers.IO) {
+                    val b64 = android.util.Base64.encodeToString(a.readBytes(), android.util.Base64.NO_WRAP)
+                    val (c, tx) = api("POST", "/functions/v1/ai-title", JSONObject().put("audio", b64).put("transcribe_only", true).toString())
+                    if (c == 200) JSONObject(tx).optString("text") else ""
+                }
+                if (t.isNotBlank()) sb.append(t.trim()).append(' ')
+            } finally { a.delete() }
+        }
+        val all = sb.toString().trim()
+        if (all.length < 4) return "" to ""
         withContext(Dispatchers.IO) {
-            val b64 = android.util.Base64.encodeToString(a.readBytes(), android.util.Base64.NO_WRAP)
-            val (c, t) = api("POST", "/functions/v1/ai-title", JSONObject().put("audio", b64).toString())
+            val (c, t) = api("POST", "/functions/v1/ai-title", JSONObject().put("text", all.take(12000)).toString())
             if (c != 200) "" to "" else JSONObject(t).let { it.optString("title") to it.optString("description") }
         }
-    } catch (_: Exception) { "" to "" } finally { a.delete() }
+    } catch (_: Exception) { "" to "" }
 }
 
 /** Background upload pipeline: compress, check content, upload, publish. The uploader never waits on it. */

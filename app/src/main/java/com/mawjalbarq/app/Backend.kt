@@ -598,6 +598,9 @@ object AdminApi {
     suspend fun removeVideo(id: String, reason: String) = rpc("admin_remove_video", JSONObject().put("p_video_id", id).put("p_reason", reason)).also {
         if (it) { Feed.videos.removeAll { v -> v.id == id } }
     }
+    suspend fun restrictVideo(id: String, reason: String) = rpc("restrict_video", JSONObject().put("p_video", id).put("p_reason", reason)).also {
+        if (it) { Feed.videos.removeAll { v -> v.id == id } }
+    }
     suspend fun deleteComment(id: String) = rpc("admin_delete_comment", JSONObject().put("p_comment_id", id))
     suspend fun setSuggestion(id: String, status: String) = rpc("admin_set_suggestion", JSONObject().put("p_id", id).put("p_status", status))
 }

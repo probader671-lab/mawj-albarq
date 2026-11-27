@@ -33,6 +33,7 @@ fun AdminVideoBar(v: Video, onRemoved: () -> Unit) {
     if (!Notifs.isAdmin) return
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         AdminConfirmButton("إدارة: حظر الفيديو", "إخفاء هذا الفيديو من التطبيق؟", { AdminApi.removeVideo(v.id, "admin") }, onRemoved)
+        AdminConfirmButton("إدارة: تقييد + إشعار", "تقييد هذا الفيديو وإبلاغ صاحبه (تم تقييد منشورك)؟", { AdminApi.restrictVideo(v.id, "مخالفة قواعد المحتوى") }, onRemoved)
         if (v.userId.isNotBlank() && v.userId != App.userId)
             AdminConfirmButton("إدارة: حظر الحساب", "حظر ${v.author} وأجهزته نهائياً؟ سيتم إخفاء فيديوهاته ومنعه من الدخول.", { AdminApi.banUser(v.userId, "admin") }, onRemoved)
     }
