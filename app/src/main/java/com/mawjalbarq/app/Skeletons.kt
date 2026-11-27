@@ -41,12 +41,13 @@ fun rememberShimmerBrush(): Brush {
         ),
         label = "shimmerShift"
     )
+    val colors = if (Pal.isDark) {
+        listOf(Color(0xFF1A2230), Color(0xFF2B374C), Color(0xFF1A2230))
+    } else {
+        listOf(Color(0xFFE3E8F0), Color(0xFFF1F5F9), Color(0xFFE3E8F0))
+    }
     return Brush.linearGradient(
-        colors = listOf(
-            Color(0xFF1A2230),
-            Color(0xFF2B374C),
-            Color(0xFF1A2230)
-        ),
+        colors = colors,
         start = Offset(shift - 350f, shift - 350f),
         end = Offset(shift, shift)
     )
@@ -385,21 +386,29 @@ fun ListSkeleton(rows: Int = 6, modifier: Modifier = Modifier) {
     }
 }
 
-/** Profile placeholder: banner, avatar, name and stat blocks. */
+/** Profile placeholder: banner, avatar, name, stat blocks, tabs and video placeholders. */
 @Composable
 fun ProfileSkeleton() {
     val brush = rememberShimmerBrush()
-    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        ShimmerBox(Modifier.fillMaxWidth().height(104.dp), RoundedCornerShape(16.dp), brush)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            ShimmerBox(Modifier.size(84.dp), CircleShape, brush)
+    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ShimmerBox(Modifier.fillMaxWidth().height(132.dp), RoundedCornerShape(16.dp), brush)
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp)) {
+            ShimmerBox(Modifier.size(88.dp), CircleShape, brush)
             Spacer(Modifier.width(14.dp))
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ShimmerBox(Modifier.width(150.dp).height(18.dp), RoundedCornerShape(6.dp), brush)
                 ShimmerBox(Modifier.width(100.dp).height(12.dp), RoundedCornerShape(6.dp), brush)
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { repeat(4) { ShimmerBox(Modifier.weight(1f).height(54.dp), RoundedCornerShape(14.dp), brush) } }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { repeat(3) { ShimmerBox(Modifier.weight(1f).aspectRatio(0.75f), RoundedCornerShape(10.dp), brush) } }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            repeat(4) { ShimmerBox(Modifier.weight(1f).height(56.dp), RoundedCornerShape(16.dp), brush) }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            repeat(3) { ShimmerBox(Modifier.weight(1f).height(34.dp), RoundedCornerShape(10.dp), brush) }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            repeat(3) { ShimmerBox(Modifier.weight(1f).aspectRatio(9f / 15f), RoundedCornerShape(12.dp), brush) }
+        }
+        ShimmerBox(Modifier.fillMaxWidth().aspectRatio(16f / 9f), RoundedCornerShape(14.dp), brush)
     }
 }

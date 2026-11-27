@@ -44,8 +44,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -67,14 +69,21 @@ private fun RoundBtn(
 ) {
     Box(
         modifier
-            .size(size.dp)
+            .sizeIn(minWidth = 42.dp, minHeight = 48.dp)
             .clip(CircleShape)
-            .background(WatchPillBg)
-            .border(1.dp, WatchCardBorder, CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, contentDesc, tint = tint, modifier = Modifier.size((size * 0.48f).dp))
+        Box(
+            Modifier
+                .size(size.dp)
+                .clip(CircleShape)
+                .background(WatchPillBg)
+                .border(1.dp, WatchCardBorder, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDesc, tint = tint, modifier = Modifier.size((size * 0.50f).dp))
+        }
     }
 }
 
@@ -90,17 +99,19 @@ private fun WatchFeedVideoCard(
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
     val saved = Feed.saved[v.id] == true
+    val borderColor = if (hero) MaterialTheme.colorScheme.primary.copy(alpha = 0.55f) else WatchCardBorder
     Column(
         modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(if (hero) 16.dp else 12.dp))
             .background(WatchCardBg)
-            .border(0.75.dp, WatchCardBorder, RoundedCornerShape(12.dp))
+            .border(if (hero) 1.25.dp else 0.75.dp, borderColor, RoundedCornerShape(if (hero) 16.dp else 12.dp))
     ) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .aspectRatio(16f / 9f)
+                .aspectRatio(ratio)
                 .background(Color.Black)
                 .clickable(onClick = onOpen)
                 .testTag("video_card_${v.id}")
@@ -111,11 +122,26 @@ private fun WatchFeedVideoCard(
                 VideoThumb(v, Modifier.fillMaxSize().alpha(0.32f), ContentScale.Crop)
                 VideoThumb(v, Modifier.fillMaxSize(), ContentScale.Fit)
             }
+            if (hero) {
+                Row(
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.92f))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(Icons.Filled.AutoAwesome, null, tint = Color.Black, modifier = Modifier.size(12.dp))
+                    Text("مميز • HD", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = Cairo)
+                }
+            }
             if (v.duration > 0) {
                 Text(
                     formatDuration(v.duration),
                     color = Color.White,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
@@ -126,38 +152,68 @@ private fun WatchFeedVideoCard(
                 )
             }
         }
-        Row(Modifier.fillMaxWidth().padding(start = 8.dp, top = 6.dp, bottom = 6.dp, end = 2.dp), verticalAlignment = Alignment.Top) {
-            Column(Modifier.weight(1f).clickable(onClick = onOpen)) {
+        Row(Modifier.fillMaxWidth().padding(start = 10.dp, top = 6.dp, bottom = 6.dp, end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f).clickable(onClick = onOpen), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     v.title,
                     color = WatchTextMain,
                     fontFamily = Cairo,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.5.sp,
-                    lineHeight = 16.sp,
+                    fontSize = if (hero) 14.5.sp else 12.5.sp,
+                    lineHeight = if (hero) 20.sp else 16.sp,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    v.author + " • " + formatCount(v.views) + " مشاهدة",
-                    color = WatchTextSec,
-                    fontSize = 10.5.sp,
-                    fontFamily = Cairo,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.clickable(enabled = v.userId.isNotBlank(), onClick = onCreator)
-                )
+                ) {
+                    Text(
+                        v.author,
+                        color = WatchTextSec,
+                        fontSize = 11.5.sp,
+                        fontFamily = Cairo,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (v.verified) VerifiedBadge(12)
+                    Text(
+                        "• ${formatCount(v.views)} مشاهدة",
+                        color = WatchTextSec,
+                        fontSize = 11.sp,
+                        fontFamily = Tajawal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
-            Row {
-                Icon(
-                    if (saved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder, "حفظ",
-                    tint = if (saved) MaterialTheme.colorScheme.primary else WatchTextSec,
-                    modifier = Modifier.size(28.dp).clip(CircleShape).clickable { scope.launch { Feed.toggleSave(v.id) } }.padding(5.dp)
-                )
-                Icon(
-                    Icons.Outlined.Flag, "إبلاغ", tint = WatchTextSec,
-                    modifier = Modifier.size(28.dp).clip(CircleShape).clickable(onClick = onReport).padding(5.dp)
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        scope.launch { Feed.toggleSave(v.id) }
+                    },
+                    modifier = Modifier.minimumInteractiveComponentSize().size(40.dp).testTag("home_save_${v.id}")
+                ) {
+                    Icon(
+                        if (saved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                        "حفظ",
+                        tint = if (saved) MaterialTheme.colorScheme.primary else WatchTextSec,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+                IconButton(
+                    onClick = onReport,
+                    modifier = Modifier.minimumInteractiveComponentSize().size(40.dp).testTag("home_report_${v.id}")
+                ) {
+                    Icon(
+                        Icons.Outlined.Flag,
+                        "إبلاغ",
+                        tint = WatchTextSec,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
             }
         }
     }
@@ -175,13 +231,13 @@ object HomePrefs {
 
 @Composable
 private fun CardRow(
-    pair: List<Video>, open: (Video) -> Unit, onCreator: (Video) -> Unit, onNeedLogin: () -> Unit, onReport: (Video) -> Unit
+    pair: List<Video>, cols: Int, open: (Video) -> Unit, onCreator: (Video) -> Unit, onNeedLogin: () -> Unit, onReport: (Video) -> Unit
 ) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = if (HomePrefs.big) 4.dp else 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = if (cols == 1) 12.dp else 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         pair.forEach { v ->
             WatchFeedVideoCard(v, 16f / 9f, false, { open(v) }, { onCreator(v) }, onNeedLogin, { onReport(v) }, Modifier.weight(1f))
         }
-        if (pair.size == 1 && !HomePrefs.big) Spacer(Modifier.weight(1f))
+        repeat((cols - pair.size).coerceAtLeast(0)) { Spacer(Modifier.weight(1f)) }
     }
 }
 
@@ -235,54 +291,71 @@ fun HomeScreen(
         Feed.open(v, onOpen)
     }
 
-    Box(Modifier.fillMaxSize().background(WatchBg), contentAlignment = Alignment.TopCenter) {
-        Column(Modifier.fillMaxSize().statusBarsPadding().widthIn(max = 760.dp)) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(WatchBg), contentAlignment = Alignment.TopCenter) {
+        val cols = if (HomePrefs.big) 1 else if (maxWidth >= 600.dp) 3 else 2
+        Column(Modifier.fillMaxSize().statusBarsPadding().widthIn(max = 920.dp)) {
+            val haptic = LocalHapticFeedback.current
             Row(
                 Modifier
                     .fillMaxWidth()
                     .background(WatchBg)
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val tctx = androidx.compose.ui.platform.LocalContext.current
-                Box(Modifier.clip(CircleShape).clickable {
-                    HomePrefs.toggle()
-                    android.widget.Toast.makeText(tctx, if (HomePrefs.big) "عرض كبير (صف واحد)" else "عرض الشبكة", android.widget.Toast.LENGTH_SHORT).show()
-                }) { Image38() }
-                Spacer(Modifier.width(10.dp))
+                Box(
+                    Modifier
+                        .minimumInteractiveComponentSize()
+                        .clip(CircleShape)
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            HomePrefs.toggle()
+                            android.widget.Toast.makeText(tctx, if (HomePrefs.big) "عرض كبير (صف واحد)" else "عرض الشبكة", android.widget.Toast.LENGTH_SHORT).show()
+                        },
+                    contentAlignment = Alignment.Center
+                ) { Image38() }
+                Spacer(Modifier.width(4.dp))
                 Text(
                     "موج البرق",
                     color = WatchTextMain,
                     fontFamily = Cairo,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
+                    fontSize = 16.sp,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
                 Box(
                     Modifier
-                        .size(34.dp)
+                        .sizeIn(minWidth = 42.dp, minHeight = 48.dp)
                         .clip(CircleShape)
-                        .background(WatchPillBg)
-                        .border(1.dp, WatchCardBorder, CircleShape)
-                        .clickable(enabled = !Feed.loading) { scope.launch { Feed.load() } }
+                        .clickable(enabled = !Feed.loading) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            scope.launch { Feed.load() }
+                        }
                         .testTag("home_refresh_button"),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (Feed.loading) {
-                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
-                    } else {
-                        Icon(Icons.Filled.Refresh, "تحديث", tint = WatchTextMain, modifier = Modifier.size(18.dp))
+                    Box(
+                        Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(WatchPillBg)
+                            .border(1.dp, WatchCardBorder, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (Feed.loading) {
+                            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+                        } else {
+                            Icon(Icons.Filled.Refresh, "تحديث", tint = WatchTextMain, modifier = Modifier.size(18.dp))
+                        }
                     }
                 }
-                Spacer(Modifier.width(6.dp))
                 BadgedBox(badge = { if (Notifs.unread > 0) Badge { Text(Notifs.unread.toString()) } }) {
                     RoundBtn(Icons.Filled.Notifications, "الإشعارات", 34, WatchTextMain, onClick = onNotifs)
                 }
-                Spacer(Modifier.width(6.dp))
                 RoundBtn(Icons.Filled.SmartToy, "المساعد الذكي", 34, MaterialTheme.colorScheme.primary, onClick = onAi)
                 RoundBtn(Icons.Filled.Lightbulb, "الاقتراحات", 34, MaterialTheme.colorScheme.secondary, onClick = onSuggestions)
-                Spacer(Modifier.width(6.dp))
                 RoundBtn(
                     if (searching) Icons.Filled.Close else Icons.Filled.Search,
                     "بحث",
@@ -426,18 +499,35 @@ fun HomeScreen(
                         }
                     }
                     else -> {
-                        val featuredCount = if (q.isBlank()) minOf(4, vids.size) else vids.size
-                        itemsIndexed(vids.take(featuredCount).chunked(if (HomePrefs.big) 1 else 2), key = { _, pr -> "top_${pr.first().id}" }) { _, pr ->
-                            CardRow(pr, { open(it) }, { if (it.userId.isNotBlank()) creatorId = it.userId }, onNeedLogin, { reportFor = it })
+                        val hasHero = q.isBlank() && vids.isNotEmpty()
+                        if (hasHero) {
+                            val heroVid = vids.first()
+                            item(key = "hero_${heroVid.id}") {
+                                WatchFeedVideoCard(
+                                    v = heroVid,
+                                    ratio = 2.0f,
+                                    hero = true,
+                                    onOpen = { open(heroVid) },
+                                    onCreator = { if (heroVid.userId.isNotBlank()) creatorId = heroVid.userId },
+                                    onNeedLogin = onNeedLogin,
+                                    onReport = { reportFor = heroVid },
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+                                )
+                            }
+                        }
+                        val restAfterHero = if (hasHero) vids.drop(1) else vids
+                        val featuredCount = if (q.isBlank()) minOf(4, restAfterHero.size) else restAfterHero.size
+                        itemsIndexed(restAfterHero.take(featuredCount).chunked(cols), key = { _, pr -> "top_${pr.first().id}" }) { _, pr ->
+                            CardRow(pr, cols, { open(it) }, { if (it.userId.isNotBlank()) creatorId = it.userId }, onNeedLogin, { reportFor = it })
                         }
                     }
                 }
 
-                if (q.isBlank() && vids.size > 4) {
-                    val afterThree = vids.drop(4)
+                if (q.isBlank() && vids.size > 5) {
+                    val afterFive = vids.drop(5)
                     promptVid?.let { pv -> item(key = "reco_prompt") { InterestCard(pv) { yes -> Reco.answerPrompt(pv, yes); promptVid = null } } }
-                    itemsIndexed(afterThree.chunked(if (HomePrefs.big) 1 else 2), key = { _, pr -> "feed_${pr.first().id}" }) { _, pr ->
-                        CardRow(pr, { open(it) }, { if (it.userId.isNotBlank()) creatorId = it.userId }, onNeedLogin, { reportFor = it })
+                    itemsIndexed(afterFive.chunked(cols), key = { _, pr -> "feed_${pr.first().id}" }) { _, pr ->
+                        CardRow(pr, cols, { open(it) }, { if (it.userId.isNotBlank()) creatorId = it.userId }, onNeedLogin, { reportFor = it })
                     }
                 }
 

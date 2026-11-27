@@ -40,9 +40,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
@@ -73,8 +75,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun FullPlayer(start: Video, onClose0: () -> Unit) {
     DarkLock()
-    val onClose = { Ui.barVisible = true; Ui.deep = false; onClose0() }
+    val onClose = { Feed.minimizedVideo = null; Ui.barVisible = true; Ui.deep = false; onClose0() }
     val ctx = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     var cur by remember { mutableStateOf(start) }
     var fs by remember { mutableStateOf(false) }
@@ -134,6 +137,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
 
     val player = remember {
         ExoPlayer.Builder(ctx)
+            .setTrackSelector(Media.highQualityTrackSelector(ctx))
             .setMediaSourceFactory(DefaultMediaSourceFactory(MediaCache.factory(ctx)))
             .build().also { Media.withMp4Fallback(it) }
     }
@@ -284,6 +288,18 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
     fun cycleSpeed() {
         speed = when (speed) { 1f -> 1.25f; 1.25f -> 1.5f; 1.5f -> 2f; 2f -> 0.5f; 0.5f -> 0.75f; else -> 1f }
         player.setPlaybackSpeed(speed)
+    }
+
+    fun minimizePlayer() {
+        val d = player.duration
+        if (d > 0L) {
+            Watch.savePos(ctx, cur.id, (player.currentPosition.toFloat() / d).coerceIn(0f, 1f))
+        }
+        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        Feed.minimizedVideo = cur
+        Ui.barVisible = true
+        Ui.deep = false
+        onClose0()
     }
 
     Dialog(
@@ -539,6 +555,18 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
                                     contentDescription = if (fs) "تصغير" else "إغلاق المشغل",
                                     tint = white
                                 )
+                            }
+                            if (!fs) {
+                                IconButton(
+                                    onClick = { minimizePlayer() },
+                                    modifier = Modifier.minimumInteractiveComponentSize().testTag("player_minimize_button")
+                                ) {
+                                    Icon(
+                                        Icons.Filled.KeyboardArrowDown,
+                                        contentDescription = "تصغير إلى المشغل المصغر",
+                                        tint = white
+                                    )
+                                }
                             }
                             if (fs) {
                                 Text(
@@ -896,6 +924,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
                                         compact = true
                                     ) {
                                         if (!needLogin()) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             if (!liked) heartTick++
                                             scope.launch { Feed.toggleLike(cur.id) }
                                         }
@@ -909,6 +938,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
                                         activeBg = MaterialTheme.colorScheme.primary,
                                         compact = true
                                     ) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                         scope.launch { Feed.toggleSave(cur.id) }
                                     }
                                 }

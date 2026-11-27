@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagebook AI Digital Realm</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #020205; /* Deep Obsidian */
+            overflow: hidden;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<script>
+/**
+ * ELITE CREATIVE CODING COLLECTIVE
+ * PROJECT: Pagebook Hyper-Realistic Banner
+ * TECH: HTML5 Canvas, Custom Physics, Perlin Noise, Additive Blending
+ */
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let width, height;
+let particles = [];
+let backgroundParticles = [];
+let gridLines = [];
+let textPoints = [];
+
+// إضافة متغيرات التحكم في التكرار
+let LOOP_DURATION = 15000; // 15 seconds ms
+let animationStartTime = Date.now();
+let autoRepeatInterval = 3000; // 3 seconds
+let isInRestPeriod = false;
+let restStartTime = 0;
+
+// Configuration
+const CONFIG = {
+    text: "pagebook",
+    fontSize: 120, // Base font size, scales with screen
+    particleCount: 2500, // Text particles
+    bgParticleCount: 150, // Floating data motes
+    gridSpacing: 100,
+    fov: 600,
+    colors: {
+        bg: '#020205',
+        cyan: 'rgba(0, 255, 255, 1)',
+        blue: 'rgba(0, 150, 255, 1)',
+        glow: 'rgba(0, 200, 255, 0.5)'
+    }
+};
+
+// Simplex Noise (Simplified for fluid dynamics)
+const Noise = (function() {
+    // Permutation table
+    const p = new Uint8Array(256);
+    for(let i=0; i<256; i++) p[i] = Math.floor(Math.random()*256);
+    const perm = new Uint8Array(512);
+    for(let i=0; i<512; i++) perm[i] = p[i & 255];
+
+    function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    function lerp(t, a, b) { return a + t * (b - a); }
+    function grad(hash, x, y, z) {
+        const h = hash & 15;
+        const u = h < 8 ? x : y;
+        const v = h < 4 ? y : h === 12 || h === 14 ? x : z;
+        return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+    }
+
+    return {
+        perlin3: function(x, y, z) {
+            const X = Math.floor(x) & 255;
+            const Y = Math.floor(y) & 255;
+            const Z = Math.floor(z) & 255;
+            x -= Math.floor(x);
+            y -= Math.floor(y);
+            z -= Math.floor(z);
+            const u = fade(x);
+            const v = fade(y);
+            const w = fade(z);
+            const A = perm[X] + Y, AA = perm[A] + Z, AB = perm[A + 1] + Z;
+            const B = perm[X + 1] + Y, BA = perm[B] + Z, BB = perm[B + 1] + Z;
+            return lerp(w, lerp(v, lerp(u, grad(perm[AA], x, y, z),
+                grad(perm[BA], x - 1, y, z)),
+                lerp(u, grad(perm[AB], x, y - 1, z),
+                grad(perm[BB], x - 1, y - 1, z))),
+                lerp(v, lerp(u, grad(perm[AA + 1], x, y, z - 1),
+                grad(perm[BA + 1], x - 1, y, z - 1)),
+                lerp(u, grad(perm[AB + 1], x, y - 1, z - 1),
+                grad(perm[BB + 1], x - 1, y - 1, z - 1))));
+        }
+    };
+})();
+
+// Resize Handling & Initialization
+function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    init();
+}
+window.addEventListener('resize', resize);
+
+// Easing Functions
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+function easeInOutExpo(x) {
+    return x === 0 ? 0 : x === 1 ? 1 : x < 0.5 ? Math.pow(2, 20 * x - 10) / 2 : (2 - Math.pow(2, -20 * x + 10)) / 2;
+}
+
+// Text Sampling
+function sampleText() {
+    const offCanvas = document.createElement('canvas');
+    const offCtx = offCanvas.getContext('2d');
+    offCanvas.width = width;
+    offCanvas.height = height;
+
+    const scaledFontSize = Math.min(width * 0.15, 200); // Responsive font size
+    offCtx.font = `900 ${scaledFontSize}px "Segoe UI", Roboto, sans-serif`;
+    offCtx.textAlign = 'center';
+    offCtx.textBaseline = 'middle';
+    offCtx.fillStyle = '#FFFFFF';
+    offCtx.fillText(CONFIG.text, width / 2, height / 2);
+
+    const imageData = offCtx.getImageData(0, 0, width, height).data;
+    textPoints = [];
+    
+    // Sample density based on resolution
+    const step = 4; 
+    for (let y = 0; y < height; y += step) {
+        for (let x = 0; x < width; x += step) {
+            const index = (y * width + x) * 4;
+            if (imageData[index] > 128) {
+                textPoints.push({ x, y });
+            }
+        }
+    }
+}
+
+// Particle Class
+class Particle {
+    constructor(isTextParticle) {
+        this.isTextParticle = isTextParticle;
+        this.reset();
+    }
+
+    reset() {
+        this.x = (Math.random() - 0.5) * width * 2;
+        this.y = (Math.random() - 0.5) * height * 2;
+        this.z = Math.random() * 1000; // Depth
+        
+        // Vortex properties
+        this.angle = Math.random() * Math.PI * 2;
+        this.radius = Math.random() * Math.min(width, height);
+        this.vSpeed = 0.02 + Math.random() * 0.03;
+        
+        // Text Target
+        this.targetIndex = Math.floor(Math.random() * textPoints.length);
+        this.tx = 0;
+        this.ty = 0;
+        
+        // Physics
+        this.vx = 0;
+        this.vy = 0;
+        this.size = Math.random() * 2 + 0.5;
+        this.alpha = Math.random();
+        
+        // Glitch offset
+        this.glitchX = 0;
+        this.glitchY = 0;
+    }
+
+    update(timeProgress, globalTime) {
+        // timeProgress 0 -> 1 over LOOP_DURATION seconds
+        
+        // Phase 1: Vortex / Chaos (0 - 0.6)
+        // Phase 2: Assembly (0.6 - 0.75)
+        // Phase 3: Hold & Glitch (0.75 - 0.95)
+        // Phase 4: Dissolve/Loop (0.95 - 1.0)
+
+        if (this.isTextParticle) {
+            // Ensure we have a valid target
+            if (textPoints.length > 0) {
+                const pt = textPoints[this.targetIndex % textPoints.length];
+                this.tx = pt.x;
+                this.ty = pt.y;
+            }
+
+            if (timeProgress < 0.5) {
+                // Vortex Motion
+                const noiseVal = Noise.perlin3(this.x * 0.001, this.y * 0.001, globalTime * 0.0005);
+                
+                // Spiral towards center
+                const dx = (width/2) - this.x;
+                const dy = (height/2) - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                // Orbit
+                this.angle += this.vSpeed;
+                const orbitRadius = this.radius * (1 - timeProgress * 1.5); // Shrink radius
+                
+                const targetX = width/2 + Math.cos(this.angle) * orbitRadius;
+                const targetY = height/2 + Math.sin(this.angle) * orbitRadius;
+                
+                this.x += (targetX - this.x) * 0.05;
+                this.y += (targetY - this.y) * 0.05;
+                
+                // Add noise turbulence
+                this.x += Math.cos(noiseVal * Math.PI * 2) * 2;
+                this.y += Math.sin(noiseVal * Math.PI * 2) * 2;
+                
+                this.z = Math.sin(timeProgress * 10 + this.x * 0.01) * 200;
+
+            } else if (timeProgress < 0.9) {
+                // Assembly - Spring physics to text position
+                const k = 0.08; // Spring constant
+                const damp = 0.85; // Damping
+                
+                // Glitch effect logic (10s - 12s roughly corresponds to 0.66 - 0.8)
+                let gx = 0, gy = 0;
+                if (timeProgress > 0.66 && timeProgress < 0.8 && Math.random() < 0.05) {
+                    gx = (Math.random() - 0.5) * 50;
+                    gy = (Math.random() - 0.5) * 10;
+                }
+
+                const ax = (this.tx + gx - this.x) * k;
+                const ay = (this.ty + gy - this.y) * k;
+                
+                this.vx += ax;
+                this.vy += ay;
+                this.vx *= damp;
+                this.vy *= damp;
+                
+                this.x += this.vx;
+                this.y += this.vy;
+                this.z = this.z * 0.9; // Flatten Z
+            } else {
+                // Dissolve for loop
+                const noiseVal = Noise.perlin3(this.x * 0.005, this.y * 0.005, globalTime * 0.001);
+                this.vx += Math.cos(noiseVal * 10) * 0.5;
+                this.vy += Math.sin(noiseVal * 10) * 0.5;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha *= 0.95;
+            }
+        } else {
+            // Background Data Stream Particles
+            // Flow field based on noise
+            const noiseVal = Noise.perlin3(this.x * 0.002, this.y * 0.002, globalTime * 0.0002);
+            const angle = noiseVal * Math.PI * 4;
+            
+            this.x += Math.cos(angle) * 2;
+            this.y += Math.sin(angle) * 2 + 0.5; // Slight upward drift
+            
+            // Wrap around
+            if (this.x < 0) this.x = width;
+            if (this.x > width) this.x = 0;
+            if (this.y < 0) this.y = height;
+            if (this.y > height) this.y = 0;
+        }
+    }
+
+    draw(ctx) {
+        if (this.alpha < 0.01) return;
+
+        // Perspective projection for Z
+        const scale = CONFIG.fov / (CONFIG.fov + (this.isTextParticle ? this.z : 0));
+        const x2d = (this.x - width / 2) * scale + width / 2;
+        const y2d = (this.y - height / 2) * scale + height / 2;
+        const s2d = this.size * scale;
+
+        ctx.globalAlpha = this.alpha;
+        
+        if (this.isTextParticle) {
+            // Electric Blue / Cyan
+            const hue = 180 + Math.random() * 40; // Cyan to Blue
+            ctx.fillStyle = `hsl(${hue}, 100%, 70%)`;
+            
+            // Additive glow done via global composite in main loop, here just draw
+            ctx.beginPath();
+            ctx.arc(x2d, y2d, s2d, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            // Background dust
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.arc(x2d, y2d, s2d * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+}
+
+function init() {
+    sampleText();
+    particles = [];
+    backgroundParticles = [];
+
+    // Create text particles
+    const pCount = Math.min(CONFIG.particleCount, textPoints.length * 2); // Limit based on text area
+    for (let i = 0; i < pCount; i++) {
+        particles.push(new Particle(true));
+    }
+
+    // Create background particles
+    for (let i = 0; i < CONFIG.bgParticleCount; i++) {
+        const p = new Particle(false);
+        p.x = Math.random() * width;
+        p.y = Math.random() * height;
+        backgroundParticles.push(p);
+    }
+}
+
+// Draw the 3D Grid
+function drawGrid(time) {
+    ctx.lineWidth = 1;
+    const speed = 0.1; // Movement speed
+    const offset = (time * speed) % CONFIG.gridSpacing;
+    const horizon = height * 0.6; // Vanishing point height adjustment
+
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.15)';
+    ctx.beginPath();
+
+    // Vertical Lines (Perspective)
+    for (let i = -width; i < width * 2; i += CONFIG.gridSpacing) {
+        // Perspective logic: Lines converge to center
+        // Simple approximation for visual effect
+        const x = i;
+        const z = 0; // Close
+        
+        // Draw line from bottom to horizon
+        ctx.moveTo(x, height);
+        // Converge towards center
+        const centerX = width / 2;
+        const t = 1; // 0 at bottom, 1 at horizon
+        const destX = centerX + (x - centerX) * 0.1; 
+        ctx.lineTo(destX, 0); // Infinity
+    }
+
+    // Horizontal Lines (Moving forward)
+    // We draw lines at Z depths
+    for (let z = 0; z < 20; z++) {
+        const depth = z * CONFIG.gridSpacing - offset;
+        if (depth < 1) continue;
+        
+        // Projection scale
+        const scale = CONFIG.fov / depth; 
+        const y = height / 2 + (height/2) * scale * 0.5; // Floor plane
+
+        if (y > height || y < height/2) continue;
+
+        // Curvature / Undulation
+        const wave = Math.sin(time * 0.002 + z * 0.5) * 20 * scale;
+        
+        ctx.moveTo(0, y + wave);
+        ctx.lineTo(width, y + wave);
+    }
+    ctx.stroke();
+    
+    // Add bottom glow gradient
+    const grad = ctx.createLinearGradient(0, height, 0, height/2);
+    grad.addColorStop(0, 'rgba(0, 20, 40, 0.8)');
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, height/2, width, height/2);
+}
+
+// God Rays (Volumetric Light Simulation)
+function drawGodRays(time) {
+    const cx = width / 2;
+    const cy = height / 2;
+    const count = 7;
+    
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.translate(cx, cy);
+    
+    for(let i=0; i<count; i++) {
+        ctx.rotate((time * 0.0001) + (i * (Math.PI * 2 / count)));
+        const grad = ctx.createLinearGradient(0, 0, width, 0);
+        grad.addColorStop(0, 'rgba(0, 100, 255, 0)');
+        grad.addColorStop(0.1, 'rgba(0, 200, 255, 0.03)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(width, -100);
+        ctx.lineTo(width, 100);
+        ctx.closePath();
+        ctx.fill();
+    }
+    ctx.restore();
+}
+
+function drawGlitch(timeProgress) {
+    // Chromatic aberration and scanlines during glitch phase
+    if (timeProgress > 0.65 && timeProgress < 0.82) {
+        const intensity = Math.max(0, Math.sin(timeProgress * 50)); // Flicker
+        
+        if (intensity > 0.5) {
+            // Scanlines
+            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            for(let y=0; y<height; y+=4) {
+                ctx.fillRect(0, y, width, 1);
+            }
+            
+            // RGB Shift simulation involves redrawing the canvas which is expensive.
+            // Instead, we just draw random colored rectangles or noise
+            ctx.fillStyle = `rgba(255, 0, 0, ${Math.random() * 0.1})`;
+            ctx.fillRect(Math.random() * width, 0, Math.random() * 50, height);
+            
+            ctx.fillStyle = `rgba(0, 255, 255, ${Math.random() * 0.1})`;
+            ctx.fillRect(0, Math.random() * height, width, Math.random() * 10);
+        }
+    }
+}
+
+// Main Animation Loop
+function animate() {
+    const now = Date.now();
+    let timeProgress;
+    
+    if (!isInRestPeriod) {
+        // نحن في فترة الأنيميشن النشطة (15 ثانية)
+        timeProgress = ((now - animationStartTime) % LOOP_DURATION) / LOOP_DURATION;
+        
+        // إذا انتهت الـ15 ثانية، ابدأ فترة الراحة
+        if ((now - animationStartTime) >= LOOP_DURATION) {
+            isInRestPeriod = true;
+            restStartTime = now;
+        }
+    } else {
+        // نحن في فترة الراحة (3 ثواني)
+        timeProgress = 1; // ضع progress على 1 (نهاية الأنيميشن)
+        
+        // إذا مرت 3 ثواني من الراحة، أعد تشغيل الأنيميشن
+        if ((now - restStartTime) >= autoRepeatInterval) {
+            isInRestPeriod = false;
+            animationStartTime = now;
+            init(); // إعادة تعيين الجسيمات
+        }
+    }
+    
+    // Clear Canvas
+    ctx.globalCompositeOperation = 'source-over';
+    // Trail effect for motion blur feel
+    ctx.fillStyle = 'rgba(2, 2, 5, 0.4)'; 
+    ctx.fillRect(0, 0, width, height);
+
+    // 1. Draw Background Grid
+    ctx.globalCompositeOperation = 'lighter';
+    drawGrid(now);
+
+    // 2. Draw God Rays
+    drawGodRays(now);
+
+    // 3. Update and Draw Particles
+    // Batch drawing for performance
+    
+    // Text Particles (فقط إذا لم نكن في فترة الراحة)
+    if (!isInRestPeriod) {
+        for (let p of particles) {
+            p.update(timeProgress, now);
+            p.draw(ctx);
+        }
+    }
+    
+    // BG Particles (تعمل باستمرار حتى في فترة الراحة)
+    for (let p of backgroundParticles) {
+        p.update(timeProgress, now);
+        p.draw(ctx);
+    }
+
+    // 4. Glitch Effects (فقط إذا لم نكن في فترة الراحة)
+    if (!isInRestPeriod) {
+        drawGlitch(timeProgress);
+    }
+
+    // 5. Bloom / Vignette overlay
+    ctx.globalCompositeOperation = 'source-over';
+    const rad = Math.min(width, height) * 0.8;
+    const vignette = ctx.createRadialGradient(width/2, height/2, rad * 0.5, width/2, height/2, rad * 1.5);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.8)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, width, height);
+
+    requestAnimationFrame(animate);
+}
+
+// Start
+resize();
+animate();
+
+</script>
+</body>
+</html>

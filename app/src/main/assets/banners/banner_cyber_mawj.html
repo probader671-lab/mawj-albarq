@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>موج البرق AI Digital Realm</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #020205;
+            overflow: hidden;
+            font-family: Cairo, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let width, height;
+let particles = [];
+let backgroundParticles = [];
+let textPoints = [];
+
+let LOOP_DURATION = 15000;
+let animationStartTime = Date.now();
+let autoRepeatInterval = 3000;
+let isInRestPeriod = false;
+let restStartTime = 0;
+
+const CONFIG = {
+    text: "موج البرق",
+    particleCount: 2500,
+    bgParticleCount: 150,
+    gridSpacing: 100,
+    fov: 600
+};
+
+const Noise = (function() {
+    const p = new Uint8Array(256);
+    for(let i=0; i<256; i++) p[i] = Math.floor(Math.random()*256);
+    const perm = new Uint8Array(512);
+    for(let i=0; i<512; i++) perm[i] = p[i & 255];
+
+    function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    function lerp(t, a, b) { return a + t * (b - a); }
+    function grad(hash, x, y, z) {
+        const h = hash & 15;
+        const u = h < 8 ? x : y;
+        const v = h < 4 ? y : h === 12 || h === 14 ? x : z;
+        return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+    }
+
+    return {
+        perlin3: function(x, y, z) {
+            const X = Math.floor(x) & 255, Y = Math.floor(y) & 255, Z = Math.floor(z) & 255;
+            x -= Math.floor(x); y -= Math.floor(y); z -= Math.floor(z);
+            const u = fade(x), v = fade(y), w = fade(z);
+            const A = perm[X] + Y, AA = perm[A] + Z, AB = perm[A + 1] + Z;
+            const B = perm[X + 1] + Y, BA = perm[B] + Z, BB = perm[B + 1] + Z;
+            return lerp(w, lerp(v, lerp(u, grad(perm[AA], x, y, z),
+                grad(perm[BA], x - 1, y, z)),
+                lerp(u, grad(perm[AB], x, y - 1, z),
+                grad(perm[BB], x - 1, y - 1, z))),
+                lerp(v, lerp(u, grad(perm[AA + 1], x, y, z - 1),
+                grad(perm[BA + 1], x - 1, y, z - 1)),
+                lerp(u, grad(perm[AB + 1], x, y - 1, z - 1),
+                grad(perm[BB + 1], x - 1, y - 1, z - 1))));
+        }
+    };
+})();
+
+function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    init();
+}
+window.addEventListener('resize', resize);
+
+function sampleText() {
+    if (!width || !height) return;
+    const offCanvas = document.createElement('canvas');
+    const offCtx = offCanvas.getContext('2d');
+    offCanvas.width = width;
+    offCanvas.height = height;
+
+    const scaledFontSize = Math.max(26, Math.min(width * 0.20, height * 0.54, 210));
+    offCtx.direction = 'rtl';
+    offCtx.font = `900 ${scaledFontSize}px Cairo, "Segoe UI", Tahoma, sans-serif`;
+    offCtx.textAlign = 'center';
+    offCtx.textBaseline = 'middle';
+    offCtx.fillStyle = '#FFFFFF';
+    offCtx.fillText(CONFIG.text, width / 2, height / 2);
+
+    const imageData = offCtx.getImageData(0, 0, width, height).data;
+    textPoints = [];
+    const step = width < 480 ? 3 : 4;
+    for (let y = 0; y < height; y += step) {
+        for (let x = 0; x < width; x += step) {
+            const index = (y * width + x) * 4;
+            if (imageData[index] > 128) {
+                textPoints.push({ x, y });
+            }
+        }
+    }
+}
+
+class Particle {
+    constructor(isTextParticle) {
+        this.isTextParticle = isTextParticle;
+        this.reset();
+    }
+
+    reset() {
+        this.x = (Math.random() - 0.5) * width * 2;
+        this.y = (Math.random() - 0.5) * height * 2;
+        this.z = Math.random() * 1000;
+        this.angle = Math.random() * Math.PI * 2;
+        this.radius = Math.random() * Math.min(width, height);
+        this.vSpeed = 0.02 + Math.random() * 0.03;
+        this.targetIndex = textPoints.length > 0 ? Math.floor(Math.random() * textPoints.length) : 0;
+        this.tx = width / 2;
+        this.ty = height / 2;
+        this.vx = 0;
+        this.vy = 0;
+        this.size = Math.random() * 2 + 0.5;
+        this.alpha = Math.random();
+    }
+
+    update(timeProgress, globalTime) {
+        if (this.isTextParticle) {
+            if (textPoints.length > 0) {
+                const pt = textPoints[this.targetIndex % textPoints.length];
+                this.tx = pt.x;
+                this.ty = pt.y;
+            }
+            if (timeProgress < 0.5) {
+                const noiseVal = Noise.perlin3(this.x * 0.001, this.y * 0.001, globalTime * 0.0005);
+                this.angle += this.vSpeed;
+                const orbitRadius = this.radius * (1 - timeProgress * 1.5);
+                const targetX = width/2 + Math.cos(this.angle) * orbitRadius;
+                const targetY = height/2 + Math.sin(this.angle) * orbitRadius;
+                this.x += (targetX - this.x) * 0.05 + Math.cos(noiseVal * Math.PI * 2) * 2;
+                this.y += (targetY - this.y) * 0.05 + Math.sin(noiseVal * Math.PI * 2) * 2;
+                this.z = Math.sin(timeProgress * 10 + this.x * 0.01) * 200;
+            } else if (timeProgress < 0.9) {
+                const k = 0.08, damp = 0.85;
+                let gx = 0, gy = 0;
+                if (timeProgress > 0.66 && timeProgress < 0.8 && Math.random() < 0.05) {
+                    gx = (Math.random() - 0.5) * 40;
+                    gy = (Math.random() - 0.5) * 10;
+                }
+                this.vx = (this.vx + (this.tx + gx - this.x) * k) * damp;
+                this.vy = (this.vy + (this.ty + gy - this.y) * k) * damp;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.z *= 0.9;
+            } else {
+                const noiseVal = Noise.perlin3(this.x * 0.005, this.y * 0.005, globalTime * 0.001);
+                this.vx += Math.cos(noiseVal * 10) * 0.5;
+                this.vy += Math.sin(noiseVal * 10) * 0.5;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha *= 0.95;
+            }
+        } else {
+            const noiseVal = Noise.perlin3(this.x * 0.002, this.y * 0.002, globalTime * 0.0002);
+            const angle = noiseVal * Math.PI * 4;
+            this.x += Math.cos(angle) * 2;
+            this.y += Math.sin(angle) * 2 + 0.5;
+            if (this.x < 0) this.x = width;
+            if (this.x > width) this.x = 0;
+            if (this.y < 0) this.y = height;
+            if (this.y > height) this.y = 0;
+        }
+    }
+
+    draw(ctx) {
+        if (this.alpha < 0.01) return;
+        const scale = CONFIG.fov / (CONFIG.fov + (this.isTextParticle ? this.z : 0));
+        const x2d = (this.x - width / 2) * scale + width / 2;
+        const y2d = (this.y - height / 2) * scale + height / 2;
+        const s2d = this.size * scale;
+        ctx.globalAlpha = this.alpha;
+        if (this.isTextParticle) {
+            const hue = 180 + Math.random() * 40;
+            ctx.fillStyle = `hsl(${hue}, 100%, 70%)`;
+            ctx.beginPath();
+            ctx.arc(x2d, y2d, s2d, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.arc(x2d, y2d, s2d * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+}
+
+function init() {
+    sampleText();
+    particles = [];
+    backgroundParticles = [];
+    const pCount = Math.min(CONFIG.particleCount, textPoints.length * 2);
+    for (let i = 0; i < pCount; i++) particles.push(new Particle(true));
+    for (let i = 0; i < CONFIG.bgParticleCount; i++) {
+        const p = new Particle(false);
+        p.x = Math.random() * width;
+        p.y = Math.random() * height;
+        backgroundParticles.push(p);
+    }
+}
+
+function drawGrid(time) {
+    ctx.lineWidth = 1;
+    const offset = (time * 0.1) % CONFIG.gridSpacing;
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.15)';
+    ctx.beginPath();
+    for (let i = -width; i < width * 2; i += CONFIG.gridSpacing) {
+        ctx.moveTo(i, height);
+        const centerX = width / 2;
+        ctx.lineTo(centerX + (i - centerX) * 0.1, 0);
+    }
+    for (let z = 0; z < 20; z++) {
+        const depth = z * CONFIG.gridSpacing - offset;
+        if (depth < 1) continue;
+        const scale = CONFIG.fov / depth;
+        const y = height / 2 + (height/2) * scale * 0.5;
+        if (y > height || y < height/2) continue;
+        const wave = Math.sin(time * 0.002 + z * 0.5) * 20 * scale;
+        ctx.moveTo(0, y + wave);
+        ctx.lineTo(width, y + wave);
+    }
+    ctx.stroke();
+    const grad = ctx.createLinearGradient(0, height, 0, height/2);
+    grad.addColorStop(0, 'rgba(0, 20, 40, 0.8)');
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, height/2, width, height/2);
+}
+
+function drawGodRays(time) {
+    const cx = width / 2, cy = height / 2, count = 7;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.translate(cx, cy);
+    for(let i=0; i<count; i++) {
+        ctx.rotate((time * 0.0001) + (i * (Math.PI * 2 / count)));
+        const grad = ctx.createLinearGradient(0, 0, width, 0);
+        grad.addColorStop(0, 'rgba(0, 100, 255, 0)');
+        grad.addColorStop(0.1, 'rgba(0, 200, 255, 0.03)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(width, -100);
+        ctx.lineTo(width, 100);
+        ctx.closePath();
+        ctx.fill();
+    }
+    ctx.restore();
+}
+
+function drawGlitch(timeProgress) {
+    if (timeProgress > 0.65 && timeProgress < 0.82) {
+        const intensity = Math.max(0, Math.sin(timeProgress * 50));
+        if (intensity > 0.5) {
+            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            for(let y=0; y<height; y+=4) ctx.fillRect(0, y, width, 1);
+            ctx.fillStyle = `rgba(255, 0, 0, ${Math.random() * 0.1})`;
+            ctx.fillRect(Math.random() * width, 0, Math.random() * 50, height);
+            ctx.fillStyle = `rgba(0, 255, 255, ${Math.random() * 0.1})`;
+            ctx.fillRect(0, Math.random() * height, width, Math.random() * 10);
+        }
+    }
+}
+
+function animate() {
+    const now = Date.now();
+    let timeProgress;
+    if (!isInRestPeriod) {
+        timeProgress = ((now - animationStartTime) % LOOP_DURATION) / LOOP_DURATION;
+        if ((now - animationStartTime) >= LOOP_DURATION) {
+            isInRestPeriod = true;
+            restStartTime = now;
+        }
+    } else {
+        timeProgress = 1;
+        if ((now - restStartTime) >= autoRepeatInterval) {
+            isInRestPeriod = false;
+            animationStartTime = now;
+            init();
+        }
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(2, 2, 5, 0.4)';
+    ctx.fillRect(0, 0, width, height);
+    ctx.globalCompositeOperation = 'lighter';
+    drawGrid(now);
+    drawGodRays(now);
+    if (!isInRestPeriod) {
+        for (let p of particles) { p.update(timeProgress, now); p.draw(ctx); }
+    }
+    for (let p of backgroundParticles) { p.update(timeProgress, now); p.draw(ctx); }
+    if (!isInRestPeriod) drawGlitch(timeProgress);
+    ctx.globalCompositeOperation = 'source-over';
+    const rad = Math.min(width, height) * 0.8;
+    const vignette = ctx.createRadialGradient(width/2, height/2, rad * 0.5, width/2, height/2, rad * 1.5);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.8)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, width, height);
+    requestAnimationFrame(animate);
+}
+resize();
+animate();
+</script>
+</body>
+</html>

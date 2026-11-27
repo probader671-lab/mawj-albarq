@@ -70,4 +70,17 @@ object Media {
         })
         return p
     }
+
+    /** TrackSelector configured to always prefer the highest supported video resolution and bitrate. */
+    fun highQualityTrackSelector(ctx: Context): androidx.media3.exoplayer.trackselection.DefaultTrackSelector =
+        androidx.media3.exoplayer.trackselection.DefaultTrackSelector(ctx).apply {
+            setParameters(
+                buildUponParameters()
+                    .setForceHighestSupportedBitrate(true)
+                    .setMaxVideoSize(Int.MAX_VALUE, Int.MAX_VALUE)
+                    .setMaxVideoBitrate(Int.MAX_VALUE)
+                    .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                    .setAllowVideoNonSeamlessAdaptiveness(true)
+            )
+        }
 }

@@ -76,6 +76,8 @@ fun BoxScope.ReelsClipOverlay(
     liked: Boolean,
     saved: Boolean,
     following: Boolean,
+    tightBottom: Boolean = false,
+    extraAction: (@Composable () -> Unit)? = null,
     onLike: () -> Unit,
     onComment: () -> Unit,
     onSave: () -> Unit,
@@ -85,13 +87,14 @@ fun BoxScope.ReelsClipOverlay(
     onCreator: () -> Unit
 ) {
     var descOpen by remember(v.id) { mutableStateOf(false) }
+    val bPad = if (tightBottom) 8.dp else 16.dp
 
-    // Left (End in RTL) vertical column with crisp outline icons & counts (no pill circles)
+    // Left (End in RTL) vertical column with crisp outline icons & counts
     Column(
         Modifier
             .align(Alignment.BottomEnd)
-            .padding(end = 10.dp, bottom = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(end = 10.dp, bottom = bPad),
+        verticalArrangement = Arrangement.spacedBy(11.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         CleanStackIcon(
@@ -128,17 +131,24 @@ fun BoxScope.ReelsClipOverlay(
         )
         IconButton(
             onClick = onReport,
-            modifier = Modifier.minimumInteractiveComponentSize().size(40.dp).testTag("clip_reels_more_button")
+            modifier = Modifier
+                .minimumInteractiveComponentSize()
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(Color(0x660B0F17))
+                .border(0.75.dp, Color(0x28FFFFFF), CircleShape)
+                .testTag("clip_reels_more_button")
         ) {
             Icon(Icons.Filled.MoreHoriz, "المزيد", tint = Color.White, modifier = Modifier.size(24.dp))
         }
+        extraAction?.invoke()
     }
 
     // Bottom-right (Start in RTL): Avatar + handle + outlined follow pill + title
     Column(
         Modifier
             .align(Alignment.BottomStart)
-            .padding(start = 14.dp, bottom = 18.dp, end = 78.dp)
+            .padding(start = 14.dp, bottom = bPad, end = 78.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.clickable(onClick = onCreator)) { Avatar(v.avatar, v.author, 36) }
@@ -187,6 +197,8 @@ fun BoxScope.TikTokClipOverlay(
     saved: Boolean,
     following: Boolean,
     isPlaying: Boolean,
+    tightBottom: Boolean = false,
+    extraAction: (@Composable () -> Unit)? = null,
     onLike: () -> Unit,
     onComment: () -> Unit,
     onSave: () -> Unit,
@@ -195,6 +207,7 @@ fun BoxScope.TikTokClipOverlay(
     onCreator: () -> Unit
 ) {
     var descOpen by remember(v.id) { mutableStateOf(false) }
+    val bPad = if (tightBottom) 8.dp else 14.dp
 
     val discTransition = rememberInfiniteTransition(label = "disc")
     val discAngle by discTransition.animateFloat(
@@ -204,12 +217,12 @@ fun BoxScope.TikTokClipOverlay(
         label = "discAngle"
     )
 
-    // Left (End in RTL) stack: Avatar + '+' badge, filled white icons, spinning vinyl disc
+    // Left (End in RTL) stack: Avatar + '+' badge, filled white icons, spinning vinyl disc, optional settings at end
     Column(
         Modifier
             .align(Alignment.BottomEnd)
-            .padding(end = 10.dp, bottom = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(end = 10.dp, bottom = bPad),
+        verticalArrangement = Arrangement.spacedBy(11.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
@@ -287,13 +300,14 @@ fun BoxScope.TikTokClipOverlay(
         ) {
             Avatar(v.avatar, v.author, 20)
         }
+        extraAction?.invoke()
     }
 
     // Bottom-right (Start in RTL): Bold name + title
     Column(
         Modifier
             .align(Alignment.BottomStart)
-            .padding(start = 14.dp, bottom = 14.dp, end = 80.dp)
+            .padding(start = 14.dp, bottom = bPad, end = 80.dp)
     ) {
         Row(
             Modifier.clickable(onClick = onCreator),
@@ -332,6 +346,7 @@ fun BoxScope.XPillClipOverlay(
     speed: Float,
     muted: Boolean,
     fillZoom: Boolean,
+    extraAction: (@Composable () -> Unit)? = null,
     onLike: () -> Unit,
     onComment: () -> Unit,
     onSave: () -> Unit,
@@ -449,6 +464,7 @@ fun BoxScope.XPillClipOverlay(
                     modifier = Modifier.testTag("clip_x_report_button"),
                     onClick = onReport
                 )
+                extraAction?.invoke()
             }
         }
 
@@ -583,9 +599,18 @@ private fun CleanStackIcon(
             }
             .padding(horizontal = 4.dp, vertical = 2.dp)
     ) {
-        Icon(icon, label, tint = tint, modifier = Modifier.size(iconSize.dp).scale(sc.value))
+        Box(
+            Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(Color(0x660B0F17))
+                .border(0.75.dp, Color(0x28FFFFFF), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, label, tint = tint, modifier = Modifier.size((iconSize - 6).coerceAtLeast(21).dp).scale(sc.value))
+        }
         if (label.isNotEmpty()) {
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(3.dp))
             Text(
                 label,
                 color = Color.White,

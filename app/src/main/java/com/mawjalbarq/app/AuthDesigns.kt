@@ -352,18 +352,24 @@ private fun OrbsFlipCard(form: AuthFormHolder, onSubmit: () -> Unit) {
 
             if (showBack) {
                 AvatarPickerField(form)
-                StyledDarkField(form.name, { form.name = it }, "الاسم (اختياري)", Color(0xFF4FACFE))
+                StyledDarkField(form.name, { form.name = it }, "الاسم (اختياري)", Color(0xFF4FACFE), leadingIcon = Icons.Filled.Person)
                 Spacer(Modifier.height(10.dp))
             }
-            StyledDarkField(form.email, { form.email = it.trim() }, "البريد الإلكتروني", Color(0xFFFF6B6B), keyboardType = KeyboardType.Email)
+            StyledDarkField(form.email, { form.email = it.trim() }, "البريد الإلكتروني", Color(0xFFFF6B6B), keyboardType = KeyboardType.Email, leadingIcon = Icons.Filled.Email)
+            EmailInlineHint(form.email)
             Spacer(Modifier.height(10.dp))
             StyledDarkField(
                 form.pass, { form.pass = it }, "كلمة المرور (8+ أحرف)", Color(0xFFFF6B6B), password = !form.showPass,
-                onTogglePass = { form.showPass = !form.showPass }
+                onTogglePass = { form.showPass = !form.showPass }, leadingIcon = Icons.Filled.Lock
             )
             if (showBack) {
+                PasswordStrengthRow(form.pass)
                 Spacer(Modifier.height(10.dp))
-                StyledDarkField(form.confirmPass, { form.confirmPass = it }, "تأكيد كلمة المرور", Color(0xFF4FACFE), password = !form.showPass)
+                StyledDarkField(
+                    form.confirmPass, { form.confirmPass = it }, "تأكيد كلمة المرور", Color(0xFF4FACFE),
+                    password = !form.showPass, onTogglePass = { form.showPass = !form.showPass }, leadingIcon = Icons.Filled.Lock
+                )
+                ConfirmPassInlineHint(form.pass, form.confirmPass)
             }
 
             Spacer(Modifier.height(16.dp))
@@ -469,18 +475,24 @@ private fun PurpleSlideCard(form: AuthFormHolder, onSubmit: () -> Unit) {
 
             if (form.isSignup) {
                 AvatarPickerField(form)
-                LightFilledInput(form.name, { form.name = it }, "الاسم (اختياري)")
+                LightFilledInput(form.name, { form.name = it }, "الاسم (اختياري)", leadingIcon = Icons.Filled.Person)
                 Spacer(Modifier.height(8.dp))
             }
-            LightFilledInput(form.email, { form.email = it.trim() }, "البريد الإلكتروني", KeyboardType.Email)
+            LightFilledInput(form.email, { form.email = it.trim() }, "البريد الإلكتروني", KeyboardType.Email, leadingIcon = Icons.Filled.Email)
+            EmailInlineHint(form.email, lightBg = true)
             Spacer(Modifier.height(8.dp))
             LightFilledInput(
                 form.pass, { form.pass = it }, "كلمة المرور", KeyboardType.Password, password = !form.showPass,
-                onTogglePass = { form.showPass = !form.showPass }
+                onTogglePass = { form.showPass = !form.showPass }, leadingIcon = Icons.Filled.Lock
             )
             if (form.isSignup) {
+                PasswordStrengthRow(form.pass, lightBg = true)
                 Spacer(Modifier.height(8.dp))
-                LightFilledInput(form.confirmPass, { form.confirmPass = it }, "تأكيد كلمة المرور", KeyboardType.Password, password = !form.showPass)
+                LightFilledInput(
+                    form.confirmPass, { form.confirmPass = it }, "تأكيد كلمة المرور", KeyboardType.Password,
+                    password = !form.showPass, onTogglePass = { form.showPass = !form.showPass }, leadingIcon = Icons.Filled.Lock
+                )
+                ConfirmPassInlineHint(form.pass, form.confirmPass, lightBg = true)
             }
 
             Spacer(Modifier.height(14.dp))
@@ -588,14 +600,20 @@ private fun MatrixAuthCard(form: AuthFormHolder, onSubmit: () -> Unit) {
             Spacer(Modifier.height(10.dp))
         }
         MatrixField(form.email, { form.email = it.trim() }, "البريد الإلكتروني", Icons.Filled.Email, keyboardType = KeyboardType.Email)
+        EmailInlineHint(form.email)
         Spacer(Modifier.height(10.dp))
         MatrixField(
             form.pass, { form.pass = it }, "كلمة المرور", Icons.Filled.Lock, password = !form.showPass,
             onTogglePass = { form.showPass = !form.showPass }
         )
         if (form.isSignup) {
+            PasswordStrengthRow(form.pass)
             Spacer(Modifier.height(10.dp))
-            MatrixField(form.confirmPass, { form.confirmPass = it }, "تأكيد كلمة المرور", Icons.Filled.Lock, password = !form.showPass)
+            MatrixField(
+                form.confirmPass, { form.confirmPass = it }, "تأكيد كلمة المرور", Icons.Filled.Lock,
+                password = !form.showPass, onTogglePass = { form.showPass = !form.showPass }
+            )
+            ConfirmPassInlineHint(form.pass, form.confirmPass)
         }
 
         Spacer(Modifier.height(16.dp))
@@ -702,21 +720,24 @@ private fun RetroCyberCard(form: AuthFormHolder, onSubmit: () -> Unit) {
 
         if (form.isSignup) {
             AvatarPickerField(form)
-            CyberLabeledField("الاسم // NAME", form.name, { form.name = it }, "مستخدم جديد")
+            CyberLabeledField("الاسم // NAME", form.name, { form.name = it }, "مستخدم جديد", leadingIcon = Icons.Filled.Person)
             Spacer(Modifier.height(10.dp))
         }
-        CyberLabeledField("البريد الإلكتروني // EMAIL", form.email, { form.email = it.trim() }, "name@example.com", KeyboardType.Email)
+        CyberLabeledField("البريد الإلكتروني // EMAIL", form.email, { form.email = it.trim() }, "name@example.com", KeyboardType.Email, leadingIcon = Icons.Filled.Email)
+        EmailInlineHint(form.email)
         Spacer(Modifier.height(10.dp))
         CyberLabeledField(
             "كلمة المرور // PASSWORD", form.pass, { form.pass = it }, "••••••••", KeyboardType.Password,
-            password = !form.showPass, onTogglePass = { form.showPass = !form.showPass }
+            password = !form.showPass, onTogglePass = { form.showPass = !form.showPass }, leadingIcon = Icons.Filled.Lock
         )
         if (form.isSignup) {
+            PasswordStrengthRow(form.pass)
             Spacer(Modifier.height(10.dp))
             CyberLabeledField(
                 "تأكيد كلمة المرور // CONFIRM", form.confirmPass, { form.confirmPass = it }, "••••••••", KeyboardType.Password,
-                password = !form.showPass
+                password = !form.showPass, onTogglePass = { form.showPass = !form.showPass }, leadingIcon = Icons.Filled.Lock
             )
+            ConfirmPassInlineHint(form.pass, form.confirmPass)
         }
 
         Spacer(Modifier.height(16.dp))
@@ -770,6 +791,75 @@ private fun OrDivider(lineColor: Color, textColor: Color) {
 }
 
 @Composable
+private fun EmailInlineHint(email: String, lightBg: Boolean = false) {
+    val trimmed = email.trim()
+    if (trimmed.isBlank()) return
+    val ok = trimmed.contains("@") && trimmed.substringAfter("@").contains(".")
+    if (!ok) {
+        Text(
+            "أدخل بريد إلكتروني صحيح (مثال: name@domain.com)",
+            color = if (lightBg) Color(0xFFD32F2F) else Color(0xFFFFB74D),
+            fontSize = 11.sp,
+            fontFamily = Cairo,
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp, start = 4.dp)
+        )
+    }
+}
+
+@Composable
+private fun ConfirmPassInlineHint(pass: String, confirm: String, lightBg: Boolean = false) {
+    if (confirm.isEmpty()) return
+    val match = pass == confirm
+    Text(
+        if (match) "كلمتا المرور متطابقتان ✓" else "كلمتا المرور غير متطابقتين",
+        color = when {
+            match && lightBg -> Color(0xFF059669)
+            match -> Color(0xFF34D399)
+            lightBg -> Color(0xFFD32F2F)
+            else -> Color(0xFFFF8A8A)
+        },
+        fontSize = 11.sp,
+        fontFamily = Cairo,
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp, start = 4.dp)
+    )
+}
+
+@Composable
+private fun PasswordStrengthRow(pass: String, lightBg: Boolean = false) {
+    if (pass.isEmpty()) return
+    val score = when {
+        pass.length < 8 -> 1
+        pass.any { it.isDigit() } && (pass.any { it.isUpperCase() } || pass.any { !it.isLetterOrDigit() }) && pass.length >= 10 -> 3
+        else -> 2
+    }
+    val barColor = when (score) {
+        1 -> Color(0xFFEF4444)
+        2 -> Color(0xFFF59E0B)
+        else -> Color(0xFF10B981)
+    }
+    val label = when (score) {
+        1 -> "ضعيفة (${8 - pass.length} أحرف متبقية على الأقل)"
+        2 -> "متوسطة • يفضل إضافة أرقام ورموز"
+        else -> "قوية ومحمية ✓"
+    }
+    Column(Modifier.fillMaxWidth().padding(top = 6.dp, start = 2.dp, end = 2.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            for (step in 1..3) {
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(4.dp)
+                        .clip(CircleShape)
+                        .background(if (step <= score) barColor else if (lightBg) Color(0x22000000) else Color(0x28FFFFFF))
+                )
+            }
+        }
+        Spacer(Modifier.height(3.dp))
+        Text(label, color = barColor, fontSize = 11.sp, fontFamily = Cairo)
+    }
+}
+
+@Composable
 private fun StyledDarkField(
     value: String,
     onChange: (String) -> Unit,
@@ -777,20 +867,22 @@ private fun StyledDarkField(
     accent: Color,
     keyboardType: KeyboardType = KeyboardType.Text,
     password: Boolean = false,
-    onTogglePass: (() -> Unit)? = null
+    onTogglePass: (() -> Unit)? = null,
+    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
         modifier = Modifier.fillMaxWidth(),
         placeholder = { Text(hint, color = Color(0x88FFFFFF), fontSize = 13.sp) },
+        leadingIcon = leadingIcon?.let { ic -> { Icon(ic, null, tint = accent, modifier = Modifier.size(18.dp)) } },
         singleLine = true,
         shape = RoundedCornerShape(12.dp),
         visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         trailingIcon = onTogglePass?.let { toggle ->
             {
-                IconButton(onClick = toggle) {
+                IconButton(onClick = toggle, modifier = Modifier.minimumInteractiveComponentSize()) {
                     Icon(if (password) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, "إظهار", tint = Color(0xAAFFFFFF))
                 }
             }
@@ -814,20 +906,22 @@ private fun LightFilledInput(
     hint: String,
     keyboardType: KeyboardType = KeyboardType.Text,
     password: Boolean = false,
-    onTogglePass: (() -> Unit)? = null
+    onTogglePass: (() -> Unit)? = null,
+    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
         modifier = Modifier.fillMaxWidth(),
         placeholder = { Text(hint, color = Color(0xFF777777), fontSize = 13.sp) },
+        leadingIcon = leadingIcon?.let { ic -> { Icon(ic, null, tint = Color(0xFF573B8A), modifier = Modifier.size(18.dp)) } },
         singleLine = true,
         shape = RoundedCornerShape(8.dp),
         visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         trailingIcon = onTogglePass?.let { toggle ->
             {
-                IconButton(onClick = toggle) {
+                IconButton(onClick = toggle, modifier = Modifier.minimumInteractiveComponentSize()) {
                     Icon(if (password) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, "إظهار", tint = Color(0xFF573B8A))
                 }
             }
@@ -863,7 +957,7 @@ private fun MatrixField(
         leadingIcon = { Icon(icon, null, tint = green, modifier = Modifier.size(18.dp)) },
         trailingIcon = onTogglePass?.let { toggle ->
             {
-                IconButton(onClick = toggle) {
+                IconButton(onClick = toggle, modifier = Modifier.minimumInteractiveComponentSize()) {
                     Icon(if (password) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, "إظهار", tint = green)
                 }
             }
@@ -892,7 +986,8 @@ private fun CyberLabeledField(
     hint: String,
     keyboardType: KeyboardType = KeyboardType.Text,
     password: Boolean = false,
-    onTogglePass: (() -> Unit)? = null
+    onTogglePass: (() -> Unit)? = null,
+    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null
 ) {
     val cyan = Color(0xFF00FFFF)
     Column(Modifier.fillMaxWidth()) {
@@ -903,9 +998,10 @@ private fun CyberLabeledField(
             onValueChange = onChange,
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text(hint, color = Color(0x66FFFFFF), fontSize = 13.sp) },
+            leadingIcon = leadingIcon?.let { ic -> { Icon(ic, null, tint = cyan, modifier = Modifier.size(18.dp)) } },
             trailingIcon = onTogglePass?.let { toggle ->
                 {
-                    IconButton(onClick = toggle) {
+                    IconButton(onClick = toggle, modifier = Modifier.minimumInteractiveComponentSize()) {
                         Icon(if (password) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, "إظهار", tint = cyan)
                     }
                 }

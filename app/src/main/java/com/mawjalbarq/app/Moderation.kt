@@ -212,7 +212,7 @@ object Moderation {
             val n = if (durMs < 4000) 4 else 8
             for (i in 0 until n) {
                 val t = (durMs * 1000L * (2 * i + 1)) / (2 * n)
-                val f = r.getFrameAtTime(t, MediaMetadataRetriever.OPTION_CLOSEST) ?: continue
+                val f = runCatching { r.getFrameAtTime(t, MediaMetadataRetriever.OPTION_CLOSEST) }.getOrNull() ?: continue
                 val s = 480f / maxOf(f.width, f.height)
                 out += if (s < 1f) Bitmap.createScaledBitmap(f, (f.width * s).toInt().coerceAtLeast(1), (f.height * s).toInt().coerceAtLeast(1), true) else f
             }

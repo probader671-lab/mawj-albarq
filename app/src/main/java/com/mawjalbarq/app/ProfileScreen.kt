@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
 @Composable
-fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions: () -> Unit = {}) {
+fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions: () -> Unit = {}, onGoUpload: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
     if (!App.loggedIn) {
         AuthPortalScreen(prefs = prefs, onSuggestions = onSuggestions)
@@ -33,7 +33,7 @@ fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions:
         var settings by remember { mutableStateOf(false) }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("حسابي", color = Ink, fontSize = 24.sp, fontFamily = Cairo, modifier = Modifier.weight(1f))
-            IconButton(onClick = { settings = true }) { Icon(Icons.Filled.Settings, "الإعدادات", tint = Color.White) }
+            IconButton(onClick = { settings = true }) { Icon(Icons.Filled.Settings, "الإعدادات", tint = Ink) }
         }
         if (settings) SettingsSheet(prefs) { settings = false }
         Spacer(Modifier.height(16.dp))
@@ -41,7 +41,7 @@ fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions:
         var edit by remember { mutableStateOf(false) }
         LaunchedEffect(App.userId) { me = App.userId?.let { loadProfile(it) } ?: me }
         me?.let { d ->
-            ProfileHeader(d, isMe = true, onPlay = { vid ->
+            ProfileHeader(d, isMe = true, onUpload = onGoUpload, onPlay = { vid ->
                 val target = d.videos.firstOrNull { it.id == vid } ?: Feed.videos.firstOrNull { it.id == vid }
                 if (target != null) Feed.open(target, onOpenFeed)
             }) {

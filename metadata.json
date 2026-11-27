@@ -1,0 +1,6 @@
+{
+  "name": "Mawj Albarq",
+  "description": "Mawj Albarq streaming and media application",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Mawj Earth Banner</title>
+<style>
+  html, body {
+    background: radial-gradient(circle at 30% 35%, #122146 0%, #070b18 65%, #020307 100%);
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+  lume-scene {
+    touch-action: none;
+    position: relative;
+    z-index: 2;
+  }
+  lume-scene * {
+    pointer-events: none;
+  }
+  .fallback-planet {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .fallback-orb {
+    width: min(38vh, 38vw);
+    height: min(38vh, 38vw);
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #4ec6ff 0%, #1d5fb8 48%, #0a1b3d 85%, #02040a 100%);
+    box-shadow: 0 0 40px rgba(78, 198, 255, 0.35), inset -18px -14px 32px rgba(0, 0, 0, 0.72);
+    animation: pulseOrb 6s ease-in-out infinite;
+  }
+  @keyframes pulseOrb {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+  }
+</style>
+</head>
+<body>
+<div class="fallback-planet" id="fallbackPlanet"><div class="fallback-orb"></div></div>
+<lume-scene id="scene" webgl touch-action="none">
+  <lume-camera-rig initial-polar-angle="0" min-distance="90" max-distance="1000" initial-distance="200"></lume-camera-rig>
+  <lume-sphere
+    id="stars"
+    texture="https://assets.codepen.io/191583/galaxy_starfield.png"
+    receive-shadow="false"
+    has="basic-material"
+    sidedness="back"
+    size="4000 4000 4000"
+    mount-point="0.5 0.5 0.5"
+    color="white"
+  ></lume-sphere>
+  <lume-element3d size="0 0" rotation="0 -50 0">
+    <lume-element3d size="0 0" rotation="10 0 0">
+      <lume-point-light
+        id="light"
+        size="0 0"
+        position="0 0 1800"
+        color="white"
+        intensity="2"
+        distance="10000"
+        shadow-map-width="1024"
+        shadow-map-height="1024"
+        shadow-camera-far="20000"
+      ></lume-point-light>
+    </lume-element3d>
+  </lume-element3d>
+  <lume-element3d size="0 0 0">
+    <lume-element3d rotation="0 180 0">
+      <lume-sphere
+        id="earth"
+        texture="https://assets.codepen.io/191583/earthmap1k.jpg"
+        bump-map="https://assets.codepen.io/191583/earthbump1k.jpg"
+        specular-map="https://assets.codepen.io/191583/earthspec1k.jpg"
+        size="120 120 120"
+        mount-point="0.5 0.5 0.5"
+        color="white"
+      >
+        <lume-sphere
+          id="clouds"
+          texture="https://assets.codepen.io/191583/earthclouds.png"
+          opacity="0.7"
+          size="125 125 125"
+          mount-point="0.5 0.5 0.5"
+          align-point="0.5 0.5 0.5"
+          color="white"
+        ></lume-sphere>
+      </lume-sphere>
+    </lume-element3d>
+    <lume-element3d rotation="90 10 0">
+      <lume-element3d id="moonRotator" rotation="0 0 110">
+        <lume-sphere
+          id="moon"
+          texture="https://assets.codepen.io/191583/moon.jpg"
+          position="250"
+          size="5 5 5"
+          mount-point="0.5 0.5 0.5"
+          color="white"
+        ></lume-sphere>
+      </lume-element3d>
+    </lume-element3d>
+  </lume-element3d>
+</lume-scene>
+<script src="https://unpkg.com/lume@0.3.0-alpha.26/dist/global.js"></script>
+<script>
+  try {
+    if (typeof LUME !== 'undefined') {
+      LUME.defineElements();
+      moonRotator.rotation = (x, y, z, t) => [x, y, t * 0.004];
+      earth.rotation = (x, y, z, t) => [x, t * 0.01, z];
+      clouds.rotation = (x, y, z, t) => [x, -t * 0.003, z];
+      setTimeout(function() {
+        var fp = document.getElementById('fallbackPlanet');
+        if (fp) fp.style.display = 'none';
+      }, 1500);
+    }
+  } catch (e) {}
+</script>
+</body>
+</html>

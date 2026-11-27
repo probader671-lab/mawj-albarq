@@ -227,11 +227,13 @@ object Feed {
     val saved = mutableStateMapOf<String, Boolean>()
     var jumpTo by mutableStateOf<Int?>(null)
     var activeVideo by mutableStateOf<Video?>(null)
+    var minimizedVideo by mutableStateOf<Video?>(null)
     private const val PAGE_SIZE = 30
     private var nextCursor: Video? = null  // keyset cursor: last video of the last page
 
     fun open(v: Video, onGoClips: () -> Unit) {
         if (!v.portrait) {
+            minimizedVideo = null
             activeVideo = v
         } else {
             val idx = videos.indexOfFirst { it.id == v.id }
@@ -239,6 +241,7 @@ object Feed {
                 jumpTo = idx
                 onGoClips()
             } else {
+                minimizedVideo = null
                 activeVideo = v
             }
         }
@@ -286,8 +289,8 @@ object Feed {
             }
             cacheUpdatedAt = cached.updatedAtMs
         }
-        val urls = cached.videos.filter { it.portrait }.ifEmpty { cached.videos }.take(2).map { it.url }
-        MediaCache.prefetch(ctx, urls)
+        val targets = cached.videos.filter { it.portrait }.ifEmpty { cached.videos }
+        MediaCache.launchSmartPrefetch(ctx, targets, currentIndex = -1, lookahead = 10)
     }
 
     private fun persistCacheAsync() {
@@ -357,8 +360,8 @@ object Feed {
                 }
                 appCtx?.let { ctx ->
                     VideoMetadataCache.save(ctx, merged)
-                    val urls = merged.filter { it.portrait }.ifEmpty { merged }.take(3).map { it.url }
-                    CoroutineScope(Dispatchers.IO).launch { MediaCache.prefetch(ctx, urls) }
+                    val targets = shown.filter { it.portrait }.ifEmpty { shown }
+                    MediaCache.launchSmartPrefetch(ctx, targets, currentIndex = -1, lookahead = 10)
                 }
             } catch (_: Exception) {
                 if (videos.isEmpty()) error = true else isOffline = true

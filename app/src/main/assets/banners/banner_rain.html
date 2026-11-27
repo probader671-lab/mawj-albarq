@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Mawj Rain Banner</title>
+    <style>
+html, body, canvas, #instructions, #columns, #book-page {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+}
+body {
+	background: linear-gradient(to bottom, rgba(8,13,40,1) 0%, rgba(38,19,0,1) 100%);
+}
+#instructions {
+	opacity: 1;
+	transition: opacity 2s;
+	background-repeat: no-repeat;
+	background-position: center center;
+	background-size: contain;
+}
+#columns {
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 2s;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0 50px;
+	box-sizing: border-box;
+}
+.column {
+	width: 15px;
+	height: 80%;
+	background: linear-gradient(to bottom,
+		rgba(255,255,255,0.1) 0%,
+		rgba(200,200,255,0.3) 20%,
+		rgba(150,150,255,0.4) 50%,
+		rgba(200,200,255,0.3) 80%,
+		rgba(255,255,255,0.1) 100%);
+	border-radius: 10px;
+	box-shadow: 0 0 20px rgba(100,150,255,0.5),
+				0 0 40px rgba(100,150,255,0.3),
+				inset 0 0 10px rgba(255,255,255,0.2);
+}
+#book-page {
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 3s, transform 3s;
+	background-color: rgba(255, 248, 220, 0.95);
+	width: 70%;
+	height: 80%;
+	left: 15%;
+	top: 10%;
+	border-radius: 10px;
+	box-shadow: 0 0 50px rgba(255, 255, 255, 0.5),
+				inset 0 0 30px rgba(200, 200, 150, 0.3);
+	transform: scale(0.8) rotate(5deg);
+	overflow: hidden;
+}
+#book-page.active {
+	opacity: 0.18;
+	transform: scale(1) rotate(0deg);
+}
+.book-water-level {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	height: 0;
+	background: linear-gradient(to top,
+		rgba(80, 175, 255, 0.8) 0%,
+		rgba(80, 175, 255, 0.4) 100%);
+	transition: height 5s linear;
+	border-radius: 0 0 10px 10px;
+}
+    </style>
+</head>
+<body>
+<div id="instructions"></div>
+<div id="columns">
+	<div class="column"></div>
+	<div class="column"></div>
+</div>
+<div id="book-page">
+	<div class="book-water-level" id="water-level"></div>
+</div>
+<canvas id="canvas"></canvas>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+	demo.init();
+	window.addEventListener('resize', demo.resize);
+});
+
+var demo = {
+	speed: 1,
+	color: { r: '80', g: '175', b: '255', a: '0.6' },
+	started: false,
+	canvas: null,
+	ctx: null,
+	width: 0,
+	height: 0,
+	dpr: window.devicePixelRatio || 1,
+	drop_time: 0,
+	drop_delay: 25,
+	wind: 4,
+	rain_color: null,
+	rain_color_clear: null,
+	rain: [],
+	rain_pool: [],
+	drops: [],
+	drop_pool: [],
+	columnsVisible: false,
+	bookVisible: false,
+	waterLevel: 0
+};
+
+demo.init = function() {
+	if (!demo.started) {
+		demo.started = true;
+		demo.canvas = document.getElementById('canvas');
+		demo.ctx = demo.canvas.getContext('2d');
+		var c = demo.color;
+		demo.rain_color = 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + c.a + ')';
+		demo.rain_color_clear = 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',0)';
+		demo.resize();
+		Ticker.addListener(demo.step);
+		if (typeof dat !== 'undefined') {
+			const gui = new dat.GUI();
+			gui.add(demo, 'speed', 0.2, 2);
+		}
+		const instructions = document.getElementById('instructions');
+		setTimeout(function() {
+			if (instructions && instructions.parentNode) {
+				instructions.style.opacity = 0;
+				setTimeout(function(){
+					if (instructions.parentNode) instructions.parentNode.removeChild(instructions);
+				}, 2000);
+			}
+		}, 3000);
+		setTimeout(function() { demo.showBook(); }, 6000);
+	}
+};
+
+demo.showBook = function() {
+	const bookPage = document.getElementById('book-page');
+	const waterLevel = document.getElementById('water-level');
+	bookPage.classList.add('active');
+	demo.bookVisible = true;
+	setInterval(function() {
+		if (demo.bookVisible && demo.waterLevel < 100) {
+			demo.waterLevel += 0.5;
+			waterLevel.style.height = demo.waterLevel + '%';
+		}
+	}, 100);
+};
+
+demo.resize = function() {
+	const rain = demo.rain;
+	const drops = demo.drops;
+	for (let i = rain.length - 1; i >= 0; i--) { rain.pop().recycle(); }
+	for (let i = drops.length - 1; i >= 0; i--) { drops.pop().recycle(); }
+	demo.width = window.innerWidth;
+	demo.height = window.innerHeight;
+	demo.canvas.width = demo.width * demo.dpr;
+	demo.canvas.height = demo.height * demo.dpr;
+};
+
+demo.step = function(time, lag) {
+	const speed = demo.speed;
+	const width = demo.width;
+	const height = demo.height;
+	const wind = demo.wind;
+	const rain = demo.rain;
+	const rain_pool = demo.rain_pool;
+	const drops = demo.drops;
+	const drop_pool = demo.drop_pool;
+	const multiplier = speed * lag;
+
+	if (demo.bookVisible && Math.random() > 0.7) {
+		const bookPage = document.getElementById('book-page');
+		const bookRect = bookPage.getBoundingClientRect();
+		if (bookRect.top < height && bookRect.bottom > 0) {
+			const new_rain = rain_pool.pop() || new Rain();
+			new_rain.init();
+			new_rain.x = Math.random() * (bookRect.right - bookRect.left) + bookRect.left;
+			new_rain.y = -50;
+			new_rain.isForBook = true;
+			new_rain.bookY = bookRect.top;
+			rain.push(new_rain);
+		}
+	}
+
+	demo.drop_time += time * speed;
+	while (demo.drop_time > demo.drop_delay) {
+		demo.drop_time -= demo.drop_delay;
+		const new_rain = rain_pool.pop() || new Rain();
+		new_rain.init();
+		const wind_expand = Math.abs(height / new_rain.speed * wind);
+		let spawn_x = Math.random() * (width + wind_expand);
+		if (wind > 0) spawn_x -= wind_expand;
+		new_rain.x = spawn_x;
+		rain.push(new_rain);
+	}
+
+	for (let i = rain.length - 1; i >= 0; i--) {
+		const r = rain[i];
+		r.y += r.speed * r.z * multiplier;
+		r.x += r.z * wind * multiplier;
+		if (r.y > height) r.splash();
+		if (r.y > height + Rain.height * r.z || (wind < 0 && r.x < wind) || (wind > 0 && r.x > width + wind)) {
+			r.recycle();
+			rain.splice(i, 1);
+		}
+	}
+
+	const drop_max_speed = Drop.max_speed;
+	for (let i = drops.length - 1; i >= 0; i--) {
+		const d = drops[i];
+		d.x += d.speed_x * multiplier;
+		d.y += d.speed_y * multiplier;
+		d.speed_y += 0.3 * multiplier;
+		d.speed_x += wind / 25 * multiplier;
+		if (d.speed_x < -drop_max_speed) d.speed_x = -drop_max_speed;
+		else if (d.speed_x > drop_max_speed) d.speed_x = drop_max_speed;
+		if (d.y > height + d.radius) {
+			d.recycle();
+			drops.splice(i, 1);
+		}
+	}
+	demo.draw();
+};
+
+demo.draw = function() {
+	const width = demo.width;
+	const height = demo.height;
+	const dpr = demo.dpr;
+	const rain = demo.rain;
+	const drops = demo.drops;
+	const ctx = demo.ctx;
+	ctx.clearRect(0, 0, width*dpr, height*dpr);
+	ctx.beginPath();
+	const rain_height = Rain.height * dpr;
+	for (let i = rain.length - 1; i >= 0; i--) {
+		const r = rain[i];
+		const real_x = r.x * dpr;
+		const real_y = r.y * dpr;
+		ctx.moveTo(real_x, real_y);
+		ctx.lineTo(real_x - demo.wind * r.z * dpr * 1.5, real_y - rain_height * r.z);
+	}
+	ctx.lineWidth = Rain.width * dpr;
+	ctx.strokeStyle = demo.rain_color;
+	ctx.stroke();
+	for (let i = drops.length - 1; i >= 0; i--) {
+		const d = drops[i];
+		ctx.drawImage(d.canvas, d.x * dpr - d.radius, d.y * dpr - d.radius);
+	}
+};
+
+function Rain() {
+	this.x = 0; this.y = 0; this.z = 0;
+	this.speed = 25; this.splashed = false;
+	this.isForBook = false; this.bookY = 0;
+}
+Rain.width = 2;
+Rain.height = 40;
+Rain.prototype.init = function() {
+	this.y = Math.random() * -100;
+	this.z = Math.random() * 0.5 + 0.5;
+	this.splashed = false; this.isForBook = false; this.bookY = 0;
+};
+Rain.prototype.recycle = function() { demo.rain_pool.push(this); };
+Rain.prototype.splash = function() {
+	if (!this.splashed) {
+		this.splashed = true;
+		for (let i = 0; i < 12; i++) {
+			const drop = demo.drop_pool.pop() || new Drop();
+			demo.drops.push(drop);
+			drop.init(this.x);
+		}
+	}
+};
+
+function Drop() {
+	this.x = 0; this.y = 0;
+	this.radius = Math.round(Math.random() * 2 + 1) * demo.dpr;
+	this.speed_x = 0; this.speed_y = 0;
+	this.canvas = document.createElement('canvas');
+	this.ctx = this.canvas.getContext('2d');
+	const diameter = this.radius * 2;
+	this.canvas.width = diameter; this.canvas.height = diameter;
+	const grd = this.ctx.createRadialGradient(this.radius, this.radius, 1, this.radius, this.radius, this.radius);
+	grd.addColorStop(0, demo.rain_color);
+	grd.addColorStop(1, demo.rain_color_clear);
+	this.ctx.fillStyle = grd;
+	this.ctx.fillRect(0, 0, diameter, diameter);
+}
+Drop.max_speed = 5;
+Drop.prototype.init = function(x) {
+	this.x = x; this.y = demo.height;
+	const angle = Math.random() * Math.PI - (Math.PI * 0.5);
+	const speed = Math.random() * Drop.max_speed;
+	this.speed_x = Math.sin(angle) * speed;
+	this.speed_y = -Math.cos(angle) * speed;
+};
+Drop.prototype.recycle = function() { demo.drop_pool.push(this); };
+
+var Ticker = (function(){
+	var PUBLIC_API = {};
+	PUBLIC_API.addListener = function(fn) {
+		listeners.push(fn);
+		if (!started) { started = true; queueFrame(); }
+	};
+	var started = false, last_timestamp = 0, listeners = [];
+	function queueFrame() { requestAnimationFrame(frameHandler); }
+	function frameHandler(timestamp) {
+		var frame_time = timestamp - last_timestamp;
+		last_timestamp = timestamp;
+		if (frame_time < 0) frame_time = 17;
+		else if (frame_time > 68) frame_time = 68;
+		for (var i = 0; i < listeners.length; i++) listeners[i].call(window, frame_time, frame_time / 16.67);
+		queueFrame();
+	}
+	return PUBLIC_API;
+}());
+</script>
+</body>
+</html>

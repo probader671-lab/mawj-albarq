@@ -38,19 +38,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -64,6 +64,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -76,6 +77,7 @@ import kotlinx.coroutines.launch
 fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
     DarkLock()
     val ctx = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val videos = Feed.clips
     if (videos.isEmpty()) {
@@ -98,7 +100,12 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
 
     val pager = rememberPagerState { videos.size }
     val player = remember {
+        val loadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(15_000, 35_000, 250, 500)
+            .build()
         ExoPlayer.Builder(ctx)
+            .setTrackSelector(Media.highQualityTrackSelector(ctx))
+            .setLoadControl(loadControl)
             .setMediaSourceFactory(DefaultMediaSourceFactory(MediaCache.factory(ctx)))
             .build()
             .apply { repeatMode = Player.REPEAT_MODE_ONE; playWhenReady = true; Media.withMp4Fallback(this) }
@@ -170,10 +177,12 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
         player.setPlaybackSpeed(speed)
         player.volume = if (muted) 0f else 1f
         player.playWhenReady = Feed.activeVideo == null
-        MediaCache.prefetch(ctx, videos.drop(cur + 1).take(2).map { it.url })
-        if (cur >= videos.size - 5 && Feed.hasMore && !Feed.loadingMore) {
+        if (cur >= videos.size - 10 && Feed.hasMore && !Feed.loadingMore) {
             Feed.loadMore(ensureWide = false)
         }
+    }
+    LaunchedEffect(curId, videos.size) {
+        MediaCache.smartPrefetchNext(ctx, videos, cur, lookahead = 10)
     }
     LaunchedEffect(curId) {
         while (true) {
@@ -182,7 +191,12 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
             if (d > 0) Watch.savePos(ctx, curId, (player.currentPosition.toFloat() / d).coerceIn(0f, 1f))
         }
     }
-    LaunchedEffect(cur) { Ui.deep = cur >= 3 }
+    var hapticPageArmed by remember { mutableStateOf(false) }
+    LaunchedEffect(cur) {
+        Ui.deep = cur >= 5
+        if (hapticPageArmed) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        else hapticPageArmed = true
+    }
     DisposableEffect(Unit) { onDispose { Ui.deep = false } }
     LaunchedEffect(speed, curId) { player.setPlaybackSpeed(speed) }
 
@@ -191,7 +205,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
     LaunchedEffect(saveTick) {
         if (saveTick > 0) {
             saveAnim.snapTo(0f)
-            saveAnim.animateTo(1f, tween(1200))
+            saveAnim.animateTo(1f, tween(1350, easing = LinearEasing))
         }
     }
 
@@ -200,50 +214,21 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
     var creatorId by remember { mutableStateOf<String?>(null) }
 
     val barShown = Ui.barVisible && !Ui.deep
-    // Keep the video viewport full-width, cleanly below status bar and right above the docked bar
-    val stageBottomPad by animateDpAsState(if (barShown) 58.dp else 0.dp, label = "stageBottom")
+    // Keep the video viewport full-width, cleanly above the docked 56dp bar when shown and flush to bottom when hidden
+    val stageBottomPad by animateDpAsState(if (barShown) 56.dp else 0.dp, tween(100), label = "stageBottom")
 
-    var lastSettledAt by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(pager.settledPage) {
-        lastSettledAt = SystemClock.uptimeMillis()
-    }
     val pagerFling = PagerDefaults.flingBehavior(
         state = pager,
         pagerSnapDistance = PagerSnapDistance.atMost(1),
-        snapPositionalThreshold = 0.25f,
-        lowVelocityAnimationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-        snapAnimationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 360f)
+        snapPositionalThreshold = 0.16f,
+        lowVelocityAnimationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
+        snapAnimationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 420f)
     )
     val swipeGuard = remember(pager) {
         object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (source != NestedScrollSource.Drag) return Offset.Zero
-                val elapsed = SystemClock.uptimeMillis() - lastSettledAt
-                // Brief subtle resistance right after settling on a clip to prevent accidental rapid skipping
-                if (elapsed in 1L..230L) {
-                    return Offset(0f, available.y * 0.60f)
-                }
-                // Soft damping on sudden high-speed drag spikes
-                if (kotlin.math.abs(available.y) > 48f) {
-                    return Offset(0f, available.y * 0.18f)
-                }
-                return Offset.Zero
-            }
-
             override suspend fun onPreFling(available: Velocity): Velocity {
-                val offset = kotlin.math.abs(pager.currentPageOffsetFraction)
-                val elapsed = SystemClock.uptimeMillis() - lastSettledAt
-                // Suppress accidental light micro-flicks that barely moved the page (< 8%)
-                if (offset < 0.08f && kotlin.math.abs(available.y) < 3400f) {
-                    return Velocity(0f, available.y * 0.90f)
-                }
-                // Suppress unintentional rapid back-to-back flicks right after landing on a clip
-                if (elapsed in 1L..250L && offset < 0.25f) {
-                    return Velocity(0f, available.y * 0.88f)
-                }
-                // Cap extreme fling speed so fast scrolling remains steady and deliberate
-                if (kotlin.math.abs(available.y) > 4200f) {
-                    val capped = available.y.coerceIn(-4200f, 4200f)
+                if (kotlin.math.abs(available.y) > 5200f) {
+                    val capped = available.y.coerceIn(-5200f, 5200f)
                     return Velocity(0f, available.y - capped)
                 }
                 return Velocity.Zero
@@ -257,12 +242,12 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
             .background(Color.Black)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(top = 4.dp, bottom = stageBottomPad)
+            .padding(top = if (barShown) 4.dp else 0.dp, bottom = stageBottomPad)
     ) {
         Box(
             Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(if (barShown) 16.dp else 0.dp))
                 .background(Color.Black)
                 .nestedScroll(swipeGuard)
         ) {
@@ -294,6 +279,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                                     else player.playWhenReady = !player.playWhenReady
                                 },
                                 onDoubleTap = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     burst++
                                     if (!App.loggedIn) {
                                         Toast.makeText(ctx, "سجّل الدخول لحفظ الإعجاب", Toast.LENGTH_SHORT).show()
@@ -378,11 +364,13 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                             if (!App.loggedIn) {
                                 onNeedLogin()
                             } else {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 if (!liked) burst++
                                 scope.launch { Feed.toggleLike(v.id) }
                             }
                         }
                         val doSave: () -> Unit = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             if (!saved) saveTick++
                             scope.launch { Feed.toggleSave(v.id) }
                         }
@@ -392,14 +380,37 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                         val doFollow: () -> Unit = {
                             if (!App.loggedIn) onNeedLogin() else scope.launch { Feed.toggleFollow(v.userId) }
                         }
+                        val settingsInStack: (@Composable () -> Unit)? = if (!barShown) {
+                            {
+                                ClipSettingsControl(
+                                    v = v,
+                                    saved = saved,
+                                    uiStyle = uiStyle,
+                                    fillZoom = fillZoom,
+                                    speed = speed,
+                                    muted = muted,
+                                    inStack = true,
+                                    onCycleStyle = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        cycleStyle()
+                                    },
+                                    onToggleZoom = { fillZoom = !fillZoom },
+                                    onCycleSpeed = { speed = when (speed) { 1f -> 1.5f; 1.5f -> 2f; 2f -> 0.5f; else -> 1f } },
+                                    onToggleMute = { muted = !muted; player.volume = if (muted) 0f else 1f },
+                                    onToggleSave = doSave,
+                                    onReport = { reportFor = v }
+                                )
+                            }
+                        } else null
 
                         when (uiStyle) {
                             ClipUiStyle.CLASSIC -> {
                                 var descOpen by remember(v.id) { mutableStateOf(false) }
+                                val bPad = if (barShown) 14.dp else 6.dp
                                 Column(
                                     Modifier
                                         .align(Alignment.BottomStart)
-                                        .padding(start = 14.dp, bottom = 14.dp, end = 82.dp)
+                                        .padding(start = 14.dp, bottom = bPad, end = 82.dp)
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Box(Modifier.clickable { creatorId = v.userId }) { Avatar(v.avatar, v.author, 34) }
@@ -475,8 +486,8 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                                 Column(
                                     Modifier
                                         .align(Alignment.BottomEnd)
-                                        .padding(end = 10.dp, bottom = 22.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                        .padding(end = 10.dp, bottom = if (barShown) 16.dp else 8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Action(
@@ -506,6 +517,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                                         modifier = Modifier.testTag("clip_share_button"),
                                         onClick = doShare
                                     )
+                                    settingsInStack?.invoke()
                                 }
                             }
                             ClipUiStyle.REELS -> {
@@ -514,6 +526,8 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                                     liked = liked,
                                     saved = saved,
                                     following = following,
+                                    tightBottom = !barShown,
+                                    extraAction = settingsInStack,
                                     onLike = doLike,
                                     onComment = { commentsFor = v },
                                     onSave = doSave,
@@ -530,6 +544,8 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                                     saved = saved,
                                     following = following,
                                     isPlaying = isPlaying && page == pager.settledPage,
+                                    tightBottom = !barShown,
+                                    extraAction = settingsInStack,
                                     onLike = doLike,
                                     onComment = { commentsFor = v },
                                     onSave = doSave,
@@ -564,6 +580,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                                     speed = speed,
                                     muted = muted,
                                     fillZoom = fillZoom,
+                                    extraAction = settingsInStack,
                                     onLike = doLike,
                                     onComment = { commentsFor = v },
                                     onSave = doSave,
@@ -602,48 +619,73 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                         }
                     }
 
-                    // Exit button in the physical top-right corner (TopStart in RTL), only while the bottom bar is hidden (immersive): leaves the clips player and shows the home feed
-                    if (!hidden && !barShown) {
-                        Box(
-                            Modifier
-                                .align(Alignment.TopStart)
-                                .padding(12.dp)
-                                .minimumInteractiveComponentSize()
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(Color(0x990D131E))
-                                .border(1.dp, Color(0x55FFFFFF), CircleShape)
-                                .clickable { onExit() }
-                                .testTag("clip_exit_button"),
-                            contentAlignment = Alignment.Center
-                        ) { Icon(Icons.Filled.Close, "خروج", tint = Color.White, modifier = Modifier.size(20.dp)) }
-                    }
-
-                    // Small app icon button (next to the exit button) to cycle layout styles
+                    // Top-Start (physical top-right in RTL):
+                    // - When bar is shown: App Logo style-cycler
+                    // - When bar is hidden: Screen icon to show the bar (in the App Logo's spot) + Exit button beside it
                     if (!hidden) {
-                        Box(
-                            Modifier
-                                .align(Alignment.TopStart)
-                                .padding(start = if (barShown) 12.dp else 66.dp, top = 12.dp, end = 12.dp, bottom = 12.dp)
-                                .minimumInteractiveComponentSize()
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(Color(0x990D131E))
-                                .border(
-                                    width = if (uiStyle != ClipUiStyle.CLASSIC) 1.75.dp else 1.dp,
-                                    color = if (uiStyle != ClipUiStyle.CLASSIC) MaterialTheme.colorScheme.primary else Color(0x55FFFFFF),
-                                    shape = CircleShape
+                        if (barShown) {
+                            Box(
+                                Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(12.dp)
+                                    .minimumInteractiveComponentSize()
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0x990D131E))
+                                    .border(
+                                        width = if (uiStyle != ClipUiStyle.CLASSIC) 1.75.dp else 1.dp,
+                                        color = if (uiStyle != ClipUiStyle.CLASSIC) MaterialTheme.colorScheme.primary else Color(0x55FFFFFF),
+                                        shape = CircleShape
+                                    )
+                                    .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        cycleStyle()
+                                    }
+                                    .testTag("clip_style_logo_toggle"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Image(
+                                    painter = painterResource(R.drawable.logo_mark),
+                                    contentDescription = "تغيير شكل العرض (${uiStyle.label})",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.size(28.dp).clip(CircleShape)
                                 )
-                                .clickable { cycleStyle() }
-                                .testTag("clip_style_logo_toggle"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                painter = painterResource(R.drawable.logo_mark),
-                                contentDescription = "تغيير شكل العرض (${uiStyle.label})",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.size(28.dp).clip(CircleShape)
-                            )
+                            }
+                        } else {
+                            // Screen button to restore the bottom bar (placed where the App Logo sits)
+                            Box(
+                                Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(12.dp)
+                                    .minimumInteractiveComponentSize()
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0x990D131E))
+                                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), CircleShape)
+                                    .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        Ui.deep = false
+                                        Ui.barVisible = true
+                                    }
+                                    .testTag("clip_show_bar_button"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Filled.CallToAction, "إظهار الشريط السفلي", tint = Color.White, modifier = Modifier.size(20.dp))
+                            }
+                            // Exit button beside it
+                            Box(
+                                Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(start = 66.dp, top = 12.dp, end = 12.dp, bottom = 12.dp)
+                                    .minimumInteractiveComponentSize()
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0x990D131E))
+                                    .border(1.dp, Color(0x55FFFFFF), CircleShape)
+                                    .clickable { onExit() }
+                                    .testTag("clip_exit_button"),
+                                contentAlignment = Alignment.Center
+                            ) { Icon(Icons.Filled.Close, "خروج", tint = Color.White, modifier = Modifier.size(20.dp)) }
                         }
                     }
 
@@ -665,130 +707,72 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
                         }
                     }
 
-                    // Settings button & icon-rich menu inside top-end of video
+                    // Top-End (physical top-left in RTL):
+                    // - When bar is shown: Settings button & menu
+                    // - When bar is hidden: App Logo style-cycler moves here (while Settings moves to end of side icons)
                     if (!hidden) {
-                        Box(Modifier.align(Alignment.TopEnd).padding(12.dp)) {
-                            var menu by remember { mutableStateOf(false) }
+                        if (barShown) {
+                            Box(Modifier.align(Alignment.TopEnd).padding(12.dp)) {
+                                ClipSettingsControl(
+                                    v = v,
+                                    saved = saved,
+                                    uiStyle = uiStyle,
+                                    fillZoom = fillZoom,
+                                    speed = speed,
+                                    muted = muted,
+                                    inStack = false,
+                                    onCycleStyle = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        cycleStyle()
+                                    },
+                                    onToggleZoom = { fillZoom = !fillZoom },
+                                    onCycleSpeed = { speed = when (speed) { 1f -> 1.5f; 1.5f -> 2f; 2f -> 0.5f; else -> 1f } },
+                                    onToggleMute = { muted = !muted; player.volume = if (muted) 0f else 1f },
+                                    onToggleSave = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        if (!saved) saveTick++
+                                        scope.launch { Feed.toggleSave(v.id) }
+                                    },
+                                    onReport = { reportFor = v }
+                                )
+                            }
+                        } else {
                             Box(
                                 Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(12.dp)
                                     .minimumInteractiveComponentSize()
-                                    .size(42.dp)
+                                    .size(40.dp)
                                     .clip(CircleShape)
                                     .background(Color(0x990D131E))
-                                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.45f), CircleShape)
-                                    .clickable { menu = true }
-                                    .testTag("clip_settings_button"),
+                                    .border(
+                                        width = if (uiStyle != ClipUiStyle.CLASSIC) 1.75.dp else 1.dp,
+                                        color = if (uiStyle != ClipUiStyle.CLASSIC) MaterialTheme.colorScheme.primary else Color(0x55FFFFFF),
+                                        shape = CircleShape
+                                    )
+                                    .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        cycleStyle()
+                                    }
+                                    .testTag("clip_style_logo_toggle"),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Filled.Tune, "خيارات العرض", tint = Color.White, modifier = Modifier.size(21.dp))
-                            }
-                            DropdownMenu(
-                                expanded = menu,
-                                onDismissRequest = { menu = false },
-                                modifier = Modifier.background(Color(0xFF151C28))
-                            ) {
-                                DropdownMenuItem(
-                                    leadingIcon = {
-                                        Icon(Icons.Filled.DashboardCustomize, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                                    },
-                                    text = { Text("تغيير شكل العرض", color = Color.White, fontFamily = Cairo) },
-                                    trailingIcon = {
-                                        Text(
-                                            uiStyle.label,
-                                            color = Color.Black,
-                                            fontSize = 10.sp,
-                                            fontFamily = Cairo,
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(50))
-                                                .background(MaterialTheme.colorScheme.primary)
-                                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                                        )
-                                    },
-                                    onClick = { cycleStyle(); menu = false }
-                                )
-                                DropdownMenuItem(
-                                    leadingIcon = {
-                                        Icon(
-                                            if (fillZoom) Icons.Filled.FitScreen else Icons.Filled.Fullscreen,
-                                            null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    },
-                                    text = { Text(if (fillZoom) "عرض الإطار كاملاً" else "ملء الشاشة", color = Color.White, fontFamily = Cairo) },
-                                    onClick = { fillZoom = !fillZoom; menu = false }
-                                )
-                                DropdownMenuItem(
-                                    leadingIcon = { Icon(Icons.Filled.Speed, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp)) },
-                                    text = { Text("سرعة التشغيل", color = Color.White, fontFamily = Cairo) },
-                                    trailingIcon = {
-                                        Text(
-                                            if (speed == 1f) "1x" else "${speed}x",
-                                            color = Color.Black,
-                                            fontSize = 11.sp,
-                                            fontFamily = Cairo,
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(50))
-                                                .background(MaterialTheme.colorScheme.secondary)
-                                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                                        )
-                                    },
-                                    onClick = { speed = when (speed) { 1f -> 1.5f; 1.5f -> 2f; 2f -> 0.5f; else -> 1f }; menu = false }
-                                )
-                                DropdownMenuItem(
-                                    leadingIcon = {
-                                        Icon(
-                                            if (muted) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp,
-                                            null,
-                                            tint = if (muted) Color(0xFFFF6B6B) else Color.White,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    },
-                                    text = { Text(if (muted) "تشغيل الصوت" else "كتم الصوت", color = Color.White, fontFamily = Cairo) },
-                                    onClick = { muted = !muted; player.volume = if (muted) 0f else 1f; menu = false }
-                                )
-                                DropdownMenuItem(
-                                    leadingIcon = {
-                                        Icon(
-                                            if (saved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                                            null,
-                                            tint = if (saved) Color(0xFFFFD21F) else Color.White,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    },
-                                    text = { Text(if (saved) "إزالة من المحفوظات" else "حفظ المقطع", color = Color.White, fontFamily = Cairo) },
-                                    onClick = { if (!saved) saveTick++; scope.launch { Feed.toggleSave(v.id) }; menu = false }
-                                )
-                                HorizontalDivider(color = Color(0x22FFFFFF), thickness = 0.5.dp)
-                                DropdownMenuItem(
-                                    leadingIcon = { Icon(Icons.Filled.Flag, null, tint = Color(0xFFFF6B6B), modifier = Modifier.size(20.dp)) },
-                                    text = { Text("إبلاغ عن المقطع", color = Color(0xFFFF8A8A), fontFamily = Cairo) },
-                                    onClick = { reportFor = v; menu = false }
+                                Image(
+                                    painter = painterResource(R.drawable.logo_mark),
+                                    contentDescription = "تغيير شكل العرض (${uiStyle.label})",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.size(28.dp).clip(CircleShape)
                                 )
                             }
                         }
                     }
 
-                    // Save bookmark wave animation
+                    // Custom yellow water-filling bookmark + two glowing expanding rings
                     if (saveAnim.value > 0f && saveAnim.value < 1f) {
-                        Box(Modifier.align(Alignment.Center), contentAlignment = Alignment.Center) {
-                            val f = saveAnim.value
-                            val fill = if (f < 0.7f) f / 0.7f else 1f
-                            val fadeOut = 1f - (if (f > 0.85f) (f - 0.85f) / 0.15f else 0f)
-                            Icon(Icons.Filled.Bookmark, null, tint = Color(0x55FFFFFF), modifier = Modifier.size(130.dp).alpha(fadeOut))
-                            Icon(
-                                Icons.Filled.Bookmark,
-                                null,
-                                tint = Color(0xFFFFD21F),
-                                modifier = Modifier
-                                    .size(130.dp)
-                                    .alpha(fadeOut)
-                                    .drawWithContent {
-                                        val wave = kotlin.math.sin(f * 24f) * 4.dp.toPx()
-                                        clipRect(top = size.height * (1f - fill) + wave) { this@drawWithContent.drawContent() }
-                                    }
-                            )
-                        }
+                        WaterSaveBurst(
+                            progress = saveAnim.value,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
                     }
                 }
             }
@@ -817,6 +801,155 @@ fun ClipsScreen(onNeedLogin: () -> Unit, onExit: () -> Unit = {}) {
 }
 
 @Composable
+private fun ClipSettingsControl(
+    v: Video,
+    saved: Boolean,
+    uiStyle: ClipUiStyle,
+    fillZoom: Boolean,
+    speed: Float,
+    muted: Boolean,
+    inStack: Boolean,
+    onCycleStyle: () -> Unit,
+    onToggleZoom: () -> Unit,
+    onCycleSpeed: () -> Unit,
+    onToggleMute: () -> Unit,
+    onToggleSave: () -> Unit,
+    onReport: () -> Unit
+) {
+    var menu by remember { mutableStateOf(false) }
+    Box {
+        if (inStack) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .minimumInteractiveComponentSize()
+                    .clip(RoundedCornerShape(14.dp))
+                    .clickable { menu = true }
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                    .testTag("clip_settings_button")
+            ) {
+                Box(
+                    Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x7A0B0F17))
+                        .border(0.85.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.55f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Filled.Tune, "خيارات العرض", tint = Color.White, modifier = Modifier.size(21.dp))
+                }
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "الإعدادات",
+                    color = Color.White,
+                    fontSize = 10.5.sp,
+                    fontFamily = Cairo,
+                    style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color(0xCC000000), blurRadius = 6f))
+                )
+            }
+        } else {
+            Box(
+                Modifier
+                    .minimumInteractiveComponentSize()
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(Color(0x990D131E))
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.45f), CircleShape)
+                    .clickable { menu = true }
+                    .testTag("clip_settings_button"),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.Tune, "خيارات العرض", tint = Color.White, modifier = Modifier.size(21.dp))
+            }
+        }
+        DropdownMenu(
+            expanded = menu,
+            onDismissRequest = { menu = false },
+            modifier = Modifier.background(Color(0xFF151C28))
+        ) {
+            DropdownMenuItem(
+                leadingIcon = {
+                    Icon(Icons.Filled.DashboardCustomize, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                },
+                text = { Text("تغيير شكل العرض", color = Color.White, fontFamily = Cairo) },
+                trailingIcon = {
+                    Text(
+                        uiStyle.label,
+                        color = Color.Black,
+                        fontSize = 10.sp,
+                        fontFamily = Cairo,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(MaterialTheme.colorScheme.primary)
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                },
+                onClick = { onCycleStyle(); menu = false }
+            )
+            DropdownMenuItem(
+                leadingIcon = {
+                    Icon(
+                        if (fillZoom) Icons.Filled.FitScreen else Icons.Filled.Fullscreen,
+                        null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                text = { Text(if (fillZoom) "عرض الإطار كاملاً" else "ملء الشاشة", color = Color.White, fontFamily = Cairo) },
+                onClick = { onToggleZoom(); menu = false }
+            )
+            DropdownMenuItem(
+                leadingIcon = { Icon(Icons.Filled.Speed, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp)) },
+                text = { Text("سرعة التشغيل", color = Color.White, fontFamily = Cairo) },
+                trailingIcon = {
+                    Text(
+                        if (speed == 1f) "1x" else "${speed}x",
+                        color = Color.Black,
+                        fontSize = 11.sp,
+                        fontFamily = Cairo,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(MaterialTheme.colorScheme.secondary)
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                },
+                onClick = { onCycleSpeed(); menu = false }
+            )
+            DropdownMenuItem(
+                leadingIcon = {
+                    Icon(
+                        if (muted) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp,
+                        null,
+                        tint = if (muted) Color(0xFFFF6B6B) else Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                text = { Text(if (muted) "تشغيل الصوت" else "كتم الصوت", color = Color.White, fontFamily = Cairo) },
+                onClick = { onToggleMute(); menu = false }
+            )
+            DropdownMenuItem(
+                leadingIcon = {
+                    Icon(
+                        if (saved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                        null,
+                        tint = if (saved) Color(0xFFFFD21F) else Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                text = { Text(if (saved) "إزالة من المحفوظات" else "حفظ المقطع", color = Color.White, fontFamily = Cairo) },
+                onClick = { onToggleSave(); menu = false }
+            )
+            HorizontalDivider(color = Color(0x22FFFFFF), thickness = 0.5.dp)
+            DropdownMenuItem(
+                leadingIcon = { Icon(Icons.Filled.Flag, null, tint = Color(0xFFFF6B6B), modifier = Modifier.size(20.dp)) },
+                text = { Text("إبلاغ عن المقطع", color = Color(0xFFFF8A8A), fontFamily = Cairo) },
+                onClick = { onReport(); menu = false }
+            )
+        }
+    }
+}
+
+@Composable
 private fun Action(
     icon: ImageVector,
     label: String,
@@ -839,16 +972,22 @@ private fun Action(
     ) {
         Box(
             Modifier
-                .size(42.dp)
+                .size(44.dp)
                 .clip(CircleShape)
-                .background(Color(0x550E131B))
-                .border(0.75.dp, Color(0x28FFFFFF), CircleShape),
+                .background(Color(0x7A0B0F17))
+                .border(0.85.dp, Color(0x33FFFFFF), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, label, tint = tint, modifier = Modifier.size(23.dp).scale(sc.value))
         }
         Spacer(Modifier.height(3.dp))
-        Text(label, color = Color.White, fontSize = 11.sp, fontFamily = Cairo)
+        Text(
+            label,
+            color = Color.White,
+            fontSize = 11.sp,
+            fontFamily = Cairo,
+            style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color(0xCC000000), blurRadius = 6f))
+        )
     }
 }
 

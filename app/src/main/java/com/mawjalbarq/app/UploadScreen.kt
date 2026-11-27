@@ -19,7 +19,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.MediaItem
@@ -329,6 +332,7 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
         return
     }
     val ctx = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     var uri by remember { mutableStateOf<Uri?>(null) }
     var title by remember { mutableStateOf("") }
@@ -338,27 +342,125 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
     var progress by remember { mutableStateOf(-1f) }
     var askArchive by remember { mutableStateOf(false) }
     var archiveOk by remember { mutableStateOf(false) }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { if (it != null) uri = it }
+    val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
+        if (it != null) {
+            uri = it
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+    }
     var camUri by remember { mutableStateOf<Uri?>(null) }
-    val cam = rememberLauncherForActivityResult(ActivityResultContracts.CaptureVideo()) { ok -> if (ok) uri = camUri }
+    val cam = rememberLauncherForActivityResult(ActivityResultContracts.CaptureVideo()) { ok ->
+        if (ok) {
+            uri = camUri
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+    }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp).padding(bottom = 110.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("استوديو الرفع", color = Color.White, fontSize = 24.sp, fontFamily = Cairo)
         var frame by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+        var previewMeta by remember { mutableStateOf<Meta?>(null) }
         LaunchedEffect(uri) {
-            frame = uri?.let { u -> withContext(Dispatchers.IO) { try { val r = MediaMetadataRetriever(); r.setDataSource(ctx, u); val f = r.getFrameAtTime(500_000); r.release(); f } catch (e: Exception) { null } } }
+            val u = uri
+            if (u == null) {
+                frame = null
+                previewMeta = null
+            } else {
+                val res = withContext(Dispatchers.IO) {
+                    val m = runCatching { readMeta(ctx, u) }.getOrNull()
+                    val f = try {
+                        val r = MediaMetadataRetriever()
+                        r.setDataSource(ctx, u)
+                        val bmp = runCatching { r.getFrameAtTime(500_000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC) }.getOrNull()
+                        r.release()
+                        bmp
+                    } catch (_: Exception) { null }
+                    m to f
+                }
+                previewMeta = res.first
+                frame = res.second
+            }
         }
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Box(Modifier.width(176.dp).aspectRatio(9f / 16f).clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), androidx.compose.foundation.shape.RoundedCornerShape(20.dp)), contentAlignment = Alignment.Center) {
-                val f = frame
-                if (f != null) androidx.compose.foundation.Image(f.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-                else Icon(androidx.compose.material.icons.Icons.Filled.Videocam, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(40.dp))
+        androidx.compose.animation.AnimatedVisibility(visible = uri != null) {
+            val m = previewMeta
+            val f = frame
+            val isPortrait = remember(m, f) {
+                when {
+                    m != null && m.w > 0 && m.h > 0 -> m.h >= m.w
+                    f != null && f.width > 0 && f.height > 0 -> f.height >= f.width
+                    else -> true
+                }
+            }
+            val boxMod = if (isPortrait) {
+                Modifier.width(176.dp).aspectRatio(9f / 16f)
+            } else {
+                Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+            }
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Box(
+                    boxMod
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.55f), androidx.compose.foundation.shape.RoundedCornerShape(20.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (f != null) {
+                        androidx.compose.foundation.Image(
+                            f.asImageBitmap(),
+                            contentDescription = "معاينة الفيديو",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    } else {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp),
+                            strokeWidth = 2.5.dp
+                        )
+                    }
+                    // Orientation & resolution/duration pill
+                    val infoParts = buildList {
+                        add(if (isPortrait) "عمودي" else "أفقي")
+                        if (m != null && m.durMs > 0L) add(formatDurationMs(m.durMs))
+                        if (m != null && m.w > 0 && m.h > 0) add("${m.w}×${m.h}")
+                    }
+                    Text(
+                        infoParts.joinToString(" • "),
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontFamily = Cairo,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(8.dp)
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                            .background(Color(0xB3000000))
+                            .padding(horizontal = 9.dp, vertical = 3.dp)
+                    )
+                    if (!busy) {
+                        IconButton(
+                            onClick = { uri = null },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(4.dp)
+                                .minimumInteractiveComponentSize()
+                                .testTag("upload_clear_video")
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(32.dp)
+                                    .clip(androidx.compose.foundation.shape.CircleShape)
+                                    .background(Color(0xB3000000)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(androidx.compose.material.icons.Icons.Filled.Close, "إزالة الفيديو", tint = Color.White, modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
+                }
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Button(onClick = { pick.launch("video/*") }, enabled = !busy, modifier = Modifier.weight(1f).height(56.dp),
+            Button(onClick = { pick.launch("video/*") }, enabled = !busy, modifier = Modifier.weight(1f).height(56.dp).testTag("upload_pick_gallery"),
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp), colors = ButtonDefaults.filledTonalButtonColors()) {
                 Icon(androidx.compose.material.icons.Icons.Filled.PhotoLibrary, null); Spacer(Modifier.width(6.dp)); Text("من المعرض")
             }
@@ -366,7 +468,7 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
                 val f = File(ctx.cacheDir, "cam").apply { mkdirs() }.let { File(it, "rec_" + System.currentTimeMillis() + ".mp4") }
                 val u = androidx.core.content.FileProvider.getUriForFile(ctx, ctx.packageName + ".fileprovider", f)
                 camUri = u; cam.launch(u)
-            }, enabled = !busy, modifier = Modifier.weight(1f).height(56.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)) {
+            }, enabled = !busy, modifier = Modifier.weight(1f).height(56.dp).testTag("upload_pick_camera"), shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)) {
                 Icon(androidx.compose.material.icons.Icons.Filled.CameraAlt, null); Spacer(Modifier.width(6.dp)); Text("الكاميرا")
             }
         }
@@ -391,6 +493,7 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
         LaunchedEffect(archiveOk) { if (archiveOk) { startTick++ } }
         val go: () -> Unit = {
             val src = uri!!; val tTitle = title.trim(); val tDesc = desc.trim(); busy = true
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             scope.launch {
                 try {
                     status = "جارٍ التحقق من الفيديو..."
@@ -407,6 +510,6 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
             }
         }
         LaunchedEffect(startTick) { if (startTick > 0 && uri != null && !busy) go() }
-        Button(enabled = uri != null && !busy, modifier = Modifier.fillMaxWidth(), onClick = { archiveOk = false; go() }) { Text("نشر") }
+        Button(enabled = uri != null && !busy, modifier = Modifier.fillMaxWidth().height(50.dp).testTag("upload_publish_button"), onClick = { archiveOk = false; go() }) { Text("نشر") }
     }
 }
