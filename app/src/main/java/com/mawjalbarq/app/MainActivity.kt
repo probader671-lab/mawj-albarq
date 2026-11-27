@@ -11,7 +11,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         App.init(applicationContext); Media.init(applicationContext); ProfileCache.init(applicationContext); HomePrefs.init(applicationContext)
         Feed.init(applicationContext)
-        PushWorker.ensureChannel(applicationContext); PushWorker.schedule(applicationContext); PushService.start(applicationContext)
+        PushWorker.ensureChannel(applicationContext); PushWorker.schedule(applicationContext)
         if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 7)
         val prefs = ThemePrefs(applicationContext)

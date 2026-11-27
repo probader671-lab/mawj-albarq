@@ -123,19 +123,6 @@ fun SettingsSheet(prefs: ThemePrefs, onClose: () -> Unit) {
                 androidx.compose.material3.Switch(checked = Media.dataSaver, onCheckedChange = { Media.setSaver(it) })
             }
             Spacer(Modifier.height(16.dp))
-            val pctx = androidx.compose.ui.platform.LocalContext.current
-            var instant by remember { mutableStateOf(PushService.enabled(pctx)) }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("إشعارات فورية", color = Ink, fontSize = 15.sp)
-                    Text("تظهر أيقونة صغيرة دائمة في الإشعارات. على هونر اسمح للتطبيق بالعمل في الخلفية", color = Color(0xFF8A8F9C), fontSize = 12.sp)
-                }
-                androidx.compose.material3.Switch(checked = instant, onCheckedChange = { instant = it; PushService.setEnabled(pctx, it) })
-            }
-            Text("السماح بالعمل في الخلفية (بطارية)", color = androidx.compose.material3.MaterialTheme.colorScheme.primary, fontSize = 14.sp, modifier = Modifier.clickable {
-                pctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-            }.padding(vertical = 6.dp))
-            Spacer(Modifier.height(16.dp))
             val uctx = androidx.compose.ui.platform.LocalContext.current
             Text("سياسة الخصوصية", color = androidx.compose.material3.MaterialTheme.colorScheme.primary, fontSize = 15.sp, modifier = Modifier.clickable {
                 uctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://probader671-lab.github.io/mawj-albarq/")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
