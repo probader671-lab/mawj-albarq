@@ -164,7 +164,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
     LaunchedEffect(curId) { Watch.save(ctx, curId); tracker.switchTo(videos.getOrNull(cur)) }
     LaunchedEffect(curId) {
         isBuffering = true
-        player.setMediaItem(MediaItem.fromUri(Uri.parse(Media.playUrl(videos[cur].url))))
+        player.setMediaItem(MediaItem.fromUri(Uri.parse(Media.playUrl(videos[cur].url, videos[cur].duration))))
         player.prepare()
         QuranBg.sync(ctx, player, videos[cur].isQuran)
         player.setPlaybackSpeed(speed)

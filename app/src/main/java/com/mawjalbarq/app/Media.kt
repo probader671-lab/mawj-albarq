@@ -10,8 +10,10 @@ object Media {
     private fun isCld(u: String) = u.contains("res.cloudinary.com/") && u.contains(VID)
 
     /** Adaptive HLS (Cloudinary sp_auto: several bitrates, the player follows the connection). */
-    fun playUrl(u: String): String =
-        if (isCld(u) && u.endsWith(".mp4") && !u.contains("/sp_auto/"))
+    fun playUrl(u: String, durationSec: Int = 0): String =
+        // Long videos play as progressive MP4: on-demand HLS can report a partial duration (e.g. 8s) and stall.
+        if (durationSec > 45) mp4Url(u)
+        else if (isCld(u) && u.endsWith(".mp4") && !u.contains("/sp_auto/"))
             u.replace(VID, VID + "sp_auto/").removeSuffix(".mp4") + ".m3u8"
         else u
 

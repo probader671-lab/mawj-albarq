@@ -182,7 +182,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
         controlsVisible = true
         Watch.save(ctx, cur.id)
         tracker.switchTo(cur)
-        player.setMediaItem(MediaItem.fromUri(Uri.parse(Media.playUrl(cur.url))))
+        player.setMediaItem(MediaItem.fromUri(Uri.parse(Media.playUrl(cur.url, cur.duration))))
         player.prepare()
         QuranBg.sync(ctx, player, cur.isQuran)
         player.setPlaybackSpeed(speed)
