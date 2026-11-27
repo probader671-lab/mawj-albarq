@@ -144,6 +144,38 @@ private suspend fun uploadThumb(f: File): String? = withContext(Dispatchers.IO) 
 }
 
 
+
+/** First ~45 s of speech as a small AAC file, or null. */
+private suspend fun extractAudio(ctx: Context, video: File, out: File): Boolean = suspendCancellableCoroutine { cont ->
+    Handler(Looper.getMainLooper()).post {
+        try {
+            val mi = MediaItem.Builder().setUri(Uri.fromFile(video))
+                .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder().setStartPositionMs(0).setEndPositionMs(45_000).build()).build()
+            val item = EditedMediaItem.Builder(mi).setRemoveVideo(true).build()
+            val t = Transformer.Builder(ctx).setAudioMimeType(MimeTypes.AUDIO_AAC)
+                .addListener(object : Transformer.Listener {
+                    override fun onCompleted(composition: Composition, exportResult: ExportResult) { if (cont.isActive) cont.resume(true) }
+                    override fun onError(composition: Composition, exportResult: ExportResult, exportException: ExportException) { if (cont.isActive) cont.resume(false) }
+                }).build()
+            out.delete(); t.start(item, out.absolutePath)
+            cont.invokeOnCancellation { Handler(Looper.getMainLooper()).post { t.cancel() } }
+        } catch (e: Exception) { if (cont.isActive) cont.resume(false) }
+    }
+}
+
+/** Title + description from the speech in the video via the ai-title Edge Function (Groq). Empty strings when there is no usable speech or anything fails. */
+private suspend fun autoText(ctx: Context, video: File): Pair<String, String> {
+    val a = File(ctx.cacheDir, "tt_" + System.currentTimeMillis() + ".m4a")
+    return try {
+        if (!extractAudio(ctx, video, a) || a.length() < 2000L || a.length() > 4_000_000L) return "" to ""
+        withContext(Dispatchers.IO) {
+            val b64 = android.util.Base64.encodeToString(a.readBytes(), android.util.Base64.NO_WRAP)
+            val (c, t) = api("POST", "/functions/v1/ai-title", JSONObject().put("audio", b64).toString())
+            if (c != 200) "" to "" else JSONObject(t).let { it.optString("title") to it.optString("description") }
+        }
+    } catch (_: Exception) { "" to "" } finally { a.delete() }
+}
+
 /** Background upload pipeline: compress, check content, upload, publish. The uploader never waits on it. */
 object UploadJobs {
     private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Main)
@@ -151,17 +183,24 @@ object UploadJobs {
     private val gate = kotlinx.coroutines.sync.Semaphore(1)   // one video at a time (weak phones)
     private fun toast(c: Context, m: String) { android.widget.Toast.makeText(c, m, android.widget.Toast.LENGTH_LONG).show() }
 
-    fun start(ctx: Context, src: Uri, title: String, desc: String, meta: Meta, bigSrc: Boolean, onPublished: () -> Unit) {
+    fun start(ctx: Context, src: Uri, title: String, desc: String, meta: Meta, bigSrc: Boolean, onPublished: suspend () -> Unit) {
         scope.launch {
             gate.acquire()
             try { run(ctx, src, title, desc, meta, bigSrc, onPublished) } catch (e: Exception) { status = ""; toast(ctx, "تعذر نشر الفيديو، حاول مرة ثانية") } finally { gate.release() }
         }
     }
 
-    private suspend fun run(ctx: Context, src: Uri, title: String, desc: String, meta: Meta, bigSrc: Boolean, onPublished: () -> Unit) {
+    private suspend fun run(ctx: Context, src: Uri, title0: String, desc0: String, meta: Meta, bigSrc: Boolean, onPublished: suspend () -> Unit) {
+        var title = title0; var desc = desc0
         val out = File(ctx.cacheDir, "upload_" + System.currentTimeMillis() + ".mp4")
         status = "جارٍ ضغط الفيديو في الخلفية..."
         if (!compress(ctx, src, out, meta)) { status = ""; toast(ctx, "فشل ضغط الفيديو"); return }
+        if (title.isBlank()) {
+            status = "جارٍ كتابة العنوان تلقائيًا..."
+            val (at, ad) = autoText(ctx, out)
+            title = at.ifBlank { "فيديو" }
+            if (desc.isBlank()) desc = ad
+        }
         status = "جارٍ فحص المحتوى في الخلفية..."
         val cfg = ModConfig.load()
         val mod = Moderation.check(ctx, out, cfg)
@@ -307,7 +346,7 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
                 Icon(androidx.compose.material.icons.Icons.Filled.CameraAlt, null); Spacer(Modifier.width(6.dp)); Text("الكاميرا")
             }
         }
-        OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text("العنوان") }, singleLine = true, enabled = !busy)
+        OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text("العنوان (اختياري، يُكتب تلقائيًا لو تركته فارغًا)") }, singleLine = true, enabled = !busy)
         OutlinedTextField(desc, { desc = it }, Modifier.fillMaxWidth(), label = { Text("الوصف") }, minLines = 3, enabled = !busy)
         if (status.isNotEmpty()) Text(status, color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
         if (UploadJobs.status.isNotEmpty()) Text("في الخلفية: " + UploadJobs.status, color = MaterialTheme.colorScheme.primary, fontSize = 13.sp)
@@ -344,6 +383,6 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
             }
         }
         LaunchedEffect(startTick) { if (startTick > 0 && uri != null && !busy) go() }
-        Button(enabled = uri != null && title.isNotBlank() && !busy, modifier = Modifier.fillMaxWidth(), onClick = { archiveOk = false; go() }) { Text("نشر") }
+        Button(enabled = uri != null && !busy, modifier = Modifier.fillMaxWidth(), onClick = { archiveOk = false; go() }) { Text("نشر") }
     }
 }
