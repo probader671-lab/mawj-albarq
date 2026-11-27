@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Palette
@@ -39,12 +40,28 @@ fun ProfileScreen(prefs: ThemePrefs, onOpenFeed: () -> Unit = {}, onSuggestions:
         Spacer(Modifier.height(16.dp))
         var me by remember { mutableStateOf<ProfileData?>(App.userId?.let { ProfileCache.load(it) }) }
         var edit by remember { mutableStateOf(false) }
+        val ctx0 = androidx.compose.ui.platform.LocalContext.current
         LaunchedEffect(App.userId) { me = App.userId?.let { loadProfile(it) } ?: me }
         me?.let { d ->
             ProfileHeader(d, isMe = true, onUpload = onGoUpload, onPlay = { vid ->
                 val target = d.videos.firstOrNull { it.id == vid } ?: Feed.videos.firstOrNull { it.id == vid }
                 if (target != null) Feed.open(target, onOpenFeed)
             }) {
+                var savedOpen by remember { mutableStateOf(false) }
+                var savedPosts by remember { mutableStateOf<List<Post>?>(null) }
+                val savedIds = remember { mutableStateListOf<String>().apply { addAll(ctx0.getSharedPreferences("posts", android.content.Context.MODE_PRIVATE).getStringSet("saved", emptySet())!!) } }
+                if (savedOpen) {
+                    LaunchedEffect(Unit) { savedPosts = loadPosts() ?: emptyList() }
+                    SavedPage(savedPosts, savedIds, { id ->
+                        if (savedIds.contains(id)) savedIds.remove(id) else savedIds.add(id)
+                        ctx0.getSharedPreferences("posts", android.content.Context.MODE_PRIVATE).edit().putStringSet("saved", savedIds.toSet()).apply()
+                    }, { savedOpen = false }, { v -> savedOpen = false; Feed.minimizedVideo = null; Feed.activeVideo = v }, { savedOpen = false })
+                }
+                OutlinedButton(onClick = { savedOpen = true }) {
+                    Icon(Icons.Filled.Bookmark, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("المحفوظات")
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { edit = true }) {
                         Icon(Icons.Filled.Edit, null, modifier = Modifier.size(16.dp))

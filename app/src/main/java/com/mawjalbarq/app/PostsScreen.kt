@@ -101,7 +101,7 @@ private fun formatRelativeTime(iso: String): String {
     }
 }
 
-private suspend fun loadPosts(after: Post? = null): List<Post>? {
+suspend fun loadPosts(after: Post? = null): List<Post>? {
     val cur = if (after == null) "" else {
         val ts = java.net.URLEncoder.encode(after.ts, "UTF-8")
         "&pinned=eq.false&or=(created_at.lt.$ts,and(created_at.eq.$ts,id.lt.${after.id}))"
@@ -511,42 +511,7 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
     reportPost?.let { p -> ReportSheet("post", p.id) { reportPost = null } }
 
     if (showSaved) {
-        ModalBottomSheet(
-            sheetState = fullSheet(),
-            onDismissRequest = { showSaved = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-            dragHandle = { BottomSheetDefaults.DragHandle(color = if (Pal.isDark) Color(0x55FFFFFF) else Color(0x55000000)) }
-        ) {
-            Column(Modifier.fillMaxWidth().padding(20.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("المحفوظات", color = Ink, fontSize = 18.sp, fontFamily = Cairo)
-                val sp = posts?.filter { savedIds.contains(it.id) }.orEmpty()
-                if (sp.isEmpty()) {
-                    Text("لا توجد منشورات محفوظة", color = muted)
-                } else {
-                    sp.forEach { p ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .clickable { showSaved = false; openComments = p }
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Avatar(p.avatar, p.author, 36)
-                            Spacer(Modifier.width(10.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(p.author, color = MaterialTheme.colorScheme.primary, fontFamily = Cairo, fontSize = 14.sp)
-                                Text(p.text.ifBlank { "منشور وسائط" }, color = Ink, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            }
-                            IconButton(onClick = { toggleSaved(p.id) }) {
-                                Icon(Icons.Filled.Bookmark, "إزالة", tint = MaterialTheme.colorScheme.secondary)
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        SavedPage(posts, savedIds, { toggleSaved(it) }, { p -> showSaved = false; openComments = p }, { v -> showSaved = false; Feed.minimizedVideo = null; Feed.activeVideo = v }, { showSaved = false })
     }
 
     if (composing) {

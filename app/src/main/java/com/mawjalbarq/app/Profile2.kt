@@ -160,131 +160,77 @@ fun ProfileHeader(p: ProfileData, onPlay: (String) -> Unit, isMe: Boolean = fals
             if (p.bio.isNotBlank()) Text(p.bio, color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = Tajawal, fontSize = 14.sp)
             extra()
         }
-        Row(Modifier.offset(y = (-24).dp).fillMaxWidth().padding(horizontal = 2.dp).clip(RoundedCornerShape(18.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer).padding(vertical = 12.dp)) {
-            listOf("المتابعون" to p.followers, "المتابَعون" to p.following, "الإعجابات" to p.videos.sumOf { it.likes }, "المقاطع" to p.videos.size).forEach { (l, n) ->
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(formatCount(n.toLong()), color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold, fontFamily = Cairo)
+        var showFollowers by remember { mutableStateOf(false) }
+        if (showFollowers) FollowersSheet(p.id) { showFollowers = false }
+        Row(Modifier.offset(y = (-24).dp).fillMaxWidth().padding(horizontal = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf(Triple("المتابعون", p.followers, true), Triple("المقاطع", p.videos.size.toLong(), false)).forEach { (l, n, tap) ->
+                Column(
+                    Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f))
+                        .then(if (tap) Modifier.clickable { showFollowers = true } else Modifier).padding(vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(formatCount(n), color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Bold, fontFamily = Cairo)
                     Text(l, color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = Tajawal, fontSize = 12.sp)
                 }
             }
         }
-        val portraitVideos = remember(p.videos) { p.videos.filter { it.portrait } }
-        val landscapeVideos = remember(p.videos) { p.videos.filter { !it.portrait } }
-        val savedVideos = Feed.videos.filter { Feed.saved[it.id] == true }
-
-        val haptic = LocalHapticFeedback.current
-        var tab by remember { mutableIntStateOf(0) }
-        val tabs = if (isMe) {
-            listOf(
-                "الطولية (${portraitVideos.size})",
-                "الأفقية (${landscapeVideos.size})",
-                "المحفوظات (${savedVideos.size})"
+        if (p.videos.isEmpty()) {
+            ProfileEmptyVideos(
+                message = "لا توجد مقاطع بعد",
+                icon = Icons.Filled.VideoLibrary,
+                actionLabel = if (isMe && onUpload != null) "ارفع أول مقطع" else null,
+                onAction = onUpload
             )
         } else {
-            listOf(
-                "الطولية (${portraitVideos.size})",
-                "الأفقية (${landscapeVideos.size})"
-            )
-        }
-        val safeTab = tab.coerceIn(0, tabs.lastIndex)
-        TabRow(
-            selectedTabIndex = safeTab,
-            containerColor = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.offset(y = (-12).dp)
-        ) {
-            tabs.forEachIndexed { i, t ->
-                Tab(
-                    selected = safeTab == i,
-                    onClick = {
-                        if (tab != i) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        tab = i
-                    },
-                    modifier = Modifier.testTag("profile_tab_$i"),
-                    text = {
-                        Text(
-                            t,
-                            fontFamily = Cairo,
-                            fontSize = 13.sp,
-                            fontWeight = if (safeTab == i) FontWeight.Bold else FontWeight.Normal,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                )
-            }
-        }
-
-        AnimatedContent(
-            targetState = safeTab,
-            transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(130)) },
-            label = "profileTabTransition"
-        ) { activeTab ->
-        when (activeTab) {
-            0 -> {
-                if (portraitVideos.isEmpty()) {
-                    ProfileEmptyVideos(
-                        message = "لا توجد مقاطع طولية بعد",
-                        icon = Icons.Filled.StayCurrentPortrait,
-                        actionLabel = if (isMe && onUpload != null) "ارفع أول مقطع" else null,
-                        onAction = onUpload
-                    )
-                } else {
-                    ProfilePortraitGrid(portraitVideos, onPlay)
-                }
-            }
-            1 -> {
-                if (landscapeVideos.isEmpty()) {
-                    ProfileEmptyVideos(
-                        message = "لا توجد فيديوهات أفقية بعد",
-                        icon = Icons.Filled.StayCurrentLandscape,
-                        actionLabel = if (isMe && onUpload != null) "ارفع فيديو أفقي" else null,
-                        onAction = onUpload
-                    )
-                } else {
-                    ProfileLandscapeList(landscapeVideos, onPlay)
-                }
-            }
-            else -> {
-                if (savedVideos.isEmpty()) {
-                    ProfileEmptyVideos(
-                        message = "لا توجد محفوظات بعد",
-                        icon = Icons.Filled.BookmarkBorder
-                    )
-                } else {
-                    val savedLandscape = savedVideos.filter { !it.portrait }
-                    val savedPortrait = savedVideos.filter { it.portrait }
-                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        if (savedLandscape.isNotEmpty()) {
-                            Row(
-                                Modifier.padding(horizontal = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(Icons.Filled.StayCurrentLandscape, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                                Text("فيديوهات أفقية (${savedLandscape.size})", color = Ink, fontFamily = Cairo, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            }
-                            ProfileLandscapeList(savedLandscape, onPlay)
-                        }
-                        if (savedPortrait.isNotEmpty()) {
-                            Row(
-                                Modifier.padding(horizontal = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(Icons.Filled.StayCurrentPortrait, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                                Text("مقاطع طولية (${savedPortrait.size})", color = Ink, fontFamily = Cairo, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            }
-                            ProfilePortraitGrid(savedPortrait, onPlay)
-                        }
-                    }
-                }
-            }
-        }
+            ProfilePortraitGrid(p.videos, onPlay)
         }
     }
 }
+
+/** List of the people who follow [userId], each with a follow button. */
+@Composable
+fun FollowersSheet(userId: String, onClose: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var rows by remember { mutableStateOf<List<ProfileRow>?>(null) }
+    LaunchedEffect(userId) {
+        val (c, t) = api("GET", "/rest/v1/follows?following_id=eq.$userId&select=follower_id&limit=200")
+        val ids = if (c == 200) try { val a = org.json.JSONArray(t); (0 until a.length()).map { a.getJSONObject(it).getString("follower_id") } } catch (_: Exception) { emptyList() } else emptyList()
+        if (ids.isEmpty()) { rows = emptyList(); return@LaunchedEffect }
+        val (c2, t2) = api("GET", "/rest/v1/profiles?id=in.(${ids.joinToString(",")})&select=id,full_name,avatar_url,verified")
+        rows = if (c2 == 200) try { val a = org.json.JSONArray(t2); (0 until a.length()).map { val o = a.getJSONObject(it); ProfileRow(o.getString("id"), o.optString("full_name").ifBlank { "مستخدم" }, if (o.isNull("avatar_url")) null else o.optString("avatar_url"), o.optBoolean("verified")) } } catch (_: Exception) { emptyList() } else emptyList()
+        if (App.userId != null) Feed.loadFollows()
+    }
+    ModalBottomSheet(sheetState = fullSheet(), onDismissRequest = onClose, containerColor = MaterialTheme.colorScheme.surface) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("المتابعون", color = Ink, fontFamily = Cairo, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            val r = rows
+            when {
+                r == null -> Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }
+                r.isEmpty() -> Text("لا يوجد متابعون بعد", color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = Tajawal, modifier = Modifier.padding(vertical = 24.dp))
+                else -> androidx.compose.foundation.lazy.LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(r.size) { i ->
+                        val u = r[i]
+                        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Avatar(u.avatar, u.name, 44)
+                            Spacer(Modifier.width(12.dp))
+                            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(u.name, color = Ink, fontFamily = Cairo, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                                if (u.verified) VerifiedBadge(14)
+                            }
+                            if (App.userId != null && u.id != App.userId) {
+                                val f = Feed.following[u.id] == true
+                                if (f) OutlinedButton(onClick = { scope.launch { Feed.toggleFollow(u.id) } }, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp)) { Text("تتابعه", fontFamily = Cairo, fontSize = 12.sp) }
+                                else Button(onClick = { scope.launch { Feed.toggleFollow(u.id) } }, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp)) { Text("متابعة", fontFamily = Cairo, fontSize = 12.sp) }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private class ProfileRow(val id: String, val name: String, val avatar: String?, val verified: Boolean)
 
 @Composable
 private fun ProfileEmptyVideos(
