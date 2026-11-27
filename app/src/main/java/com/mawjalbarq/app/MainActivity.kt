@@ -20,7 +20,7 @@ class MainActivity : ComponentActivity() {
             MawjTheme(Accents[prefs.index]) {
                 LaunchedEffect(Unit) { Feed.load() }
                 var splash by remember { mutableStateOf(true) }
-                if (splash) SplashScreen { splash = false } else AppRoot(prefs)
+                if (splash) IntroVideo { splash = false } else AppRoot(prefs)
             }
         }
     }
