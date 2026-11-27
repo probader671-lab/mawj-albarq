@@ -73,8 +73,11 @@ data class Post(
     val liked: Boolean,
     val comments: Int,
     val pinned: Boolean,
-    val at: String = ""
+    val at: String = "",
+    val ts: String = ""
 )
+
+private const val POSTS_PAGE = 30
 
 private val FeedSeparatorColor = Color(0xFF070A0F)
 private val GalleryGreen = Color(0xFF45BD62)
@@ -98,19 +101,30 @@ private fun formatRelativeTime(iso: String): String {
     }
 }
 
-private suspend fun loadPosts(): List<Post>? {
+private suspend fun loadPosts(after: Post? = null): List<Post>? {
+    val cur = if (after == null) "" else {
+        val ts = java.net.URLEncoder.encode(after.ts, "UTF-8")
+        "&pinned=eq.false&or=(created_at.lt.$ts,and(created_at.eq.$ts,id.lt.${after.id}))"
+    }
     val (c, t) = api(
         "GET",
-        "/rest/v1/social_posts?select=id,user_id,created_at,content,media_url,thumbnail_url,media_type,video_id,pinned,profiles!social_posts_user_id_fkey(full_name,avatar_url,verified),post_likes(user_id),post_comments(id)&is_deleted=eq.false&order=pinned.desc,created_at.desc&limit=50"
+        "/rest/v1/social_posts?select=id,user_id,created_at,content,media_url,thumbnail_url,media_type,video_id,pinned,profiles!social_posts_user_id_fkey(full_name,avatar_url,verified),post_likes(count),post_comments(count)&is_deleted=eq.false$cur&order=pinned.desc,created_at.desc,id.desc&limit=$POSTS_PAGE"
     )
     if (c != 200) return null
     return try {
         val a = JSONArray(t)
         val me = App.userId
+        // which of these posts did I like: one extra query for the page, not an embedded row per like
+        val likedByMe = HashSet<String>()
+        if (me != null && a.length() > 0) {
+            val ids = (0 until a.length()).joinToString(",") { a.getJSONObject(it).getString("id") }
+            val (lc, lt) = api("GET", "/rest/v1/post_likes?user_id=eq.$me&post_id=in.($ids)&select=post_id")
+            if (lc == 200) try { val b = JSONArray(lt); for (i in 0 until b.length()) likedByMe.add(b.getJSONObject(i).getString("post_id")) } catch (_: Exception) {}
+        }
+        fun cnt(o: JSONObject, k: String) = o.optJSONArray(k)?.optJSONObject(0)?.optInt("count", 0) ?: 0
         (0 until a.length()).map {
             val o = a.getJSONObject(it)
             val pr = o.optJSONObject("profiles")
-            val likes = o.optJSONArray("post_likes") ?: JSONArray()
             val mediaType = o.optString("media_type", "none")
             val mediaUrl = if (o.isNull("media_url")) null else o.optString("media_url").ifBlank { null }
             val thumbUrl = if (o.isNull("thumbnail_url")) null else o.optString("thumbnail_url").ifBlank { null }
@@ -126,11 +140,12 @@ private suspend fun loadPosts(): List<Post>? {
                 author = pr?.optString("full_name").orEmpty().ifBlank { "مستخدم" },
                 avatar = if (pr == null || pr.isNull("avatar_url")) null else pr.optString("avatar_url").ifBlank { null },
                 verified = pr?.optBoolean("verified", false) ?: false,
-                likes = likes.length(),
-                liked = me != null && (0 until likes.length()).any { i -> likes.getJSONObject(i).optString("user_id") == me },
-                comments = o.optJSONArray("post_comments")?.length() ?: 0,
+                likes = cnt(o, "post_likes"),
+                liked = likedByMe.contains(o.getString("id")),
+                comments = cnt(o, "post_comments"),
                 pinned = o.optBoolean("pinned", false),
-                at = formatRelativeTime(o.optString("created_at"))
+                at = formatRelativeTime(o.optString("created_at")),
+                ts = o.optString("created_at")
             )
         }
     } catch (_: Exception) {
@@ -159,6 +174,8 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
     val ctx = LocalContext.current
     var posts by remember { mutableStateOf<List<Post>?>(null) }
     var failed by remember { mutableStateOf(false) }
+    var morePosts by remember { mutableStateOf(false) }
+    var loadingMore by remember { mutableStateOf(false) }
     var refreshing by remember { mutableStateOf(false) }
     var composing by remember { mutableStateOf(false) }
     var autoPickPhoto by remember { mutableStateOf(false) }
@@ -177,6 +194,7 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
             val r = loadPosts()
             if (r == null) failed = true else {
                 posts = r
+                morePosts = r.size >= POSTS_PAGE
                 failed = false
             }
             refreshing = false
@@ -444,6 +462,22 @@ fun PostsScreen(onNeedLogin: () -> Unit) {
                     Box(Modifier.fillMaxWidth().height(7.dp).background(FeedSeparatorColor))
                 }
             }
+                if (morePosts && searchQuery.isBlank() && visiblePosts != null) item(key = "more_posts") {
+                    LaunchedEffect(posts?.size) {
+                        if (!loadingMore) {
+                            loadingMore = true
+                            val cur = posts
+                            val r = loadPosts(cur?.lastOrNull { !it.pinned } ?: cur?.lastOrNull())
+                            if (r == null) morePosts = false else if (cur != null) {
+                                val seen = cur.mapTo(HashSet()) { it.id }
+                                posts = cur + r.filter { seen.add(it.id) }
+                                morePosts = r.size >= POSTS_PAGE
+                            }
+                            loadingMore = false
+                        }
+                    }
+                    Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp) }
+                }
         }
     }
 
@@ -884,11 +918,36 @@ private fun PostCommentsSheet(post: Post, onNeedLogin: () -> Unit, onClose: () -
     var text by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
 
+    var moreC by remember { mutableStateOf(false) }
+
+    suspend fun loadMoreC() {
+        val cur = list ?: return
+        val last = cur.lastOrNull() ?: return
+        val ts = java.net.URLEncoder.encode(last.ts, "UTF-8")
+        val (c, t) = api("GET", "/rest/v1/post_comments?post_id=eq.${post.id}&is_deleted=eq.false&select=id,content,created_at,profiles!post_comments_user_id_fkey(full_name,avatar_url)&or=(created_at.lt.$ts,and(created_at.eq.$ts,id.lt.${last.id}))&order=created_at.desc,id.desc&limit=${Feed.COMMENTS_PAGE}")
+        if (c != 200) return
+        try {
+            val a = JSONArray(t)
+            val more = (0 until a.length()).map {
+                val o = a.getJSONObject(it); val pr = o.optJSONObject("profiles")
+                Comment(
+                    id = o.getString("id"), text = o.optString("content"),
+                    author = pr?.optString("full_name").orEmpty().ifBlank { "مستخدم" },
+                    avatar = if (pr == null || pr.isNull("avatar_url")) null else pr.optString("avatar_url").ifBlank { null },
+                    at = formatRelativeTime(o.optString("created_at")), ts = o.optString("created_at")
+                )
+            }
+            val seen = cur.mapTo(HashSet()) { it.id }
+            list = cur + more.filter { seen.add(it.id) }
+            moreC = a.length() >= Feed.COMMENTS_PAGE
+        } catch (_: Exception) {}
+    }
+
     suspend fun load() {
         failed = false
         val (c, t) = api(
             "GET",
-            "/rest/v1/post_comments?post_id=eq.${post.id}&is_deleted=eq.false&select=id,content,created_at,profiles!post_comments_user_id_fkey(full_name,avatar_url)&order=created_at.desc"
+            "/rest/v1/post_comments?post_id=eq.${post.id}&is_deleted=eq.false&select=id,content,created_at,profiles!post_comments_user_id_fkey(full_name,avatar_url)&order=created_at.desc,id.desc&limit=${Feed.COMMENTS_PAGE}"
         )
         if (c == 200) {
             try {
@@ -901,9 +960,11 @@ private fun PostCommentsSheet(post: Post, onNeedLogin: () -> Unit, onClose: () -
                         text = o.optString("content"),
                         author = pr?.optString("full_name").orEmpty().ifBlank { "مستخدم" },
                         avatar = if (pr == null || pr.isNull("avatar_url")) null else pr.optString("avatar_url").ifBlank { null },
-                        at = formatRelativeTime(o.optString("created_at"))
+                        at = formatRelativeTime(o.optString("created_at")),
+                        ts = o.optString("created_at")
                     )
                 }
+                moreC = list!!.size >= Feed.COMMENTS_PAGE
             } catch (_: Exception) {
                 failed = true
             }
@@ -1008,6 +1069,10 @@ private fun PostCommentsSheet(post: Post, onNeedLogin: () -> Unit, onClose: () -
                                     Text(c.text, color = Ink, fontSize = 14.sp, lineHeight = 20.sp)
                                 }
                             }
+                        }
+                        if (moreC) item(key = "more_post_comments") {
+                            LaunchedEffect(l.size) { loadMoreC() }
+                            Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp) }
                         }
                     }
                 }

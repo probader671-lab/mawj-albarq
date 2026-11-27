@@ -165,7 +165,8 @@ data class Comment(
     val at: String = "",
     val likes: Int = 0,
     val verified: Boolean = false,
-    val userId: String = ""
+    val userId: String = "",
+    val ts: String = ""
 )
 
 fun formatDuration(seconds: Int): String {
@@ -226,7 +227,7 @@ object Feed {
     var jumpTo by mutableStateOf<Int?>(null)
     var activeVideo by mutableStateOf<Video?>(null)
     private const val PAGE_SIZE = 30
-    private var nextOffset = 0
+    private var nextCursor: Video? = null  // keyset cursor: last video of the last page
 
     fun open(v: Video, onGoClips: () -> Unit) {
         if (!v.portrait) {
@@ -296,8 +297,13 @@ object Feed {
         }
     }
 
-    private fun videosQuery(limit: Int, offset: Int): String =
-        "/rest/v1/videos?select=id,user_id,width,height,duration,views,created_at,title,description,video_url,thumbnail_url,likes,comments_count,profiles!videos_user_id_fkey(full_name,avatar_url,verified,followers_count)&status=eq.ready&deleted=eq.false&order=created_at.desc&limit=$limit&offset=$offset"
+    private fun cursorFilter(ts: String, id: String): String {
+        val t = java.net.URLEncoder.encode(ts, "UTF-8")
+        return "&or=(created_at.lt.$t,and(created_at.eq.$t,id.lt.$id))"
+    }
+
+    private fun videosQuery(limit: Int, after: Video?): String =
+        "/rest/v1/videos?select=id,user_id,width,height,duration,views,created_at,title,description,video_url,thumbnail_url,likes,comments_count,profiles!videos_user_id_fkey(full_name,avatar_url,verified,followers_count)&status=eq.ready&deleted=eq.false" + (if (after != null && after.createdAt.isNotBlank()) cursorFilter(after.createdAt, after.id) else "") + "&order=created_at.desc,id.desc&limit=$limit"
 
     suspend fun load() {
         if (loading) return
@@ -305,24 +311,24 @@ object Feed {
         if (videos.isEmpty()) {
             restoreFromCache()
         }
-        val (c, t) = api("GET", videosQuery(PAGE_SIZE, 0))
+        val (c, t) = api("GET", videosQuery(PAGE_SIZE, null))
         if (c == 200) {
             try {
                 val (raw0, parsed0) = parse(t)
                 val merged = ArrayList<Video>(parsed0)
-                var offset = raw0
+                var cursor: Video? = parsed0.lastOrNull()
                 var moreAvailable = raw0 >= PAGE_SIZE
                 var extraPages = 0
                 // Ensure at least 10 horizontal videos are ready in Home right after initial load with minimal extra requests
                 while (moreAvailable && merged.count { !it.portrait } < 10 && extraPages < 3) {
-                    val (cExtra, tExtra) = api("GET", videosQuery(PAGE_SIZE, offset))
+                    val (cExtra, tExtra) = api("GET", videosQuery(PAGE_SIZE, cursor))
                     if (cExtra != 200) break
                     val (rawExtra, parsedExtra) = parse(tExtra)
                     if (rawExtra == 0) {
                         moreAvailable = false
                         break
                     }
-                    offset += rawExtra
+                    cursor = parsedExtra.lastOrNull() ?: cursor
                     moreAvailable = rawExtra >= PAGE_SIZE
                     extraPages++
                     val seenIds = merged.mapTo(HashSet()) { it.id }
@@ -334,7 +340,7 @@ object Feed {
                 withContext(Dispatchers.Main) {
                     videos.clear()
                     videos.addAll(merged)
-                    nextOffset = offset
+                    nextCursor = cursor
                     hasMore = moreAvailable
                     isOffline = false
                     error = false
@@ -364,14 +370,14 @@ object Feed {
             var pages = 0
             val maxPages = if (ensureWide) 2 else 1
             while (hasMore && pages < maxPages) {
-                val (c, t) = api("GET", videosQuery(PAGE_SIZE, nextOffset))
+                val (c, t) = api("GET", videosQuery(PAGE_SIZE, nextCursor))
                 if (c != 200) break
                 val (raw, parsed) = parse(t)
                 if (raw == 0) {
                     hasMore = false
                     break
                 }
-                nextOffset += raw
+                nextCursor = parsed.lastOrNull() ?: nextCursor
                 hasMore = raw >= PAGE_SIZE
                 pages++
                 var addedWide = 0
@@ -473,8 +479,15 @@ object Feed {
         }
     }
 
-    suspend fun comments(id: String): List<Comment>? {
-        val (c, t) = api("GET", "/rest/v1/comments?video_id=eq.$id&is_deleted=eq.false&select=id,user_id,content,created_at,likes,profiles!comments_user_id_fkey(full_name,avatar_url,verified)&order=created_at.desc&limit=100")
+    const val COMMENTS_PAGE = 25
+
+    /** One page of comments, newest first. Pass the last comment of the previous page as [after] for the next page. */
+    suspend fun comments(id: String, after: Comment? = null): List<Comment>? {
+        val cur = if (after != null && after.ts.isNotBlank()) {
+            val t = java.net.URLEncoder.encode(after.ts, "UTF-8")
+            "&or=(created_at.lt.$t,and(created_at.eq.$t,id.lt.${after.id}))"
+        } else ""
+        val (c, t) = api("GET", "/rest/v1/comments?video_id=eq.$id&is_deleted=eq.false&select=id,user_id,content,created_at,likes,profiles!comments_user_id_fkey(full_name,avatar_url,verified)$cur&order=created_at.desc,id.desc&limit=$COMMENTS_PAGE")
         if (c != 200) return null
         return try {
             val a = JSONArray(t)
@@ -489,7 +502,8 @@ object Feed {
                     at = o.optString("created_at").take(10),
                     likes = o.optInt("likes", 0),
                     verified = pr?.optBoolean("verified", false) == true,
-                    userId = o.optString("user_id")
+                    userId = o.optString("user_id"),
+                    ts = o.optString("created_at")
                 )
             }
         } catch (e: Exception) { null }

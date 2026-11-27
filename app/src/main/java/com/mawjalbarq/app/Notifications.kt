@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.sp
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class Notif(val id: String, val type: String, val actor: String, val actorAvatar: String?, val videoId: String?, val at: String, val read: Boolean)
+data class Notif(val id: String, val type: String, val actor: String, val actorAvatar: String?, val videoId: String?, val at: String, val read: Boolean, val ts: String = "")
 
 object Notifs {
     var unread by mutableIntStateOf(0)
@@ -28,9 +28,11 @@ object Notifs {
         val (c, t) = api("GET", "/rest/v1/notifications?user_id=eq.$u&is_read=eq.false&select=id&limit=100")
         if (c == 200) try { unread = JSONArray(t).length() } catch (_: Exception) {}
     }
-    suspend fun load(): List<Notif>? {
+    const val PAGE = 30
+    suspend fun load(after: Notif? = null): List<Notif>? {
         val u = App.userId ?: return emptyList()
-        val (c, t) = api("GET", "/rest/v1/notifications?user_id=eq.$u&select=id,type,actor_id,video_id,created_at,is_read&order=created_at.desc&limit=60")
+        val cur = if (after != null && after.ts.isNotBlank()) { val t = java.net.URLEncoder.encode(after.ts, "UTF-8"); "&or=(created_at.lt.$t,and(created_at.eq.$t,id.lt.${after.id}))" } else ""
+        val (c, t) = api("GET", "/rest/v1/notifications?user_id=eq.$u&select=id,type,actor_id,video_id,created_at,is_read$cur&order=created_at.desc,id.desc&limit=$PAGE")
         if (c != 200) return null
         return try {
             val a = JSONArray(t)
@@ -44,7 +46,7 @@ object Notifs {
             (0 until a.length()).map {
                 val o = a.getJSONObject(it); val aid = o.optString("actor_id")
                 Notif(o.getString("id"), o.getString("type"), names[aid]?.first ?: "مستخدم", names[aid]?.second,
-                    if (o.isNull("video_id")) null else o.optString("video_id"), o.optString("created_at").take(10), o.optBoolean("is_read"))
+                    if (o.isNull("video_id")) null else o.optString("video_id"), o.optString("created_at").take(10), o.optBoolean("is_read"), o.optString("created_at"))
             }
         } catch (e: Exception) { null }
     }
@@ -59,7 +61,8 @@ object Notifs {
 fun NotificationsScreen(onBack: () -> Unit, onOpenVideo: (String) -> Unit) {
     var list by remember { mutableStateOf<List<Notif>?>(null) }
     var failed by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { val r = Notifs.load(); if (r == null) failed = true else list = r; Notifs.markAllRead() }
+    var moreN by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { val r = Notifs.load(); if (r == null) failed = true else { list = r; moreN = r.size >= Notifs.PAGE }; Notifs.markAllRead() }
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("الإشعارات", color = Ink, fontSize = 24.sp, fontFamily = Cairo, modifier = Modifier.weight(1f))
@@ -72,7 +75,18 @@ fun NotificationsScreen(onBack: () -> Unit, onOpenVideo: (String) -> Unit) {
             l == null -> CircularProgressIndicator()
             l.isEmpty() -> Text("لا توجد إشعارات بعد", color = Color.Gray)
             else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 40.dp)) {
-                items(l, key = { it.id }) { n ->
+                items(l, key = { it.id }
+                if (moreN) item(key = "more_notifs") {
+                    LaunchedEffect(l.size) {
+                        val r = Notifs.load(l.lastOrNull())
+                        if (r == null) { moreN = false } else {
+                            val seen = l.mapTo(HashSet()) { it.id }
+                            list = l + r.filter { seen.add(it.id) }
+                            moreN = r.size >= Notifs.PAGE
+                        }
+                    }
+                    Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp) }
+                }) { n ->
                     val (icon, tint, msg) = when (n.type) {
                         "like" -> Triple(Icons.Filled.Favorite, Color(0xFFFF2D55), "أعجبه مقطعك")
                         "comment" -> Triple(Icons.Filled.Comment, MaterialTheme.colorScheme.secondary, "علّق على مقطعك")

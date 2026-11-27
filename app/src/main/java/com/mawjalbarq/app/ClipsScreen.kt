@@ -840,10 +840,21 @@ private fun CommentsSheet(v: Video, onNeedLogin: () -> Unit, onClose: () -> Unit
     var text by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
 
+    var moreC by remember { mutableStateOf(false) }
+
     suspend fun reload() {
         failed = false
         val r = Feed.comments(v.id)
-        if (r == null) failed = true else list = r
+        if (r == null) failed = true else { list = r; moreC = r.size >= Feed.COMMENTS_PAGE }
+    }
+
+    suspend fun loadMoreC() {
+        val cur = list ?: return
+        val r = Feed.comments(v.id, cur.lastOrNull())
+        if (r == null) return
+        val seen = cur.mapTo(HashSet()) { it.id }
+        list = cur + r.filter { seen.add(it.id) }
+        moreC = r.size >= Feed.COMMENTS_PAGE
     }
 
     LaunchedEffect(v.id) { reload() }
@@ -931,6 +942,10 @@ private fun CommentsSheet(v: Video, onNeedLogin: () -> Unit, onClose: () -> Unit
                                 Text(c.text, color = Color.White, fontSize = 14.sp, lineHeight = 20.sp)
                             }
                         }
+                    }
+                    if (moreC) item(key = "more_comments") {
+                        LaunchedEffect(l.size) { loadMoreC() }
+                        Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp) }
                     }
                 }
             }
