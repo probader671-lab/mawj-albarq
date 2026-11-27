@@ -419,10 +419,12 @@ fun HomeScreen(
 
                 if (q.isBlank() && vids.size > 4) {
                     val afterThree = vids.drop(4)
+                    val portraitPicks = vids.filter { it.portrait }.take(10)
                     item(key = "home_rail") {
                         WatchRailSection(
                             title = "اقتراحات قد تعجبك",
-                            videos = afterThree.take(10),
+                            videos = if (portraitPicks.isNotEmpty()) portraitPicks else afterThree.take(10),
+                            portraitCards = portraitPicks.isNotEmpty(),
                             onSelect = { open(it) }
                         )
                     }

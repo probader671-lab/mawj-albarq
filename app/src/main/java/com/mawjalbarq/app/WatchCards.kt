@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.StayCurrentLandscape
+import androidx.compose.material.icons.filled.StayCurrentPortrait
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -150,6 +151,7 @@ fun WatchJoinButton(
 fun WatchRailSection(
     title: String = "فيديوهات قد تعجبك",
     videos: List<Video>,
+    portraitCards: Boolean = false,
     onSelect: (Video) -> Unit
 ) {
     if (videos.isEmpty()) return
@@ -172,7 +174,7 @@ fun WatchRailSection(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 Icon(
-                    Icons.Filled.StayCurrentLandscape,
+                    if (portraitCards) Icons.Filled.StayCurrentPortrait else Icons.Filled.StayCurrentLandscape,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)
@@ -204,13 +206,13 @@ fun WatchRailSection(
                 items(videos, key = { "rail_${it.id}" }) { v ->
                     Column(
                         Modifier
-                            .width(204.dp)
+                            .width(if (portraitCards) 128.dp else 204.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .background(Color(0xFF0A141D))
                             .border(0.75.dp, WatchCardBorder, RoundedCornerShape(14.dp))
                             .clickable { onSelect(v) }
                     ) {
-                        Box(Modifier.fillMaxWidth().height(114.dp).background(Color(0xFF070F16))) {
+                        Box(Modifier.fillMaxWidth().height(if (portraitCards) 200.dp else 114.dp).background(Color(0xFF070F16))) {
                             VideoThumb(v, Modifier.fillMaxSize(), ContentScale.Crop)
                             Box(
                                 Modifier
@@ -330,7 +332,7 @@ fun WatchSuggestionRowCard(
             }
             if (!v.portrait) {
                 Icon(
-                    Icons.Filled.StayCurrentLandscape,
+                    if (portraitCards) Icons.Filled.StayCurrentPortrait else Icons.Filled.StayCurrentLandscape,
                     contentDescription = null,
                     tint = Color.White.copy(alpha = 0.85f),
                     modifier = Modifier
