@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     const fd = new FormData();
     fd.set("api_key", key); fd.set("api_secret", secret);
     fd.set("image_base64", b64);
-    fd.set("return_attributes", "gender,facequality,blur,headpose");
+    fd.set("return_attributes", "gender,facequality,blur,headpose,mouthstatus");
     try {
       const r = await fetch("https://api-us.faceplusplus.com/facepp/v3/detect", { method: "POST", body: fd });
       if (!r.ok) return { error: r.status };
@@ -32,6 +32,7 @@ Deno.serve(async (req) => {
           blur: f.attributes?.blur?.blurness?.value ?? null,
           yaw: f.attributes?.headpose?.yaw_angle ?? null,
           w: f.face_rectangle?.width ?? null,
+          mouth_occ: Math.max(f.attributes?.mouthstatus?.other_occlusion ?? 0, f.attributes?.mouthstatus?.surgical_mask_or_respirator ?? 0),
         })),
       };
     } catch (_) { return { error: "net" }; }

@@ -174,18 +174,21 @@ object Moderation {
             val j = JSONObject(text)
             if (!j.optBoolean("available")) return@withContext "unsure"
             val fr = j.getJSONArray("frames")
-            var male = 0; var female = 0; var bad = 0
+            var male = 0; var female = 0; var bad = 0; var covered = 0
             for (i in 0 until fr.length()) {
                 val faces = fr.getJSONObject(i).optJSONArray("faces") ?: continue
                 for (k in 0 until faces.length()) {
                     val f = faces.getJSONObject(k)
                     val g = f.optString("gender", "")
+                    // Female whose mouth/lower face is fully covered = treated as niqab (publish). Threshold is a prior, not validated.
+                    if (g == "Female" && f.optDouble("mouth_occ", 0.0) >= 80.0) { covered++; continue }
                     val q = f.optDouble("quality", 0.0); val bl = f.optDouble("blur", 100.0); val yaw = Math.abs(f.optDouble("yaw", 90.0))
                     if (g.isEmpty() || q < 50 || bl > 50 || yaw > 35) { bad++; continue }
                     if (g == "Male") male++ else if (g == "Female") female++
                 }
             }
-            if (bad == 0 && male >= 2 && female == 0) "male"
+            if (bad == 0 && covered > 0 && female == 0 && male + covered >= 2) "male"
+            else if (bad == 0 && male >= 2 && female == 0) "male"
             else if (bad == 0 && female >= 2 && male == 0) "female"
             else "unsure"
         } catch (e: Throwable) { "unsure" }
