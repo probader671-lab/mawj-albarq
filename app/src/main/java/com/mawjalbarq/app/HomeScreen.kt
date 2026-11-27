@@ -203,6 +203,9 @@ fun HomeScreen(
     val all = Feed.wideVideos
     val vids = if (q.isBlank()) all else all.filter { it.title.contains(q, true) || it.author.contains(q, true) }
 
+    var promptVid by remember { mutableStateOf<Video?>(null) }
+    LaunchedEffect(vids.size, App.userId) { if (promptVid == null) promptVid = Reco.promptCandidate(all) }
+
     val lastVisible by remember {
         derivedStateOf { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
     }
@@ -417,6 +420,7 @@ fun HomeScreen(
 
                 if (q.isBlank() && vids.size > 4) {
                     val afterThree = vids.drop(4)
+                    promptVid?.let { pv -> item(key = "reco_prompt") { InterestCard(pv) { yes -> Reco.answerPrompt(pv, yes); promptVid = null } } }
                     itemsIndexed(afterThree.chunked(2), key = { _, pr -> "feed_${pr.first().id}" }) { _, pr ->
                         CardRow(pr, { open(it) }, { if (it.userId.isNotBlank()) creatorId = it.userId }, onNeedLogin, { reportFor = it })
                     }

@@ -87,6 +87,8 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
     var muted by remember { mutableStateOf(false) }
     var disliked by remember { mutableStateOf(false) }
     var comments by remember { mutableStateOf<List<Comment>?>(null) }
+    val tracker = remember { Reco.Tracker() }
+    DisposableEffect(Unit) { onDispose { tracker.stop() } }
     var noMoreComments by remember(cur.id) { mutableStateOf(false) }
     var cText by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
@@ -179,6 +181,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
         showDesc = false
         controlsVisible = true
         Watch.save(ctx, cur.id)
+        tracker.switchTo(cur)
         player.setMediaItem(MediaItem.fromUri(Uri.parse(Media.playUrl(cur.url))))
         player.prepare()
         QuranBg.sync(ctx, player, cur.isQuran)

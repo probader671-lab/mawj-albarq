@@ -160,7 +160,9 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
         Toast.makeText(ctx, next.label, Toast.LENGTH_SHORT).show()
     }
 
-    LaunchedEffect(curId) { Watch.save(ctx, curId) }
+    val tracker = remember { Reco.Tracker() }
+    DisposableEffect(Unit) { onDispose { tracker.stop() } }
+    LaunchedEffect(curId) { Watch.save(ctx, curId); tracker.switchTo(videos.getOrNull(cur)) }
     LaunchedEffect(curId) {
         isBuffering = true
         player.setMediaItem(MediaItem.fromUri(Uri.parse(Media.playUrl(videos[cur].url))))

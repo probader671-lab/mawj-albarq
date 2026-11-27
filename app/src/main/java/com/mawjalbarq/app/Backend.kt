@@ -339,9 +339,16 @@ object Feed {
                         if (seenIds.add(v.id) && seenUrls.add(v.url)) merged.add(v)
                     }
                 }
+                Reco.ensureLoaded()
+                val rankedAll = Reco.rank(merged)
+                val unseen = rankedAll.filter { !Reco.seen(it) }
+                val watched = rankedAll.filter { Reco.seen(it) }
+                // watched videos only come back as the last resort: after every unseen one, or when nothing unseen is left
+                val shown = if (unseen.isEmpty() || !moreAvailable) unseen + watched else unseen
+                deferredSeen.clear(); if (shown.size == unseen.size) deferredSeen.addAll(watched)
                 withContext(Dispatchers.Main) {
                     videos.clear()
-                    videos.addAll(merged)
+                    videos.addAll(shown)
                     nextCursor = cursor
                     hasMore = moreAvailable
                     isOffline = false
@@ -365,6 +372,14 @@ object Feed {
         }
     }
 
+    private val deferredSeen = ArrayList<Video>()
+
+    /** Re-sort what is loaded (after a taste change such as a not-interested tap). */
+    fun rerank() {
+        val r = Reco.rank(videos.toList())
+        videos.clear(); videos.addAll(r)
+    }
+
     suspend fun loadMore(ensureWide: Boolean = false) {
         if (loading || loadingMore || !hasMore || isOffline) return
         loadingMore = true
@@ -386,12 +401,13 @@ object Feed {
                 withContext(Dispatchers.Main) {
                     val seenIds = videos.mapTo(HashSet()) { it.id }
                     val seenUrls = videos.mapTo(HashSet()) { it.url }
-                    parsed.forEach { v ->
+                    val ranked = Reco.rank(parsed)
+                    ranked.forEach { v ->
                         if (seenIds.add(v.id) && seenUrls.add(v.url)) {
-                            videos.add(v)
-                            if (!v.portrait) addedWide++
+                            if (Reco.seen(v)) deferredSeen.add(v) else { videos.add(v); if (!v.portrait) addedWide++ }
                         }
                     }
+                    if (!hasMore && deferredSeen.isNotEmpty()) { deferredSeen.forEach { d -> if (videos.none { it.id == d.id }) videos.add(d) }; deferredSeen.clear() }
                 }
                 if (ensureWide && addedWide >= 5) break
             }
@@ -423,10 +439,10 @@ object Feed {
     suspend fun toggleLike(id: String) {
         val u = App.userId ?: return
         if (liked[id] == true) {
-            liked.remove(id); bump(id, -1)
+            liked.remove(id); bump(id, -1); videos.firstOrNull { it.id == id }?.let { Reco.onLike(it, false) }
             api("DELETE", "/rest/v1/likes?user_id=eq.$u&video_id=eq.$id")
         } else {
-            liked[id] = true; bump(id, 1)
+            liked[id] = true; bump(id, 1); videos.firstOrNull { it.id == id }?.let { Reco.onLike(it, true) }
             api("POST", "/rest/v1/likes", JSONObject().put("user_id", u).put("video_id", id).toString())
         }
     }
@@ -449,10 +465,10 @@ object Feed {
         }
         persistCacheAsync()
         if (wasFollowing) {
-            following.remove(id)
+            following.remove(id); Reco.onFollow(id, false)
             api("DELETE", "/rest/v1/follows?follower_id=eq.$u&following_id=eq.$id")
         } else {
-            following[id] = true
+            following[id] = true; Reco.onFollow(id, true)
             api("POST", "/rest/v1/follows", JSONObject().put("follower_id", u).put("following_id", id).toString())
         }
     }
@@ -474,9 +490,9 @@ object Feed {
             return
         }
         if (saved[id] == true) {
-            saved.remove(id); api("DELETE", "/rest/v1/saved_videos?user_id=eq.$u&video_id=eq.$id")
+            saved.remove(id); videos.firstOrNull { it.id == id }?.let { Reco.onSave(it, false) }; api("DELETE", "/rest/v1/saved_videos?user_id=eq.$u&video_id=eq.$id")
         } else {
-            saved[id] = true
+            saved[id] = true; videos.firstOrNull { it.id == id }?.let { Reco.onSave(it, true) }
             api("POST", "/rest/v1/saved_videos", JSONObject().put("user_id", u).put("video_id", id).toString())
         }
     }
