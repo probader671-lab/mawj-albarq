@@ -85,6 +85,7 @@ fun NotificationsScreen(onBack: () -> Unit, onOpenVideo: (String) -> Unit) {
                     val (icon, tint, msg) = when (n.type) {
                         "like" -> Triple(Icons.Filled.Favorite, Color(0xFFFF2D55), "أعجبه مقطعك")
                         "comment" -> Triple(Icons.Filled.Comment, MaterialTheme.colorScheme.secondary, "علّق على مقطعك")
+                        "new_video" -> Triple(Icons.Filled.VideoLibrary, MaterialTheme.colorScheme.primary, "نزّل فيديو جديد")
                         "moderation" -> Triple(Icons.Filled.Shield, Color(0xFFFFB300), "مقطع بانتظار مراجعتك")
                         "moderation_blocked" -> Triple(Icons.Filled.Shield, Color(0xFFFF2D55), "تم منع مقطع تلقائياً")
                         else -> Triple(Icons.Filled.PersonAdd, MaterialTheme.colorScheme.primary, "بدأ بمتابعتك")

@@ -122,6 +122,11 @@ fun SettingsSheet(prefs: ThemePrefs, onClose: () -> Unit) {
                 }
                 androidx.compose.material3.Switch(checked = Media.dataSaver, onCheckedChange = { Media.setSaver(it) })
             }
+            Spacer(Modifier.height(16.dp))
+            val uctx = androidx.compose.ui.platform.LocalContext.current
+            Text("سياسة الخصوصية", color = MaterialTheme.colorScheme.primary, fontSize = 15.sp, modifier = Modifier.clickable {
+                uctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://probader671-lab.github.io/mawj-albarq/")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            }.padding(vertical = 6.dp))
         }
     }
 }
