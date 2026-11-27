@@ -18,6 +18,22 @@ import java.util.concurrent.TimeUnit
 /** True while the app UI is on screen (no phone notification is needed then). */
 object Fg { @Volatile var on = false }
 
+/** Shows one phone notification for a notification row. */
+suspend fun showPhoneNotification(ctx: Context, id: String, type: String, actorId: String?) {
+    if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
+    var who = "مستخدم"
+    if (!actorId.isNullOrBlank() && actorId != "null") {
+        val (c, t) = api("GET", "/rest/v1/profiles?id=eq.$actorId&select=full_name")
+        if (c == 200) try { who = JSONArray(t).optJSONObject(0)?.optString("full_name").orEmpty().ifBlank { "مستخدم" } } catch (_: Exception) {}
+    }
+    val msg = when (type) { "new_video" -> "$who نزّل فيديو جديد"; "like" -> "$who أعجبه مقطعك"; "comment" -> "$who علّق على مقطعك"; else -> "$who بدأ بمتابعتك" }
+    PushWorker.ensureChannel(ctx)
+    val open = PendingIntent.getActivity(ctx, id.hashCode(), Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+    val n = NotificationCompat.Builder(ctx, PushWorker.CH).setSmallIcon(android.R.drawable.stat_notify_chat).setContentTitle("موج البرق").setContentText(msg)
+        .setContentIntent(open).setAutoCancel(true).setPriority(NotificationCompat.PRIORITY_DEFAULT).build()
+    try { NotificationManagerCompat.from(ctx).notify(id.hashCode(), n) } catch (_: SecurityException) {}
+}
+
 /** Push without Firebase: a periodic background check of the user's notification rows (new video from someone followed, likes, comments, follows) shown as normal phone notifications. */
 class PushWorker(ctx: Context, p: WorkerParameters) : CoroutineWorker(ctx, p) {
     override suspend fun doWork(): Result {

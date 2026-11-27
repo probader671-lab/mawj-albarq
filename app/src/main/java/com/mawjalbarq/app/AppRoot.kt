@@ -39,6 +39,7 @@ fun AppRoot(prefs: ThemePrefs) {
         var notifs by remember { mutableStateOf(false) }
         val appCtx = androidx.compose.ui.platform.LocalContext.current
         LaunchedEffect(Unit) { Feed.init(appCtx); if (Feed.videos.isEmpty() && !Feed.loading) Feed.load() }
+        LaunchedEffect(App.userId) { if (App.userId != null) PushService.start(appCtx) else PushService.stop(appCtx) }
         UpdatePrompt()
         ShareProgressHost()
         // Back stack for tabs: back returns to the previous tab; the app exits only when there is nowhere left to go.
