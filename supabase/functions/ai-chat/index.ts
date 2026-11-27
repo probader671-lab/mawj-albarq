@@ -6,6 +6,15 @@ const J = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, 
 const GROQ = "https://api.groq.com/openai/v1";
 const NOT_CHAT = /whisper|orpheus|guard|safeguard|tts|embed|distil-whisper/i;
 
+// Per-user rate limit (DB function rl_hit). Fails open if the check itself errors.
+async function allowed(auth: string): Promise<boolean> {
+  try {
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/rl_hit`, { method: "POST", headers: { Authorization: auth, apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "", "Content-Type": "application/json" }, body: JSON.stringify({ p_fn: "chat", p_max: 60, p_window_sec: 3600 }) });
+    if (!r.ok) return true;
+    return (await r.json()) === true;
+  } catch (_) { return true; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   const key = Deno.env.get("GROQ_KEY");
@@ -24,6 +33,7 @@ Deno.serve(async (req) => {
     }
     const model = String(b.model ?? "");
     if (!model || NOT_CHAT.test(model)) return J({ error: "bad_model" }, 400);
+    if (!(await allowed(auth))) return J({ error: "rate_limited" }, 429);
     const msgs = (b.messages ?? []).filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string").slice(-20)
       .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }));
     if (!msgs.length) return J({ error: "no_messages" }, 400);

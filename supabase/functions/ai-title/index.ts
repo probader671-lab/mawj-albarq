@@ -5,6 +5,15 @@ const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers
 const J = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: CORS });
 const GROQ = "https://api.groq.com/openai/v1";
 
+// Per-user rate limit (DB function rl_hit). Fails open if the check itself errors.
+async function allowed(auth: string): Promise<boolean> {
+  try {
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/rl_hit`, { method: "POST", headers: { Authorization: auth, apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "", "Content-Type": "application/json" }, body: JSON.stringify({ p_fn: "title", p_max: 20, p_window_sec: 3600 }) });
+    if (!r.ok) return true;
+    return (await r.json()) === true;
+  } catch (_) { return true; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   const key = Deno.env.get("GROQ_KEY");
@@ -12,6 +21,7 @@ Deno.serve(async (req) => {
   const auth = req.headers.get("authorization") ?? "";
   const u = await fetch(`${Deno.env.get("SUPABASE_URL")}/auth/v1/user`, { headers: { Authorization: auth, apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "" } });
   if (!u.ok) return J({ error: "unauthorized" }, 401);
+  if (!(await allowed(auth))) return J({ error: "rate_limited" }, 429);
   let body: { audio?: string; text?: string };
   try { body = await req.json(); } catch { return J({ error: "bad_json" }, 400); }
   const a = body.audio;
