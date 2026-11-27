@@ -42,7 +42,7 @@ import androidx.compose.foundation.clickable
 import java.io.File
 import kotlin.coroutines.resume
 
-private class Meta(val w: Int, val h: Int, val durMs: Long)
+class Meta(val w: Int, val h: Int, val durMs: Long)
 
 private fun readMeta(ctx: Context, uri: Uri): Meta {
     val r = MediaMetadataRetriever()
@@ -56,7 +56,7 @@ private fun readMeta(ctx: Context, uri: Uri): Meta {
     } finally { r.release() }
 }
 
-private suspend fun compress(ctx: Context, uri: Uri, out: File, meta: Meta): Boolean = suspendCancellableCoroutine { cont ->
+suspend fun compress(ctx: Context, uri: Uri, out: File, meta: Meta): Boolean = suspendCancellableCoroutine { cont ->
     Handler(Looper.getMainLooper()).post {
         try {
             val effects = ArrayList<androidx.media3.common.Effect>()
@@ -92,7 +92,7 @@ private fun srcSize(ctx: Context, uri: Uri): Long = try {
 } catch (_: Exception) { 0L }
 
 /** Public upload to archive.org (S3-like API). Keys come from the ia-keys Edge Function (signed-in users only). Returns the item id, or null. */
-private suspend fun uploadArchive(f: File, title: String, onProgress: (Float) -> Unit): String? = withContext(Dispatchers.IO) {
+suspend fun uploadArchive(f: File, title: String, onProgress: (Float) -> Unit): String? = withContext(Dispatchers.IO) {
     try {
         val (kc, kt) = api("POST", "/functions/v1/ia-keys", "{}")
         if (kc != 200) return@withContext null
@@ -141,6 +141,73 @@ private suspend fun uploadThumb(f: File): String? = withContext(Dispatchers.IO) 
             if (it.code == 200) JSONObject(it.body?.string().orEmpty()).optString("secure_url").ifBlank { null } else null
         }
     } catch (_: Exception) { null }
+}
+
+
+/** Background upload pipeline: compress, check content, upload, publish. The uploader never waits on it. */
+object UploadJobs {
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Main)
+    var status by mutableStateOf("")
+    private val gate = kotlinx.coroutines.sync.Semaphore(1)   // one video at a time (weak phones)
+    private fun toast(c: Context, m: String) { android.widget.Toast.makeText(c, m, android.widget.Toast.LENGTH_LONG).show() }
+
+    fun start(ctx: Context, src: Uri, title: String, desc: String, meta: Meta, bigSrc: Boolean, onPublished: () -> Unit) {
+        scope.launch {
+            gate.acquire()
+            try { run(ctx, src, title, desc, meta, bigSrc, onPublished) } catch (e: Exception) { status = ""; toast(ctx, "تعذر نشر الفيديو، حاول مرة ثانية") } finally { gate.release() }
+        }
+    }
+
+    private suspend fun run(ctx: Context, src: Uri, title: String, desc: String, meta: Meta, bigSrc: Boolean, onPublished: () -> Unit) {
+        val out = File(ctx.cacheDir, "upload_" + System.currentTimeMillis() + ".mp4")
+        status = "جارٍ ضغط الفيديو في الخلفية..."
+        if (!compress(ctx, src, out, meta)) { status = ""; toast(ctx, "فشل ضغط الفيديو"); return }
+        status = "جارٍ فحص المحتوى في الخلفية..."
+        val cfg = ModConfig.load()
+        val mod = Moderation.check(ctx, out, cfg)
+        fun qBody(vid: String?) = JSONObject().put("kind", if (mod.verdict == Verdict.BLOCK) "blocked" else "review")
+            .put("reasons", org.json.JSONArray(mod.reasons)).put("music_share", mod.musicShare.toDouble()).put("music_max", mod.musicMax.toDouble())
+            .put("nsfw_max", mod.nsfwMax.toDouble()).put("faces", mod.faces).apply { if (vid != null) put("video_id", vid) }
+        if (mod.verdict == Verdict.BLOCK) {
+            api("POST", "/rest/v1/moderation_queue", qBody(null).toString())
+            out.delete(); status = ""
+            toast(ctx, "هذا المقطع يخالف قواعد المحتوى ولا يمكن نشره"); return
+        }
+        val useArchive = bigSrc || out.length() > IA_MAX_CLOUDINARY
+        var r: JSONObject? = null
+        var iaId: String? = null
+        status = "جارٍ الرفع..."
+        if (useArchive) {
+            val om = withContext(Dispatchers.IO) { readMeta(ctx, Uri.fromFile(out)) }
+            iaId = uploadArchive(out, title) { p -> status = "جارٍ الرفع... " + (p * 100).toInt() + "%" }
+            if (iaId != null) r = JSONObject().put("width", om.w).put("height", om.h).put("duration", om.durMs / 1000.0).put("bytes", out.length())
+        } else {
+            r = uploadCloudinary(out) { p -> status = "جارٍ الرفع... " + (p * 100).toInt() + "%" }
+        }
+        val iaThumb = if (iaId != null) uploadThumb(out) else null
+        out.delete()
+        if (r == null) { status = ""; toast(ctx, "فشل الرفع، تحقق من الاتصال"); return }
+        status = "جارٍ النشر..."
+        val pid = if (iaId != null) iaId else r.getString("public_id")
+        val w = r.optInt("width"); val h = r.optInt("height")
+        val body = JSONObject().put("user_id", App.userId).put("title", title).put("description", desc)
+            .put("video_url", if (iaId != null) "https://archive.org/download/$iaId/video.mp4" else r.getString("secure_url"))
+            .put("thumbnail_url", if (iaId != null) (iaThumb ?: "https://archive.org/services/img/$iaId") else "https://res.cloudinary.com/${Cfg.CLOUD}/video/upload/so_0/$pid.jpg")
+            .put("storage_type", if (iaId != null) "archive" else "cloudinary").put("media_public_id", pid).put("mime_type", "video/mp4")
+            .put("size_bytes", r.optLong("bytes")).put("duration", Math.round(r.optDouble("duration", 0.0)).toInt())
+            .put("width", w).put("height", h).put("is_vertical", h > w).put("is_short", r.optDouble("duration", 0.0) <= 90.0)
+            .put("status", if (mod.verdict == Verdict.REVIEW) "pending_review" else "ready")
+            .put("is_quran", mod.quranLikely || (Reco.looksQuranic(title + " " + desc) && mod.musicMax < cfg.quranMaxMusic && mod.faces == 0))
+        val (c, rt) = api("POST", "/rest/v1/videos", body.toString(), prefer = "return=representation")
+        status = ""
+        if (c in 200..299) {
+            if (mod.verdict == Verdict.REVIEW) {
+                val vid = try { JSONArray(rt).getJSONObject(0).getString("id") } catch (_: Exception) { null }
+                api("POST", "/rest/v1/moderation_queue", qBody(vid).toString())
+                toast(ctx, "المقطع قيد المراجعة وسيُنشر بعد موافقة الإدارة")
+            } else { toast(ctx, "تم نشر الفيديو!"); onPublished() }
+        } else toast(ctx, "فشل النشر")
+    }
 }
 
 private const val CHUNK = 6 * 1024 * 1024  // Cloudinary needs >= 5 MB per chunk except the last
@@ -243,6 +310,7 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
         OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text("العنوان") }, singleLine = true, enabled = !busy)
         OutlinedTextField(desc, { desc = it }, Modifier.fillMaxWidth(), label = { Text("الوصف") }, minLines = 3, enabled = !busy)
         if (status.isNotEmpty()) Text(status, color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+        if (UploadJobs.status.isNotEmpty()) Text("في الخلفية: " + UploadJobs.status, color = MaterialTheme.colorScheme.primary, fontSize = 13.sp)
         if (busy) androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
             Column(Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surface).padding(28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -259,66 +327,18 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
         var startTick by remember { mutableStateOf(0) }
         LaunchedEffect(archiveOk) { if (archiveOk) { startTick++ } }
         val go: () -> Unit = {
-            val src = uri!!; busy = true
+            val src = uri!!; val tTitle = title.trim(); val tDesc = desc.trim(); busy = true
             scope.launch {
                 try {
-                    status = "جارٍ ضغط الفيديو..."
+                    status = "جارٍ التحقق من الفيديو..."
                     val meta = withContext(Dispatchers.IO) { readMeta(ctx, src) }
                     val bigSrc = meta.durMs > IA_MIN_MS || withContext(Dispatchers.IO) { srcSize(ctx, src) } > IA_MIN_BYTES
                     if (bigSrc && !archiveOk) { busy = false; status = ""; askArchive = true; return@launch }
-                    val out = File(ctx.cacheDir, "upload.mp4")
-                    if (!compress(ctx, src, out, meta)) { status = "فشل ضغط الفيديو"; busy = false; return@launch }
-                    status = "جارٍ فحص المحتوى..."
-                    val cfg = ModConfig.load()
-                    val mod = Moderation.check(ctx, out, cfg)
-                    fun qBody(vid: String?) = JSONObject().put("kind", if (mod.verdict == Verdict.BLOCK) "blocked" else "review")
-                        .put("reasons", org.json.JSONArray(mod.reasons)).put("music_share", mod.musicShare.toDouble()).put("music_max", mod.musicMax.toDouble())
-                        .put("nsfw_max", mod.nsfwMax.toDouble()).put("faces", mod.faces).apply { if (vid != null) put("video_id", vid) }
-                    if (mod.verdict == Verdict.BLOCK) {
-                        api("POST", "/rest/v1/moderation_queue", qBody(null).toString())
-                        out.delete()
-                        status = "هذا المقطع يخالف قواعد المحتوى ولا يمكن نشره"; busy = false; return@launch
-                    }
-                    val useArchive = bigSrc || out.length() > IA_MAX_CLOUDINARY
-                    status = "جارٍ الرفع..."
-                    progress = 0f
-                    var r: JSONObject? = null
-                    var iaId: String? = null
-                    if (useArchive) {
-                        if (!archiveOk) { out.delete(); busy = false; status = ""; askArchive = true; return@launch }
-                        val om = withContext(Dispatchers.IO) { readMeta(ctx, Uri.fromFile(out)) }
-                        iaId = uploadArchive(out, title.trim()) { p -> progress = p; status = "جارٍ الرفع... " + (p * 100).toInt() + "%" }
-                        if (iaId != null) r = JSONObject().put("width", om.w).put("height", om.h).put("duration", om.durMs / 1000.0).put("bytes", out.length())
-                    } else {
-                        r = uploadCloudinary(out) { p -> progress = p; status = "جارٍ الرفع... " + (p * 100).toInt() + "%" }
-                    }
-                    progress = -1f
-                    val iaThumb = if (iaId != null) uploadThumb(out) else null
-                    out.delete()
                     archiveOk = false
-                    if (r == null) { status = "فشل الرفع، تحقق من الاتصال"; busy = false; return@launch }
-                    status = "جارٍ النشر..."
-                    val pid = if (iaId != null) iaId else r.getString("public_id")
-                    val w = r.optInt("width"); val h = r.optInt("height")
-                    val body = JSONObject().put("user_id", App.userId).put("title", title.trim()).put("description", desc.trim())
-                        .put("video_url", if (iaId != null) "https://archive.org/download/$iaId/video.mp4" else r.getString("secure_url"))
-                        .put("thumbnail_url", if (iaId != null) (iaThumb ?: "https://archive.org/services/img/$iaId") else "https://res.cloudinary.com/${Cfg.CLOUD}/video/upload/so_0/$pid.jpg")
-                        .put("storage_type", if (iaId != null) "archive" else "cloudinary").put("media_public_id", pid).put("mime_type", "video/mp4")
-                        .put("size_bytes", r.optLong("bytes")).put("duration", Math.round(r.optDouble("duration", 0.0)).toInt())
-                        .put("width", w).put("height", h).put("is_vertical", h > w).put("is_short", r.optDouble("duration", 0.0) <= 90.0)
-                        .put("status", if (mod.verdict == Verdict.REVIEW) "pending_review" else "ready")
-                        .put("is_quran", mod.quranLikely || (Reco.looksQuranic(title + " " + desc) && mod.musicMax < cfg.quranMaxMusic && mod.faces == 0))
-                    val (c, rt) = api("POST", "/rest/v1/videos", body.toString(), prefer = "return=representation")
-                    if (c in 200..299) {
-                        if (mod.verdict == Verdict.REVIEW) {
-                            val vid = try { JSONArray(rt).getJSONObject(0).getString("id") } catch (_: Exception) { null }
-                            api("POST", "/rest/v1/moderation_queue", qBody(vid).toString())
-                            status = "المقطع قيد المراجعة وسيُنشر بعد موافقة الإدارة"; title = ""; desc = ""; uri = null
-                        } else {
-                            status = "تم النشر!"; title = ""; desc = ""; uri = null
-                            Feed.load(); onDone()
-                        }
-                    } else status = "فشل النشر"
+                    // Everything else (compression, content checks, upload, publishing) runs in the background.
+                    UploadJobs.start(ctx.applicationContext, src, tTitle, tDesc, meta, bigSrc) { Feed.load(); onDone() }
+                    title = ""; desc = ""; uri = null
+                    status = "تم! الفيديو بيتجهز وينشر في الخلفية، تقدر تكمل استخدام التطبيق"
                 } catch (e: Exception) { status = "حدث خطأ غير متوقع" }
                 busy = false
             }
