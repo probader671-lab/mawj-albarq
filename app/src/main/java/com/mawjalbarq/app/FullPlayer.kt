@@ -137,7 +137,6 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
 
     val player = remember {
         ExoPlayer.Builder(ctx)
-            .setTrackSelector(Media.highQualityTrackSelector(ctx))
             .setMediaSourceFactory(DefaultMediaSourceFactory(MediaCache.factory(ctx)))
             .build().also { Media.withMp4Fallback(it) }
     }

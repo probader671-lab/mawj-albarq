@@ -14,9 +14,11 @@ jobs:
         with: { distribution: temurin, java-version: 17 }
       - uses: gradle/actions/setup-gradle@v3
         with: { gradle-version: 8.7 }
+      - name: Version code (always above the old demo 32 and earlier test builds 33)
+        run: echo "VC=$((100 + ${{ github.run_number }}))" >> "$GITHUB_ENV"
       - name: Build
         env:
-          BUILD_VERSION_CODE: "33"
+          BUILD_VERSION_CODE: ${{ env.VC }}
         run: |
           for i in 1 2 3; do gradle --no-daemon :app:assembleDebug && break || sleep 10; done
           test -f app/build/outputs/apk/debug/app-debug.apk
@@ -27,5 +29,5 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: نسخة اختبار (لا تحدث تلقائياً)
           prerelease: true
-          body: "test build ${{ github.sha }}"
+          body: "versionCode=${{ env.VC }} test build ${{ github.sha }}"
           files: mawj-albarq-test.apk
