@@ -153,7 +153,8 @@ data class Video(
     val views: Long = 0L,
     val createdAt: String = "",
     val verified: Boolean = false,
-    val followers: Long = 0L
+    val followers: Long = 0L,
+    val isQuran: Boolean = false
 ) {
     val portrait get() = h == 0 || h >= w
 }
@@ -266,7 +267,8 @@ object Feed {
                     views = o.optLong("views", 0L).coerceAtLeast(0L),
                     createdAt = o.optString("created_at"),
                     verified = pr?.optBoolean("verified", false) == true,
-                    followers = pr?.optLong("followers_count", 0L)?.coerceAtLeast(0L) ?: 0L
+                    followers = pr?.optLong("followers_count", 0L)?.coerceAtLeast(0L) ?: 0L,
+                    isQuran = o.optBoolean("is_quran", false)
                 )
             )
         }
@@ -303,7 +305,7 @@ object Feed {
     }
 
     private fun videosQuery(limit: Int, after: Video?): String =
-        "/rest/v1/videos?select=id,user_id,width,height,duration,views,created_at,title,description,video_url,thumbnail_url,likes,comments_count,profiles!videos_user_id_fkey(full_name,avatar_url,verified,followers_count)&status=eq.ready&deleted=eq.false" + (if (after != null && after.createdAt.isNotBlank()) cursorFilter(after.createdAt, after.id) else "") + "&order=created_at.desc,id.desc&limit=$limit"
+        "/rest/v1/videos?select=id,user_id,width,height,duration,views,created_at,title,description,video_url,thumbnail_url,likes,comments_count,is_quran,profiles!videos_user_id_fkey(full_name,avatar_url,verified,followers_count)&status=eq.ready&deleted=eq.false" + (if (after != null && after.createdAt.isNotBlank()) cursorFilter(after.createdAt, after.id) else "") + "&order=created_at.desc,id.desc&limit=$limit"
 
     suspend fun load() {
         if (loading) return

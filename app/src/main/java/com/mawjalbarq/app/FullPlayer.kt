@@ -162,6 +162,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
         player.addListener(listener)
         onDispose {
             player.removeListener(listener)
+            QuranBg.release(ctx, player)
             player.clearVideoSurface()
             player.release()
         }
@@ -180,6 +181,7 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
         Watch.save(ctx, cur.id)
         player.setMediaItem(MediaItem.fromUri(Uri.parse(Media.playUrl(cur.url))))
         player.prepare()
+        QuranBg.sync(ctx, player, cur.isQuran)
         player.setPlaybackSpeed(speed)
         player.volume = if (muted) 0f else 1f
         player.playWhenReady = true
@@ -1092,6 +1094,13 @@ fun FullPlayer(start: Video, onClose0: () -> Unit) {
                         }
                     }
 
+                    if (cur.isQuran) item(key = "quran_bg_toggle") {
+                        var bg by remember { mutableStateOf(QuranPrefs.enabled(ctx)) }
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("تشغيل التلاوة في الخلفية", color = white, fontFamily = Cairo, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                            Switch(checked = bg, onCheckedChange = { bg = it; QuranPrefs.set(ctx, it); QuranBg.sync(ctx, player, cur.isQuran) })
+                        }
+                    }
                     if (upNext.isNotEmpty()) {
                         item(key = "watch_rail") {
                             WatchRailSection(

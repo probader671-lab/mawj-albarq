@@ -115,6 +115,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
         onDispose {
             player.removeListener(listener)
             player.clearVideoSurface()
+            QuranBg.release(ctx, player)
             player.release()
         }
     }
@@ -122,7 +123,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val obs = LifecycleEventObserver { _, e ->
-            if (e == Lifecycle.Event.ON_PAUSE) player.playWhenReady = false
+            if (e == Lifecycle.Event.ON_PAUSE && !(videos.getOrNull(cur)?.isQuran == true && QuranPrefs.enabled(ctx))) player.playWhenReady = false
         }
         lifecycleOwner.lifecycle.addObserver(obs)
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
@@ -164,6 +165,7 @@ fun ClipsScreen(onNeedLogin: () -> Unit) {
         isBuffering = true
         player.setMediaItem(MediaItem.fromUri(Uri.parse(Media.playUrl(videos[cur].url))))
         player.prepare()
+        QuranBg.sync(ctx, player, videos[cur].isQuran)
         player.setPlaybackSpeed(speed)
         player.volume = if (muted) 0f else 1f
         player.playWhenReady = Feed.activeVideo == null

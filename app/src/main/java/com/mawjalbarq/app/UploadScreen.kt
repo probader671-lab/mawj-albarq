@@ -36,7 +36,9 @@ import okhttp3.MultipartBody
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
+import androidx.compose.foundation.clickable
 import java.io.File
 import kotlin.coroutines.resume
 
@@ -139,6 +141,7 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
     var status by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf(-1f) }
+    var isQuran by remember { mutableStateOf(false) }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { if (it != null) uri = it }
     var camUri by remember { mutableStateOf<Uri?>(null) }
     val cam = rememberLauncherForActivityResult(ActivityResultContracts.CaptureVideo()) { ok -> if (ok) uri = camUri }
@@ -173,6 +176,13 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
         }
         OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text("العنوان") }, singleLine = true, enabled = !busy)
         OutlinedTextField(desc, { desc = it }, Modifier.fillMaxWidth(), label = { Text("الوصف") }, minLines = 3, enabled = !busy)
+        Row(Modifier.fillMaxWidth().clickable(enabled = !busy) { isQuran = !isQuran }, verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = isQuran, onCheckedChange = { isQuran = it }, enabled = !busy)
+            Column {
+                Text("مقطع قرآن / تلاوة", color = Color.White, fontSize = 15.sp, fontFamily = Cairo)
+                Text("يكمّل تشغيله في الخلفية والشاشة مقفولة", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+            }
+        }
         if (status.isNotEmpty()) Text(status, color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
         if (busy) androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
             Column(Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surface).padding(28.dp),
@@ -190,6 +200,17 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
                     val meta = withContext(Dispatchers.IO) { readMeta(ctx, src) }
                     val out = File(ctx.cacheDir, "upload.mp4")
                     if (!compress(ctx, src, out, meta)) { status = "فشل ضغط الفيديو"; busy = false; return@launch }
+                    status = "جارٍ فحص المحتوى..."
+                    val cfg = ModConfig.load()
+                    val mod = Moderation.check(ctx, out, cfg)
+                    fun qBody(vid: String?) = JSONObject().put("kind", if (mod.verdict == Verdict.BLOCK) "blocked" else "review")
+                        .put("reasons", org.json.JSONArray(mod.reasons)).put("music_share", mod.musicShare.toDouble()).put("music_max", mod.musicMax.toDouble())
+                        .put("nsfw_max", mod.nsfwMax.toDouble()).put("faces", mod.faces).apply { if (vid != null) put("video_id", vid) }
+                    if (mod.verdict == Verdict.BLOCK) {
+                        api("POST", "/rest/v1/moderation_queue", qBody(null).toString())
+                        out.delete()
+                        status = "هذا المقطع يخالف قواعد المحتوى ولا يمكن نشره"; busy = false; return@launch
+                    }
                     status = "جارٍ الرفع..."
                     progress = 0f
                     val r = uploadCloudinary(out) { p -> progress = p; status = "جارٍ الرفع... " + (p * 100).toInt() + "%" }
@@ -205,11 +226,18 @@ fun UploadScreen(onNeedLogin: () -> Unit, onDone: () -> Unit) {
                         .put("storage_type", "cloudinary").put("media_public_id", pid).put("mime_type", "video/mp4")
                         .put("size_bytes", r.optLong("bytes")).put("duration", Math.round(r.optDouble("duration", 0.0)).toInt())
                         .put("width", w).put("height", h).put("is_vertical", h > w).put("is_short", r.optDouble("duration", 0.0) <= 90.0)
-                        .put("status", "ready")
-                    val (c, _) = api("POST", "/rest/v1/videos", body.toString())
+                        .put("status", if (mod.verdict == Verdict.REVIEW) "pending_review" else "ready")
+                        .put("is_quran", isQuran || mod.quranLikely)
+                    val (c, rt) = api("POST", "/rest/v1/videos", body.toString(), prefer = "return=representation")
                     if (c in 200..299) {
-                        status = "تم النشر!"; title = ""; desc = ""; uri = null
-                        Feed.load(); onDone()
+                        if (mod.verdict == Verdict.REVIEW) {
+                            val vid = try { JSONArray(rt).getJSONObject(0).getString("id") } catch (_: Exception) { null }
+                            api("POST", "/rest/v1/moderation_queue", qBody(vid).toString())
+                            status = "المقطع قيد المراجعة وسيُنشر بعد موافقة الإدارة"; title = ""; desc = ""; uri = null; isQuran = false
+                        } else {
+                            status = "تم النشر!"; title = ""; desc = ""; uri = null; isQuran = false
+                            Feed.load(); onDone()
+                        }
                     } else status = "فشل النشر"
                 } catch (e: Exception) { status = "حدث خطأ غير متوقع" }
                 busy = false

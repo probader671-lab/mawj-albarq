@@ -385,8 +385,6 @@ fun HomeScreen(
                     vids.isEmpty() && Feed.loading -> {
                         item(key = "sk0") { HomeVideoSkeletonCard(16f / 9f) }
                         item(key = "sk1") { HomeVideoSkeletonCard(16f / 9f) }
-                        item(key = "sk2") { HomeSuggestionSkeletonRow() }
-                        item(key = "sk3") { HomeSuggestionSkeletonRow() }
                     }
                     vids.isEmpty() -> item {
                         Column(
@@ -419,25 +417,6 @@ fun HomeScreen(
 
                 if (q.isBlank() && vids.size > 4) {
                     val afterThree = vids.drop(4)
-                    val portraitPicks = vids.filter { it.portrait }.take(10)
-                    item(key = "home_rail") {
-                        WatchRailSection(
-                            title = "اقتراحات قد تعجبك",
-                            videos = if (portraitPicks.isNotEmpty()) portraitPicks else afterThree.take(10),
-                            portraitCards = portraitPicks.isNotEmpty(),
-                            onSelect = { open(it) }
-                        )
-                    }
-                    item(key = "home_more_header") {
-                        Text(
-                            "المزيد من الفيديوهات",
-                            color = WatchTextMain,
-                            fontFamily = Cairo,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 17.sp,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 2.dp)
-                        )
-                    }
                     itemsIndexed(afterThree.chunked(2), key = { _, pr -> "feed_${pr.first().id}" }) { _, pr ->
                         CardRow(pr, { open(it) }, { if (it.userId.isNotBlank()) creatorId = it.userId }, onNeedLogin, { reportFor = it })
                     }

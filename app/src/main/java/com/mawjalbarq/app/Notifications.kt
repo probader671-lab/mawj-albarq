@@ -23,6 +23,8 @@ data class Notif(val id: String, val type: String, val actor: String, val actorA
 
 object Notifs {
     var unread by mutableIntStateOf(0)
+    var isAdmin by mutableStateOf(false)
+    suspend fun checkAdmin() { if (App.userId == null) { isAdmin = false; return }; val (c, t) = api("POST", "/rest/v1/rpc/is_admin", "{}"); isAdmin = c == 200 && t.trim() == "true" }
     suspend fun refreshCount() {
         val u = App.userId ?: run { unread = 0; return }
         val (c, t) = api("GET", "/rest/v1/notifications?user_id=eq.$u&is_read=eq.false&select=id&limit=100")
@@ -62,10 +64,14 @@ fun NotificationsScreen(onBack: () -> Unit, onOpenVideo: (String) -> Unit) {
     var list by remember { mutableStateOf<List<Notif>?>(null) }
     var failed by remember { mutableStateOf(false) }
     var moreN by remember { mutableStateOf(false) }
+    var showQueue by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { Notifs.checkAdmin() }
+    if (showQueue) { ModerationQueueScreen { showQueue = false }; return }
     LaunchedEffect(Unit) { val r = Notifs.load(); if (r == null) failed = true else { list = r; moreN = r.size >= Notifs.PAGE }; Notifs.markAllRead() }
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("الإشعارات", color = Ink, fontSize = 24.sp, fontFamily = Cairo, modifier = Modifier.weight(1f))
+            if (Notifs.isAdmin) TextButton(onClick = { showQueue = true }) { Text("المراجعة") }
             TextButton(onClick = onBack) { Text("رجوع") }
         }
         val l = list
@@ -79,11 +85,13 @@ fun NotificationsScreen(onBack: () -> Unit, onOpenVideo: (String) -> Unit) {
                     val (icon, tint, msg) = when (n.type) {
                         "like" -> Triple(Icons.Filled.Favorite, Color(0xFFFF2D55), "أعجبه مقطعك")
                         "comment" -> Triple(Icons.Filled.Comment, MaterialTheme.colorScheme.secondary, "علّق على مقطعك")
+                        "moderation" -> Triple(Icons.Filled.Shield, Color(0xFFFFB300), "مقطع بانتظار مراجعتك")
+                        "moderation_blocked" -> Triple(Icons.Filled.Shield, Color(0xFFFF2D55), "تم منع مقطع تلقائياً")
                         else -> Triple(Icons.Filled.PersonAdd, MaterialTheme.colorScheme.primary, "بدأ بمتابعتك")
                     }
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
                         .background(if (n.read) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { n.videoId?.let(onOpenVideo) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        .clickable { if (n.type.startsWith("moderation")) showQueue = true else n.videoId?.let(onOpenVideo) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Avatar(n.actorAvatar, n.actor, 44)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
