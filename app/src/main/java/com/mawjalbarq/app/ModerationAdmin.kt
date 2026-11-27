@@ -22,7 +22,7 @@ import org.json.JSONObject
 
 data class QueueItem(
     val id: String, val videoId: String?, val kind: String, val reasons: List<String>,
-    val music: Double, val nsfw: Double, val faces: Int, val title: String, val url: String?, val thumb: String?, val status: String, val userId: String
+    val music: Double, val nsfw: Double, val faces: Int, val title: String, val url: String?, val thumb: String?, val status: String, val userId: String, val w: Int = 0, val h: Int = 0
 )
 
 private fun reasonAr(r: String) = when (r) {
@@ -38,7 +38,7 @@ private fun reasonAr(r: String) = when (r) {
 object ModQueue {
     suspend fun load(status: String): List<QueueItem>? {
         val filter = if (status == "pending") "status=eq.pending" else "status=eq.blocked"
-        val (c, t) = api("GET", "/rest/v1/moderation_queue?$filter&select=id,video_id,kind,reasons,music_max,nsfw_max,faces,status,user_id,videos(title,video_url,thumbnail_url)&order=created_at.desc,id.desc&limit=30")
+        val (c, t) = api("GET", "/rest/v1/moderation_queue?$filter&select=id,video_id,kind,reasons,music_max,nsfw_max,faces,status,user_id,videos(title,video_url,thumbnail_url,width,height)&order=created_at.desc,id.desc&limit=30")
         if (c != 200) return null
         return try {
             val a = JSONArray(t)
@@ -47,7 +47,7 @@ object ModQueue {
                 val rs = o.optJSONArray("reasons") ?: JSONArray()
                 QueueItem(o.getString("id"), if (o.isNull("video_id")) null else o.optString("video_id"), o.optString("kind"),
                     (0 until rs.length()).map { i -> rs.getString(i) }, o.optDouble("music_max", 0.0), o.optDouble("nsfw_max", 0.0), o.optInt("faces"),
-                    v?.optString("title").orEmpty(), v?.optString("video_url"), v?.optString("thumbnail_url")?.ifBlank { null }, o.optString("status"), o.optString("user_id"))
+                    v?.optString("title").orEmpty(), v?.optString("video_url"), v?.optString("thumbnail_url")?.ifBlank { null }, o.optString("status"), o.optString("user_id"), v?.optInt("width") ?: 0, v?.optInt("height") ?: 0)
             }
         } catch (_: Exception) { null }
     }
@@ -102,7 +102,7 @@ fun ModerationQueueScreen(onBack: () -> Unit) {
                             }
                         }
                         if (tab == 0 && q.videoId != null) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = { q.url?.let { u -> Feed.activeVideo = Video(id = q.videoId, title = q.title, desc = "", url = u, thumb = q.thumb, author = "", likes = 0, comments = 0, userId = q.userId) } }, modifier = Modifier.weight(1f)) { Text("معاينة") }
+                            OutlinedButton(onClick = { q.url?.let { u -> Feed.activeVideo = Video(id = q.videoId, title = q.title, desc = "", url = u, thumb = q.thumb, author = "", likes = 0, comments = 0, userId = q.userId, w = q.w, h = q.h) } }, modifier = Modifier.weight(1f)) { Text("معاينة") }
                             Button(enabled = busyId == null, onClick = { busyId = q.id; scope.launch { ModQueue.decide(q, true); busyId = null; reload() } }, modifier = Modifier.weight(1f)) { Text("قبول") }
                             Button(enabled = busyId == null, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB3261E)), onClick = { busyId = q.id; scope.launch { ModQueue.decide(q, false); busyId = null; reload() } }, modifier = Modifier.weight(1f)) { Text("رفض") }
                         }

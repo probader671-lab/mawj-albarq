@@ -150,7 +150,7 @@ fun AppRoot(prefs: ThemePrefs) {
             if (notifs) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { NotificationsScreen({ notifs = false }) { vid -> notifs = false; Feed.videos.firstOrNull { it.id == vid }?.let { Feed.open(it) { sel = 1 } } } }
             if (aiChat) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { AiChatScreen({ aiChat = false }, { sel = 4 }) }
             if (suggestions) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { SuggestionsScreen { suggestions = false } }
-            Feed.activeVideo?.let { v -> FullPlayer(v) { Feed.activeVideo = null } }
+            Feed.activeVideo?.let { v -> if (v.w > 0 && v.h > v.w) PortraitPlayer(v) { Feed.activeVideo = null } else FullPlayer(v) { Feed.activeVideo = null } }
         }
     }
 }

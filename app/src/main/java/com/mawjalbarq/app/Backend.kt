@@ -285,7 +285,7 @@ object Feed {
                 onGoClips()
             } else {
                 minimizedVideo = null
-                activeVideo = v
+                activeVideo = v   // not in the feed list: single-video player (portrait player for vertical videos)
             }
         }
     }
