@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: "openai/gpt-oss-20b", temperature: 0.3, max_tokens: 2000, reasoning_effort: "low", response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: "You write a short title and description for a video from its transcript. Reply with JSON {\"title\":\"...\",\"description\":\"...\"}. Use the same language as the transcript (Arabic stays Arabic). Title: max 60 characters, plain, no emojis, no quotes. Description: one or two sentences, max 200 characters. Only describe what the transcript says. Never invent names, quotes or claims." },
+          { role: "system", content: "You write a short title and description for a video from its transcript. Reply with JSON {\"title\":\"...\",\"description\":\"...\"}. Use the same language as the transcript (Arabic stays Arabic). Title: max 60 characters, plain, no emojis, no quotes. Description: one or two sentences, max 200 characters. Only describe what the transcript says. Never invent names, quotes or claims. Be neutral: never judge or label the content (no words like mockery, insult, blasphemy, offensive, haram, joke about religion) and never accuse the speakers of anything; name the topic only. If the speech is unclear, fragmentary or looks like a mistranscription, give a short generic title about the visible topic or leave title and description empty." },
           { role: "user", content: text },
         ],
       }),

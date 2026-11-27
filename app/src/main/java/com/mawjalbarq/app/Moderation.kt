@@ -190,7 +190,7 @@ object Moderation {
             }
             // Loosened (build 16): one clear male/covered face with no female evidence is enough; a few blurry or side-on faces no longer force review.
             if (seen == 0 && covered == 0) "male"   // Face++ found no real face (the on-device detector fired on something small): nothing to judge
-            else if (female == 0 && male + covered >= 1 && bad <= male + covered) "male"
+            else if (female == 0 && male + covered >= 1 && bad <= 2 * (male + covered)) "male"
             else if (bad == 0 && female >= 2 && male == 0) "female"
             else "unsure"
         } catch (e: Throwable) { "unsure" }
